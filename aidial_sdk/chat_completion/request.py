@@ -1,6 +1,6 @@
-from typing import List, Optional, Mapping, Union, Any
-from pydantic import BaseModel, confloat, conint, conlist, ConfigDict
+from typing import Any, List, Mapping, Optional, Union
 
+from pydantic import BaseModel, ConfigDict, confloat, conint, conlist
 
 MODEL_CONFIG = ConfigDict(extra="forbid")
 

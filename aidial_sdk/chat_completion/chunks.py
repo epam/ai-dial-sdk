@@ -1,29 +1,14 @@
-from typing import Optional, Any
-from time import time
+from abc import ABC, abstractmethod
+from typing import Any, Optional
 
 
-class DIALChatCompletionInit:
-    response_id: str
-    model: str
-    created: int
-
-    def __init__(
-        self,
-        response_id: str,
-        model: Optional[str] = None,
-        created: Optional[int] = None,
-    ):
-        self.response_id = response_id
-        self.model = model
-        self.created = created if created else int(time())
-
-
-class DIALChatCompletionBaseChunk:
+class BaseChunk(ABC):
+    @abstractmethod
     def to_dict(self):
         pass
 
 
-class DIALChatCompletionStartChoiceChunk(DIALChatCompletionBaseChunk):
+class StartChoiceChunk(BaseChunk):
     choice_index: int
 
     def __init__(self, choice_index: int):
@@ -42,7 +27,7 @@ class DIALChatCompletionStartChoiceChunk(DIALChatCompletionBaseChunk):
         }
 
 
-class DIALChatCompletionEndChoiceChunk(DIALChatCompletionBaseChunk):
+class EndChoiceChunk(BaseChunk):
     finish_reason: str
     index: int
     timestamp: int
@@ -64,7 +49,7 @@ class DIALChatCompletionEndChoiceChunk(DIALChatCompletionBaseChunk):
         }
 
 
-class DIALChatCompletionContentChunk(DIALChatCompletionBaseChunk):
+class ContentChunk(BaseChunk):
     content: str
     choice_index: int
 
@@ -85,11 +70,11 @@ class DIALChatCompletionContentChunk(DIALChatCompletionBaseChunk):
         }
 
 
-class DIALChatCompletionStartStageChunk(DIALChatCompletionBaseChunk):
+class StartStageChunk(BaseChunk):
     choice_index: int
     stage_index: int
 
-    def __init__(self, choice_index: str, stage_index: int, name: str):
+    def __init__(self, choice_index: int, stage_index: int, name: str):
         self.choice_index = choice_index
         self.stage_index = stage_index
         self.name = name
@@ -117,12 +102,12 @@ class DIALChatCompletionStartStageChunk(DIALChatCompletionBaseChunk):
         }
 
 
-class DIALChatCompletionFinishStageChunk(DIALChatCompletionBaseChunk):
+class FinishStageChunk(BaseChunk):
     choice_index: int
     stage_index: int
     status: str
 
-    def __init__(self, choice_index: str, stage_index: int, status: str):
+    def __init__(self, choice_index: int, stage_index: int, status: str):
         self.choice_index = choice_index
         self.stage_index = stage_index
         self.status = status
@@ -149,12 +134,12 @@ class DIALChatCompletionFinishStageChunk(DIALChatCompletionBaseChunk):
         }
 
 
-class DIALChatCompletionContentStageChunk(DIALChatCompletionBaseChunk):
+class ContentStageChunk(BaseChunk):
     choice_index: int
     stage_index: int
     content: str
 
-    def __init__(self, choice_index: str, stage_index: int, content: str):
+    def __init__(self, choice_index: int, stage_index: int, content: str):
         self.choice_index = choice_index
         self.stage_index = stage_index
         self.content = content
@@ -182,7 +167,7 @@ class DIALChatCompletionContentStageChunk(DIALChatCompletionBaseChunk):
         }
 
 
-class DIALChatCompletionAttachmentStageChunk(DIALChatCompletionBaseChunk):
+class AttachmentStageChunk(BaseChunk):
     choice_index: int
     stage_index: int
     attachment_index: int
@@ -196,7 +181,7 @@ class DIALChatCompletionAttachmentStageChunk(DIALChatCompletionBaseChunk):
 
     def __init__(
         self,
-        choice_index: str,
+        choice_index: int,
         stage_index: int,
         attachment_index: int,
         type: Optional[str] = None,
@@ -228,7 +213,9 @@ class DIALChatCompletionAttachmentStageChunk(DIALChatCompletionBaseChunk):
                             "stages": [
                                 {
                                     "index": self.stage_index,
-                                    "attachments": [{"index": self.attachment_index}],
+                                    "attachments": [
+                                        {"index": self.attachment_index}
+                                    ],
                                     "status": None,
                                 }
                             ]
@@ -239,9 +226,9 @@ class DIALChatCompletionAttachmentStageChunk(DIALChatCompletionBaseChunk):
             "usage": None,
         }
 
-        attachment = result["choices"][0]["delta"]["custom_content"]["stages"][0][
-            "attachments"
-        ][0]
+        attachment = result["choices"][0]["delta"]["custom_content"]["stages"][
+            0
+        ]["attachments"][0]
         if self.type:
             attachment["type"] = self.type
         if self.title:
@@ -258,7 +245,7 @@ class DIALChatCompletionAttachmentStageChunk(DIALChatCompletionBaseChunk):
         return result
 
 
-class DIALChatCompletionStateChunk(DIALChatCompletionBaseChunk):
+class StateChunk(BaseChunk):
     choice_index: int
     state: Any
 
@@ -279,7 +266,7 @@ class DIALChatCompletionStateChunk(DIALChatCompletionBaseChunk):
         }
 
 
-class DIALChatCompletionAttachmentChunk(DIALChatCompletionBaseChunk):
+class AttachmentChunk(BaseChunk):
     choice_index: int
     attachment_index: int
 
@@ -326,7 +313,9 @@ class DIALChatCompletionAttachmentChunk(DIALChatCompletionBaseChunk):
             "usage": None,
         }
 
-        attachment = result["choices"][0]["delta"]["custom_content"]["attachments"][0]
+        attachment = result["choices"][0]["delta"]["custom_content"][
+            "attachments"
+        ][0]
         if self.type:
             attachment["type"] = self.type
         if self.title:
@@ -343,7 +332,7 @@ class DIALChatCompletionAttachmentChunk(DIALChatCompletionBaseChunk):
         return result
 
 
-class DIALChatCompletionUsageChunk(DIALChatCompletionBaseChunk):
+class UsageChunk(BaseChunk):
     prompt_tokens: int
     completion_tokens: int
 
@@ -361,7 +350,7 @@ class DIALChatCompletionUsageChunk(DIALChatCompletionBaseChunk):
         }
 
 
-class DIALChatCompletionUsagePerModelChunk(DIALChatCompletionBaseChunk):
+class UsagePerModelChunk(BaseChunk):
     index: int
     model: str
     prompt_tokens: int
@@ -388,12 +377,13 @@ class DIALChatCompletionUsagePerModelChunk(DIALChatCompletionBaseChunk):
                         "model": self.model,
                         "prompt_tokens": self.prompt_tokens,
                         "completion_tokens": self.completion_tokens,
-                        "total_tokens": self.prompt_tokens + self.completion_tokens,
+                        "total_tokens": self.prompt_tokens
+                        + self.completion_tokens,
                     }
                 ]
             }
         }
 
 
-class DIALChatCompletionEndChunk:
+class EndChunk:
     pass

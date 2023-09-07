@@ -1,15 +1,14 @@
-from dialsdk.chat_completion.chunks import (
-    DIALChatCompletionContentChunk,
-    DIALChatCompletionEndChoiceChunk,
-    DIALChatCompletionAttachmentChunk,
-    DIALChatCompletionStateChunk,
-)
-from contextlib import contextmanager
-from dialsdk.stage import Stage
 from asyncio import Queue
-from typing import Generator
-from typing import Optional, Any
-import asyncio
+from contextlib import contextmanager
+from typing import Any, Iterator, Optional
+
+from aidial_sdk.chat_completion.chunks import (
+    AttachmentChunk,
+    ContentChunk,
+    EndChoiceChunk,
+    StateChunk,
+)
+from aidial_sdk.stage import Stage
 
 
 class Choice:
@@ -29,20 +28,15 @@ class Choice:
         self.state_submitted = False
 
     def content(self, content: str) -> None:
-        self.queue.put_nowait(DIALChatCompletionContentChunk(content, self.index))
-
-    # async def acontent(self, content: str) -> None:
-    #     await self.queue.put(DIALChatCompletionContentChunk(content, self.index))
+        self.queue.put_nowait(ContentChunk(content, self.index))
 
     def finish(self, finish_reason: str) -> None:
-        if finished:
+        if self.finished:
             # TODO: Generate warn to log
             return
 
-        finished = True
-        self.queue.put_nowait(
-            DIALChatCompletionEndChoiceChunk(finish_reason, self.index)
-        )
+        self.finished = True
+        self.queue.put_nowait(EndChoiceChunk(finish_reason, self.index))
 
     def attachment(
         self,
@@ -54,7 +48,7 @@ class Choice:
         reference_type: Optional[str] = None,
     ) -> None:
         self.queue.put_nowait(
-            DIALChatCompletionAttachmentChunk(
+            AttachmentChunk(
                 self.index,
                 self.last_attachment_index,
                 type,
@@ -72,11 +66,11 @@ class Choice:
             # TODO: Generate warn to log
             return
 
-        self.queue.put_nowait(DIALChatCompletionStateChunk(self.index, state))
+        self.queue.put_nowait(StateChunk(self.index, state))
         self.state_submitted = True
 
     @contextmanager
-    def stage(self, name: str) -> Generator[Stage, None, None]:
+    def stage(self, name: str) -> Iterator[Stage]:
         stage = Stage(self.queue, self.index, self.last_stage_index)
         stage.start(name)
 

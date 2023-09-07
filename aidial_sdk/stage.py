@@ -1,11 +1,12 @@
 from asyncio import Queue
-from dialsdk.chat_completion.chunks import (
-    DIALChatCompletionStartStageChunk,
-    DIALChatCompletionAttachmentStageChunk,
-    DIALChatCompletionFinishStageChunk,
-    DIALChatCompletionContentStageChunk,
-)
 from typing import Optional
+
+from aidial_sdk.chat_completion.chunks import (
+    AttachmentStageChunk,
+    ContentStageChunk,
+    FinishStageChunk,
+    StartStageChunk,
+)
 
 
 class Stage:
@@ -24,16 +25,12 @@ class Stage:
 
     def start(self, name: str):
         self.queue.put_nowait(
-            DIALChatCompletionStartStageChunk(self.choice_index, self.stage_index, name)
+            StartStageChunk(self.choice_index, self.stage_index, name)
         )
 
     def content(self, content: str):
         self.queue.put_nowait(
-            DIALChatCompletionContentStageChunk(
-                self.choice_index,
-                self.stage_index,
-                content
-            )
+            ContentStageChunk(self.choice_index, self.stage_index, content)
         )
 
     def attachment(
@@ -46,7 +43,7 @@ class Stage:
         reference_type: Optional[str] = None,
     ) -> None:
         self.queue.put_nowait(
-            DIALChatCompletionAttachmentStageChunk(
+            AttachmentStageChunk(
                 self.choice_index,
                 self.stage_index,
                 self.last_attachment_index,
@@ -66,8 +63,6 @@ class Stage:
             return
 
         self.queue.put_nowait(
-            DIALChatCompletionFinishStageChunk(
-                self.choice_index, self.stage_index, status
-            )
+            FinishStageChunk(self.choice_index, self.stage_index, status)
         )
         self.finished = True

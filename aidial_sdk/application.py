@@ -1,0 +1,67 @@
+from json import JSONDecodeError
+from typing import Dict
+
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse, Response, StreamingResponse
+
+from aidial_sdk.assistants import ChatCompletion
+from aidial_sdk.chat_completion.request import ChatCompletionRequest
+from aidial_sdk.chunk_stream import ChunkStream
+from aidial_sdk.utils.streaming import merge_chunks
+
+
+class DIALApp(FastAPI):
+    chat_completion_impls: Dict[str, ChatCompletion] = {}
+
+    def __init__(self):
+        super().__init__()
+
+        self.add_api_route(
+            "/openai/deployments/{deployment_id}/chat/completions",
+            self.__chat_completion,
+            methods=["POST"],
+        )
+
+    def add_chat_completion(
+        self, deployment_name: str, impl: ChatCompletion
+    ) -> None:
+        self.chat_completion_impls[deployment_name] = impl
+
+    async def __chat_completion(
+        self, deployment_id: str, original_request: Request
+    ) -> Response:
+        impl = self.chat_completion_impls.get(deployment_id, None)
+
+        try:
+            body = await original_request.json()
+        except JSONDecodeError as e:
+            return JSONResponse(
+                status_code=400,
+                content={
+                    "error": {
+                        "message": "Your request contained invalid JSON: "
+                        + str(e),
+                        "type": "invalid_request_error",
+                        "param": None,
+                        "code": None,
+                    }
+                },
+            )
+
+        headers = original_request.headers
+        request = ChatCompletionRequest(
+            **body,
+            api_key=headers["Api-Key"],
+            jwt=headers["Authorization"],
+            deployment_id=deployment_id
+        )
+
+        chunk_stream = ChunkStream(request)
+        await chunk_stream._generator(impl.chat_completion, request)
+
+        if request.stream:
+            return StreamingResponse(
+                chunk_stream._generate_stream(), media_type="text/event-stream"
+            )
+        else:
+            return await merge_chunks(chunk_stream._generate_stream())
