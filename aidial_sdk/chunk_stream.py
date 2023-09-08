@@ -1,19 +1,20 @@
 import asyncio
-from contextlib import contextmanager
 from time import time
-from typing import Any, Callable, Coroutine, Optional
+from typing import Any, AsyncGenerator, Callable, Coroutine, Optional
 from uuid import uuid4
+
+from fastapi import HTTPException
 
 from aidial_sdk.chat_completion.chunks import (
     BaseChunk,
     EndChoiceChunk,
     EndChunk,
-    StartChoiceChunk,
     UsageChunk,
     UsagePerModelChunk,
 )
 from aidial_sdk.chat_completion.request import ChatCompletionRequest
-from aidial_sdk.choice import Choice
+from aidial_sdk.choice import Choice, SingleChoice
+from aidial_sdk.exceptions import DIALException
 from aidial_sdk.utils.merge_chunks import merge_recursive
 from aidial_sdk.utils.streaming import (
     DONE_CHUNK,
@@ -42,7 +43,7 @@ class ChunkStream:
         self.model = None
         self.created = int(time())
 
-    async def _generate_stream(self):
+    async def _generate_stream(self) -> AsyncGenerator[Any, None]:
         chunk = self.first_chunk.to_dict()
         add_default_fields(
             chunk,
@@ -60,7 +61,10 @@ class ChunkStream:
             yield chunk
         user_task_finished = False
 
+        self._queue.task_done()
+
         last_end_choice_chunk = None
+        usage_chunk = {}
         while True:
             get_task = asyncio.create_task(self._queue.get())
             done, pending = await asyncio.wait(
@@ -90,11 +94,13 @@ class ChunkStream:
                 (UsageChunk, UsagePerModelChunk),
             ):
                 if last_end_choice_chunk == None:
-                    pass  # TODO
-
-                chunk = merge_recursive(
-                    last_end_choice_chunk, item.to_dict(), path=[]
-                )
+                    usage_chunk = merge_recursive(
+                        usage_chunk, item.to_dict(), path=[]
+                    )
+                else:
+                    last_end_choice_chunk = merge_recursive(
+                        last_end_choice_chunk, item.to_dict(), path=[]
+                    )
             elif isinstance(item, BaseChunk):
                 chunk = item.to_dict()
 
@@ -111,7 +117,9 @@ class ChunkStream:
                     yield chunk
             elif isinstance(item, EndChunk):
                 if last_end_choice_chunk:
-                    chunk = last_end_choice_chunk
+                    chunk = merge_recursive(
+                        last_end_choice_chunk, usage_chunk, []
+                    )
 
                     if self.request.stream:
                         add_default_fields(
@@ -127,7 +135,12 @@ class ChunkStream:
 
                 if self.request.stream:
                     yield DONE_CHUNK
+
+                self._queue.task_done()
+
                 return
+
+            self._queue.task_done()
 
     async def _generator(
         self,
@@ -141,24 +154,44 @@ class ChunkStream:
             [get_task, self.user_task], return_when=asyncio.FIRST_COMPLETED
         )
         if self.user_task in done:
-            self.user_task.result()
+            try:
+                self.user_task.result()
+            except DIALException as e:
+                raise HTTPException(
+                    status_code=e.status_code,
+                    detail={
+                        "message": e.message,
+                        "type": e.type,
+                        "param": e.param,
+                        "code": e.code,
+                    },
+                )
+            except Exception as e:
+                raise HTTPException(
+                    status_code=500,
+                    detail={
+                        "message": e,
+                        "type": "runtime_error",
+                        "param": None,
+                        "code": None,
+                    },
+                )
 
         self.first_chunk = (
             get_task.result() if get_task in done else await get_task
         )
 
-    @contextmanager
-    def choice(self):
+    def choice(self) -> Choice:
         choice = Choice(self._queue, self._last_choice_index)
-        self._queue.put_nowait(
-            StartChoiceChunk(choice_index=self._last_choice_index)
-        )
         self._last_choice_index += 1
 
-        try:
-            yield choice
-        finally:
-            self._queue.put_nowait(EndChoiceChunk(index=choice.index))
+        return choice
+
+    def single_choice(self) -> SingleChoice:
+        choice = SingleChoice(self._queue, self._last_choice_index)
+        self._last_choice_index += 1
+
+        return choice
 
     def usage_per_model(
         self, model: str, prompt_tokens: int = 0, completion_tokens: int = 0
@@ -181,3 +214,6 @@ class ChunkStream:
             pass  # TODO:
 
         self._queue.put_nowait(UsageChunk(prompt_tokens, completion_tokens))
+
+    async def aflush(self):
+        await self._queue.join()

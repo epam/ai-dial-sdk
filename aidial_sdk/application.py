@@ -1,5 +1,5 @@
 from json import JSONDecodeError
-from typing import Dict
+from typing import Dict, Optional
 
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
@@ -8,6 +8,22 @@ from aidial_sdk.assistants import ChatCompletion
 from aidial_sdk.chat_completion.request import ChatCompletionRequest
 from aidial_sdk.chunk_stream import ChunkStream
 from aidial_sdk.utils.streaming import merge_chunks
+
+
+def json_error(
+    message: Optional[str] = None,
+    type: Optional[str] = None,
+    param: Optional[str] = None,
+    code: Optional[str] = None,
+):
+    return {
+        "error": {
+            "message": message,
+            "type": type,
+            "param": param,
+            "code": code,
+        }
+    }
 
 
 class DIALApp(FastAPI):
@@ -30,22 +46,26 @@ class DIALApp(FastAPI):
     async def __chat_completion(
         self, deployment_id: str, original_request: Request
     ) -> Response:
-        impl = self.chat_completion_impls.get(deployment_id, None)
+        impl = self.chat_completion_impls[deployment_id]
+
+        if not impl:
+            return JSONResponse(
+                status_code=404,
+                content=json_error(
+                    message="The API deployment for this resource does not exist.",
+                    code="DeploymentNotFound",
+                ),
+            )
 
         try:
             body = await original_request.json()
         except JSONDecodeError as e:
             return JSONResponse(
                 status_code=400,
-                content={
-                    "error": {
-                        "message": "Your request contained invalid JSON: "
-                        + str(e),
-                        "type": "invalid_request_error",
-                        "param": None,
-                        "code": None,
-                    }
-                },
+                content=json_error(
+                    message="Your request contained invalid JSON: " + str(e),
+                    type="invalid_request_error",
+                ),
             )
 
         headers = original_request.headers

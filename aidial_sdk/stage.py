@@ -13,15 +13,26 @@ class Stage:
     queue: Queue
     choice_index: int
     stage_index: int
+    name: str
     last_attachment_index: int
     finished: bool
 
-    def __init__(self, queue: Queue, choice_index: int, stage_index: int):
+    def __init__(
+        self, queue: Queue, choice_index: int, stage_index: int, name: str
+    ):
         self.queue = queue
         self.choice_index = choice_index
         self.stage_index = stage_index
         self.last_attachment_index = 0
         self.finished = False
+        self.name = name
+
+    def __enter__(self):
+        self.start(self.name)
+        return self
+
+    def __exit__(self, type, value, traceback):
+        self.finish("completed")
 
     def start(self, name: str):
         self.queue.put_nowait(
