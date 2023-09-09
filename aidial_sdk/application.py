@@ -6,7 +6,7 @@ from fastapi.responses import JSONResponse, Response, StreamingResponse
 
 from aidial_sdk.assistants import ChatCompletion
 from aidial_sdk.chat_completion.request import ChatCompletionRequest
-from aidial_sdk.chunk_stream import ChunkStream
+from aidial_sdk.chat_completion.response import ChatCompletionResponse
 from aidial_sdk.utils.streaming import merge_chunks
 
 
@@ -72,16 +72,16 @@ class DIALApp(FastAPI):
         request = ChatCompletionRequest(
             **body,
             api_key=headers["Api-Key"],
-            jwt=headers["Authorization"],
+            jwt=headers.get("Authorization", ""),
             deployment_id=deployment_id
         )
 
-        chunk_stream = ChunkStream(request)
-        await chunk_stream._generator(impl.chat_completion, request)
+        response = ChatCompletionResponse(request)
+        await response._generator(impl.chat_completion, request)
 
         if request.stream:
             return StreamingResponse(
-                chunk_stream._generate_stream(), media_type="text/event-stream"
+                response._generate_stream(), media_type="text/event-stream"
             )
         else:
-            return await merge_chunks(chunk_stream._generate_stream())
+            return await merge_chunks(response._generate_stream())

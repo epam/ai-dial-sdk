@@ -5,6 +5,7 @@ from uuid import uuid4
 
 from fastapi import HTTPException
 
+from aidial_sdk.chat_completion.choice import Choice, SingleChoice
 from aidial_sdk.chat_completion.chunks import (
     BaseChunk,
     EndChoiceChunk,
@@ -13,8 +14,7 @@ from aidial_sdk.chat_completion.chunks import (
     UsagePerModelChunk,
 )
 from aidial_sdk.chat_completion.request import ChatCompletionRequest
-from aidial_sdk.choice import Choice, SingleChoice
-from aidial_sdk.exceptions import DIALException
+from aidial_sdk.exceptions import HTTPException as DialHttpException
 from aidial_sdk.utils.merge_chunks import merge_recursive
 from aidial_sdk.utils.streaming import (
     DONE_CHUNK,
@@ -23,7 +23,7 @@ from aidial_sdk.utils.streaming import (
 )
 
 
-class ChunkStream:
+class ChatCompletionResponse:
     _queue: asyncio.Queue
     _last_choice_index: int
     _last_usage_per_model_index: int
@@ -147,7 +147,7 @@ class ChunkStream:
         producer: Callable[[Any, Any], Coroutine[Any, Any, Any]],
         request: ChatCompletionRequest,
     ):
-        self.user_task = asyncio.create_task(producer(self, request))
+        self.user_task = asyncio.create_task(producer(request, self))
 
         get_task = asyncio.create_task(self._queue.get())
         done, pending = await asyncio.wait(
@@ -156,7 +156,7 @@ class ChunkStream:
         if self.user_task in done:
             try:
                 self.user_task.result()
-            except DIALException as e:
+            except DialHttpException as e:
                 raise HTTPException(
                     status_code=e.status_code,
                     detail={

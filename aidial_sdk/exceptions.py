@@ -1,7 +1,7 @@
 from typing import Optional
 
 
-class DIALException(Exception):
+class HTTPException(Exception):
     def __init__(
         self,
         message: str,

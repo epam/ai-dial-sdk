@@ -10,7 +10,7 @@ from aidial_sdk.chat_completion.chunks import (
     UsageChunk,
     UsagePerModelChunk,
 )
-from aidial_sdk.stage import Stage
+from aidial_sdk.chat_completion.stage import Stage
 
 
 class Choice:

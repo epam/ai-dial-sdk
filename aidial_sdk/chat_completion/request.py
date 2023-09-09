@@ -1,8 +1,15 @@
 from typing import Any, List, Mapping, Optional, Union
 
-from pydantic import BaseModel, ConfigDict, confloat, conint, conlist
+from aidial_sdk.pydantic_v1 import (
+    BaseModel,
+    ConfigDict,
+    Extra,
+    confloat,
+    conint,
+    conlist,
+)
 
-MODEL_CONFIG = ConfigDict(extra="forbid")
+MODEL_CONFIG = ConfigDict(extra=Extra.forbid)
 
 
 class Attachment(BaseModel):
@@ -58,7 +65,7 @@ class ChatCompletionRequest(BaseModel):
     temperature: Optional[confloat(ge=0, le=2)] = None
     top_p: Optional[confloat(ge=0, le=1)] = None
     n: Optional[conint(ge=1, le=128)] = None
-    stop: Optional[Union[str, conlist(str, max_length=4)]] = None
+    stop: Optional[Union[str, conlist(str, max_items=4)]] = None
     max_tokens: Optional[conint(ge=1)] = None
     presence_penalty: Optional[confloat(ge=-2, le=2)] = None
     frequency_penalty: Optional[confloat(ge=-2, le=2)] = None
