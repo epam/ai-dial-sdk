@@ -84,4 +84,6 @@ class DIALApp(FastAPI):
                 response._generate_stream(), media_type="text/event-stream"
             )
         else:
-            return await merge_chunks(response._generate_stream())
+            return JSONResponse(
+                content=await merge_chunks(response._generate_stream())
+            )

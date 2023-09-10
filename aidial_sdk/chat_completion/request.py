@@ -3,10 +3,11 @@ from typing import Any, List, Mapping, Optional, Union
 from aidial_sdk.pydantic_v1 import (
     BaseModel,
     ConfigDict,
+    ConstrainedFloat,
+    ConstrainedInt,
+    ConstrainedList,
     Extra,
-    confloat,
-    conint,
-    conlist,
+    PositiveInt,
 )
 
 MODEL_CONFIG = ConfigDict(extra=Extra.forbid)
@@ -55,6 +56,31 @@ class Function(BaseModel):
     model_config = MODEL_CONFIG
 
 
+class Temperature(ConstrainedFloat):
+    ge = 0
+    le = 2
+
+
+class TopP(ConstrainedFloat):
+    ge = 0
+    le = 1
+
+
+class N(ConstrainedInt):
+    ge = 1
+    le = 128
+
+
+class Stop(ConstrainedList):
+    max_items: int = 4
+    __args__ = tuple([str])
+
+
+class Penalty(ConstrainedFloat):
+    ge = -2
+    le = 2
+
+
 class ChatCompletionRequest(BaseModel):
     model: Optional[str] = None
     messages: List[Message]
@@ -62,18 +88,18 @@ class ChatCompletionRequest(BaseModel):
     function_call: Optional[Union[str, Mapping[str, str]]] = None
     addons: Optional[List[Addon]] = None
     stream: bool = False
-    temperature: Optional[confloat(ge=0, le=2)] = None
-    top_p: Optional[confloat(ge=0, le=1)] = None
-    n: Optional[conint(ge=1, le=128)] = None
-    stop: Optional[Union[str, conlist(str, max_items=4)]] = None
-    max_tokens: Optional[conint(ge=1)] = None
-    presence_penalty: Optional[confloat(ge=-2, le=2)] = None
-    frequency_penalty: Optional[confloat(ge=-2, le=2)] = None
+    temperature: Optional[Temperature] = None
+    top_p: Optional[TopP] = None
+    n: Optional[N] = None
+    stop: Optional[Union[str, Stop]] = None
+    max_tokens: Optional[PositiveInt] = None
+    presence_penalty: Optional[Penalty] = None
+    frequency_penalty: Optional[Penalty] = None
     logit_bias: Optional[Mapping[int, float]] = None
     user: Optional[str] = None
 
     api_key: str
-    jwt: Optional[str]
+    jwt: Optional[str] = None
     deployment_id: str
 
     model_config = MODEL_CONFIG

@@ -1,42 +1,48 @@
-from aidial_sdk import (
-    DIALApp,
-    ChatCompletion,
-    ChunkStream,
-    ChatCompletionRequest,
-)
 import uvicorn
-import asyncio
+
+from aidial_sdk import (
+    ChatCompletionRequest,
+    DIALApp,
+    SingleChoice,
+    SingleChoiceChatCompletion,
+)
 
 
-class ExampleApplication(ChatCompletion):
-    async def chat_completion(
-        self, stream: ChunkStream, request: ChatCompletionRequest
+class ExampleApplication(SingleChoiceChatCompletion):
+    async def generate_choice(
+        self,
+        request: ChatCompletionRequest,
+        choice: SingleChoice,
     ):
-        for _ in range(request.n or 1):
-            with stream.choice() as choice:
-                choice.content("Some ")
+        # choice1 = stream.choice()
+        # choice2 = stream.choice()
 
-                await asyncio.sleep(2)
+        choice.content("Content")
+        choice.content("Content")
 
-                choice.content("Content")
+        await choice.aflush()
 
-                choice.attachment(
-                    title="Some document title", data="Some document content..."
-                )
+        # raise DIALException(message="some_text")
 
-                with choice.stage("Some stage") as stage:
-                    stage.content("Some stage content")
-                    stage.attachment(
-                        title="Some document title for stage",
-                        data="Some document content for stage...",
-                    )
+        choice.attachment(
+            title="Some document title", data="Some document content..."
+        )
 
-                choice.state([1, 2, 3, 4, 5])
+        with choice.stage("Some stage #2") as stage:
+            stage.content("Some stage content")
+            stage.attachment(
+                title="Some document title for stage",
+                data="Some document content for stage...",
+            )
 
-        stream.usage(15, 23)
+        choice.state([1, 2, 3, 4, 5])
 
-        stream.usage_per_model("gpt-4", 15, 23)
-        stream.usage_per_model("gpt-5", 15, 23)
+        choice.usage(15, 23)
+
+        choice.usage_per_model("gpt-4", 15, 23)
+        choice.usage_per_model("gpt-5", 15, 23)
+
+        await choice.aflush()
 
 
 app = DIALApp()
