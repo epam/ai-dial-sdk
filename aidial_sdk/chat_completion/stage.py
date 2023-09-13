@@ -1,5 +1,6 @@
 from asyncio import Queue
-from typing import Optional
+from types import TracebackType
+from typing import Optional, Type
 
 from aidial_sdk.chat_completion.chunks import (
     AttachmentStageChunk,
@@ -7,6 +8,7 @@ from aidial_sdk.chat_completion.chunks import (
     FinishStageChunk,
     StartStageChunk,
 )
+from aidial_sdk.chat_completion.enums import Status
 
 
 class Stage:
@@ -15,7 +17,7 @@ class Stage:
     stage_index: int
     name: str
     last_attachment_index: int
-    finished: bool
+    closed: bool
 
     def __init__(
         self, queue: Queue, choice_index: int, stage_index: int, name: str
@@ -24,20 +26,23 @@ class Stage:
         self.choice_index = choice_index
         self.stage_index = stage_index
         self.last_attachment_index = 0
-        self.finished = False
+        self.closed = False
         self.name = name
 
     def __enter__(self):
-        self.start(self.name)
+        self.open()
         return self
 
-    def __exit__(self, type, value, traceback):
-        self.finish("completed")
+    def __exit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc: Optional[BaseException],
+        traceback: Optional[TracebackType],
+    ) -> Optional[bool]:
+        if not exc:
+            self.close()
 
-    def start(self, name: str):
-        self.queue.put_nowait(
-            StartStageChunk(self.choice_index, self.stage_index, name)
-        )
+        return False
 
     def content(self, content: str):
         self.queue.put_nowait(
@@ -68,12 +73,17 @@ class Stage:
         )
         self.last_attachment_index += 1
 
-    def finish(self, status: str):
-        if self.finished:
-            pass  # TODO: logging
+    def open(self):
+        self.queue.put_nowait(
+            StartStageChunk(self.choice_index, self.stage_index, self.name)
+        )
+
+    def close(self, status: Status = Status.COMPLETED):
+        if self.closed:
+            pass  # TODO: exception
             return
 
         self.queue.put_nowait(
             FinishStageChunk(self.choice_index, self.stage_index, status)
         )
-        self.finished = True
+        self.closed = True

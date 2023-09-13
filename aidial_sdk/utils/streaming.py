@@ -51,5 +51,21 @@ async def merge_chunks(
     return response
 
 
-def generate_chunk(data: Any):
+def format_chunk(data: Any):
     return "data: " + json.dumps(data, separators=(",", ":")) + "\n\n"
+
+
+def json_error(
+    message: Optional[str] = None,
+    type: Optional[str] = None,
+    param: Optional[str] = None,
+    code: Optional[str] = None,
+):
+    return {
+        "error": {
+            "message": message,
+            "type": type,
+            "param": param,
+            "code": code,
+        }
+    }

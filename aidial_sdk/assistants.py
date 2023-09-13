@@ -16,9 +16,7 @@ class ChatCompletion(ABC):
 
 class SingleChoiceChatCompletion(ChatCompletion):
     async def generate_choice(
-        self,
-        request: ChatCompletionRequest,
-        choice: SingleChoice,
+        self, request: ChatCompletionRequest, choice: SingleChoice
     ) -> None:
         """Implement function that generate choice."""
 

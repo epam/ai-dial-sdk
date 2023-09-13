@@ -1,5 +1,6 @@
 from asyncio import Queue
-from typing import Any, Optional
+from types import TracebackType
+from typing import Any, Optional, Type
 
 from aidial_sdk.chat_completion.chunks import (
     AttachmentChunk,
@@ -10,6 +11,7 @@ from aidial_sdk.chat_completion.chunks import (
     UsageChunk,
     UsagePerModelChunk,
 )
+from aidial_sdk.chat_completion.enums import FinishReason
 from aidial_sdk.chat_completion.stage import Stage
 
 
@@ -18,7 +20,7 @@ class Choice:
     index: int
     last_attachment_index: int
     last_stage_index: int
-    finished: bool
+    closed: bool
     state_submitted: bool
 
     def __init__(self, queue: Queue, choice_index: int):
@@ -26,15 +28,23 @@ class Choice:
         self.index = choice_index
         self.last_attachment_index = 0
         self.last_stage_index = 0
-        self.finished = False
+        self.closed = False
         self.state_submitted = False
 
     def __enter__(self):
-        self.start()
+        self.open()
         return self
 
-    def __exit__(self, type, value, traceback):
-        self.finish()
+    def __exit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc: Optional[BaseException],
+        traceback: Optional[TracebackType],
+    ) -> Optional[bool]:
+        if not exc:
+            self.close()
+
+        return False
 
     def content(self, content: str) -> None:
         self._queue.put_nowait(ContentChunk(content, self.index))
@@ -64,7 +74,7 @@ class Choice:
 
     def state(self, state: Any) -> None:
         if self.state_submitted:
-            # TODO: Generate warn to log
+            # TODO: Generate exception
             return
 
         self._queue.put_nowait(StateChunk(self.index, state))
@@ -76,15 +86,15 @@ class Choice:
 
         return stage
 
-    def start(self):
+    def open(self):
         self._queue.put_nowait(StartChoiceChunk(choice_index=self.index))
 
-    def finish(self, finish_reason: str = "stop") -> None:
-        if self.finished:
-            # TODO: Generate warn to log
+    def close(self, finish_reason: FinishReason = FinishReason.STOP) -> None:
+        if self.closed:
+            # TODO: Generate exception
             return
 
-        self.finished = True
+        self.closed = True
         self._queue.put_nowait(EndChoiceChunk(finish_reason, self.index))
 
 

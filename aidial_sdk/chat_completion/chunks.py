@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Any, Optional
 
+from aidial_sdk.chat_completion.enums import FinishReason, Status
+
 
 class BaseChunk(ABC):
     @abstractmethod
@@ -28,11 +30,11 @@ class StartChoiceChunk(BaseChunk):
 
 
 class EndChoiceChunk(BaseChunk):
-    finish_reason: str
+    finish_reason: FinishReason
     index: int
     timestamp: int
 
-    def __init__(self, finish_reason="stop", index: int = 0):
+    def __init__(self, finish_reason: FinishReason, index: int = 0):
         self.finish_reason = finish_reason
         self.index = index
 
@@ -41,7 +43,7 @@ class EndChoiceChunk(BaseChunk):
             "choices": [
                 {
                     "index": self.index,
-                    "finish_reason": self.finish_reason,
+                    "finish_reason": self.finish_reason.value,
                     "delta": {},
                 }
             ],
@@ -105,9 +107,9 @@ class StartStageChunk(BaseChunk):
 class FinishStageChunk(BaseChunk):
     choice_index: int
     stage_index: int
-    status: str
+    status: Status
 
-    def __init__(self, choice_index: int, stage_index: int, status: str):
+    def __init__(self, choice_index: int, stage_index: int, status: Status):
         self.choice_index = choice_index
         self.stage_index = stage_index
         self.status = status
@@ -123,7 +125,7 @@ class FinishStageChunk(BaseChunk):
                             "stages": [
                                 {
                                     "index": self.stage_index,
-                                    "status": self.status,
+                                    "status": self.status.value,
                                 }
                             ]
                         }
@@ -386,4 +388,7 @@ class UsagePerModelChunk(BaseChunk):
 
 
 class EndChunk:
-    pass
+    exc: Optional[Exception]
+
+    def __init__(self, exc: Optional[Exception] = None):
+        self.exc = exc
