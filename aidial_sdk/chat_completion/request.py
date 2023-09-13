@@ -1,4 +1,4 @@
-from typing import Any, List, Mapping, Optional, Union
+from typing import Any, List, Literal, Mapping, Optional, Union
 
 from aidial_sdk.pydantic_v1 import (
     BaseModel,
@@ -32,7 +32,7 @@ class CustomContent(BaseModel):
 
 
 class Message(BaseModel):
-    role: str
+    role: Literal["system", "user", "assistant", "function"]
     content: Optional[str] = None
     custom_content: Optional[CustomContent] = None
     name: Optional[str] = None

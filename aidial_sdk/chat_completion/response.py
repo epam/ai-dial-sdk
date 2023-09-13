@@ -7,7 +7,7 @@ from uuid import uuid4
 
 from fastapi import HTTPException
 
-from aidial_sdk.chat_completion.choice import Choice, SingleChoice
+from aidial_sdk.chat_completion.choice import Choice
 from aidial_sdk.chat_completion.chunks import (
     BaseChunk,
     EndChoiceChunk,
@@ -269,7 +269,7 @@ class ChatCompletionResponse:
             get_task.result() if get_task in done else await get_task
         )
 
-    def choice(self) -> Choice:
+    def create_choice(self) -> Choice:
         self._generation_started = True
 
         if self._last_choice_index >= (self.request.n or 1):
@@ -280,20 +280,26 @@ class ChatCompletionResponse:
 
         return choice
 
-    def single_choice(self) -> SingleChoice:
+    def create_single_choice(self) -> Choice:
         self._generation_started = True
 
         if self._last_choice_index > 0:
             self._runtime_error(
                 "Trying to generate a signle choice after choice"
             )
+        if (self.request.n or 1) > 1:
+            raise DialHttpException(
+                status_code=422,
+                message=f"{self.request.deployment_id} deployment doesn't support n > 1",
+                type="invalid_request_error",
+            )
 
-        choice = SingleChoice(self._queue, self._last_choice_index)
+        choice = Choice(self._queue, self._last_choice_index)
         self._last_choice_index += 1
 
         return choice
 
-    def usage_per_model(
+    def add_usage_per_model(
         self, model: str, prompt_tokens: int = 0, completion_tokens: int = 0
     ):
         self._generation_started = True
@@ -313,7 +319,7 @@ class ChatCompletionResponse:
         )
         self._last_usage_per_model_index += 1
 
-    def usage(self, prompt_tokens: int = 0, completion_tokens: int = 0):
+    def set_usage(self, prompt_tokens: int = 0, completion_tokens: int = 0):
         self._generation_started = True
 
         if self._usage_generated:

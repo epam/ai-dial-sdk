@@ -1,48 +1,56 @@
 import uvicorn
 
 from aidial_sdk import (
+    ChatCompletion,
     ChatCompletionRequest,
+    ChatCompletionResponse,
     DIALApp,
-    SingleChoice,
-    SingleChoiceChatCompletion,
 )
+from aidial_sdk.chat_completion.enums import FinishReason, Status
+from aidial_sdk.exceptions import HTTPException
 
 
-class ExampleApplication(SingleChoiceChatCompletion):
-    async def generate_choice(
-        self,
-        request: ChatCompletionRequest,
-        choice: SingleChoice,
-    ):
-        # choice1 = stream.choice()
-        # choice2 = stream.choice()
+class ExampleApplication(ChatCompletion):
+    async def chat_completion(
+        self, request: ChatCompletionRequest, response: ChatCompletionResponse
+    ) -> None:
+        response.set_created(123456)
+        response.set_model("gpt-10")
+        response.set_response_id("random")
 
-        choice.content("Content")
-        choice.content("Content")
+        with response.create_single_choice() as choice:
+            choice.append_content("Content")
+            choice.append_content("Content2")
 
-        await choice.aflush()
+            await response.aflush()
 
-        # raise DIALException(message="some_text")
+            # raise HTTPException(
+            #     message="some_text",
+            #     status_code=423,
+            # )
+            # raise ValueError("save must be True if recurse is True")
 
-        choice.attachment(
-            title="Some document title", data="Some document content..."
-        )
-
-        with choice.stage("Some stage #2") as stage:
-            stage.content("Some stage content")
-            stage.attachment(
-                title="Some document title for stage",
-                data="Some document content for stage...",
+            choice.add_attachment(
+                title="Some document title", data="Some document content..."
             )
 
-        choice.state([1, 2, 3, 4, 5])
+            stage = choice.create_stage("Some stage #1")
+            stage.open()
+            stage.append_content("12")
+            stage.close(Status.FAILED)
 
-        choice.usage(15, 23)
+            with choice.create_stage("Some stage #2") as stage:
+                stage.append_content("Some stage content")
+                stage.add_attachment(
+                    title="Some document title for stage",
+                    data="Some document content for stage...",
+                )
 
-        choice.usage_per_model("gpt-4", 15, 23)
-        choice.usage_per_model("gpt-5", 15, 23)
+            choice.append_state([1, 2, 3, 4, 5])
 
-        await choice.aflush()
+        response.set_usage(15, 23)
+        response.add_usage_per_model("gpt-4", 15, 23)
+        response.add_usage_per_model("gpt-5", 23, 15)
 
 
 app = DIALApp()

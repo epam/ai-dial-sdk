@@ -40,16 +40,18 @@ class Stage:
         traceback: Optional[TracebackType],
     ) -> Optional[bool]:
         if not exc:
-            self.close()
+            self.close(Status.COMPLETED)
+        else:
+            self.close(Status.FAILED)
 
         return False
 
-    def content(self, content: str):
+    def append_content(self, content: str):
         self.queue.put_nowait(
             ContentStageChunk(self.choice_index, self.stage_index, content)
         )
 
-    def attachment(
+    def add_attachment(
         self,
         type: Optional[str] = None,
         title: Optional[str] = None,

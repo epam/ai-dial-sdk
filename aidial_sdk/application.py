@@ -8,7 +8,7 @@ from fastapi.responses import JSONResponse, Response, StreamingResponse
 from aidial_sdk.assistants import ChatCompletion
 from aidial_sdk.chat_completion.request import ChatCompletionRequest
 from aidial_sdk.chat_completion.response import ChatCompletionResponse
-from aidial_sdk.telemetry import Telemetry
+from aidial_sdk.header_propagation import HeaderPropogetaion
 from aidial_sdk.utils.log_config import LogConfig
 from aidial_sdk.utils.streaming import json_error, merge_chunks
 
@@ -19,20 +19,25 @@ class DIALApp(FastAPI):
     chat_completion_impls: Dict[str, ChatCompletion] = {}
 
     def __init__(
-        self, dial_url: Optional[str] = None, pass_auth_headers: bool = False
+        self,
+        dial_url: Optional[str] = None,
+        propagation_auth_headers: bool = False,
     ):
         super().__init__()
 
-        # TODO: check dial_url is setted for pass_auth_headers
+        if propagation_auth_headers:
+            if not dial_url:
+                raise ValueError(
+                    "dial_url is required if propagation auth headers is enabled"
+                )
+
+            HeaderPropogetaion(self, dial_url)
 
         self.add_api_route(
             "/openai/deployments/{deployment_id}/chat/completions",
             self.__chat_completion,
             methods=["POST"],
         )
-
-        if pass_auth_headers:
-            Telemetry(self, dial_url, pass_auth_headers)
 
     def add_chat_completion(
         self, deployment_name: str, impl: ChatCompletion

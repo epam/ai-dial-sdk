@@ -1,10 +1,7 @@
-import logging
 import os
 
 from aidial_sdk.pydantic_v1 import BaseModel
 
-# By default (in prod) we don't want to print debug messages,
-# because they typically contain prompts.
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
 
@@ -30,7 +27,6 @@ class LogConfig(BaseModel):
     }
     loggers = {
         "app": {"handlers": ["default"], "level": LOG_LEVEL},
-        "bedrock": {"handlers": ["default"], "level": LOG_LEVEL},
         "uvicorn": {
             "handlers": ["default"],
             "level": LOG_LEVEL,

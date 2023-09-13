@@ -16,6 +16,12 @@ class HTTPException(Exception):
         self.param = param
         self.code = code
 
-    def __repr__(self) -> str:
-        class_name = self.__class__.__name__
-        return f"{class_name}(status_code={self.status_code!r}, message={self.message!r})"
+    def __repr__(self):
+        return "%s(message=%r, status_code=%r, type=%r, param=%r, code=%r)" % (
+            self.__class__.__name__,
+            self.message,
+            self.status_code,
+            self.type,
+            self.param,
+            self.code,
+        )

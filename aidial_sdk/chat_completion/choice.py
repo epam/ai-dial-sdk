@@ -8,8 +8,6 @@ from aidial_sdk.chat_completion.chunks import (
     EndChoiceChunk,
     StartChoiceChunk,
     StateChunk,
-    UsageChunk,
-    UsagePerModelChunk,
 )
 from aidial_sdk.chat_completion.enums import FinishReason
 from aidial_sdk.chat_completion.stage import Stage
@@ -43,13 +41,14 @@ class Choice:
     ) -> Optional[bool]:
         if not exc:
             self.close()
-
+        else:
+            self.close()
         return False
 
-    def content(self, content: str) -> None:
+    def append_content(self, content: str) -> None:
         self._queue.put_nowait(ContentChunk(content, self.index))
 
-    def attachment(
+    def add_attachment(
         self,
         type: Optional[str] = None,
         title: Optional[str] = None,
@@ -72,7 +71,7 @@ class Choice:
         )
         self.last_attachment_index += 1
 
-    def state(self, state: Any) -> None:
+    def append_state(self, state: Any) -> None:
         if self.state_submitted:
             # TODO: Generate exception
             return
@@ -80,11 +79,16 @@ class Choice:
         self._queue.put_nowait(StateChunk(self.index, state))
         self.state_submitted = True
 
-    def stage(self, name: str) -> Stage:
+    def create_stage(self, name: str) -> Stage:
         stage = Stage(self._queue, self.index, self.last_stage_index, name)
         self.last_stage_index += 1
 
         return stage
+
+    def single_choice(
+        self,
+    ):
+        pass
 
     def open(self):
         self._queue.put_nowait(StartChoiceChunk(choice_index=self.index))
@@ -96,30 +100,3 @@ class Choice:
 
         self.closed = True
         self._queue.put_nowait(EndChoiceChunk(finish_reason, self.index))
-
-
-class SingleChoice(Choice):
-    _last_usage_per_model_index: int
-
-    def __init__(self, queue: Queue, choice_index: int):
-        super().__init__(queue, choice_index)
-        self._last_usage_per_model_index = 0
-
-    def usage_per_model(
-        self, model: str, prompt_tokens: int = 0, completion_tokens: int = 0
-    ):
-        self._queue.put_nowait(
-            UsagePerModelChunk(
-                self._last_usage_per_model_index,
-                model,
-                prompt_tokens,
-                completion_tokens,
-            )
-        )
-        self._last_usage_per_model_index += 1
-
-    def usage(self, prompt_tokens: int = 0, completion_tokens: int = 0):
-        self._queue.put_nowait(UsageChunk(prompt_tokens, completion_tokens))
-
-    async def aflush(self):
-        await self._queue.join()
