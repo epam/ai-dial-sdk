@@ -5,7 +5,7 @@ from typing import Dict, Optional
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 
-from aidial_sdk.assistants import ChatCompletion
+from aidial_sdk.chat_completion.chat_completion import ChatCompletion
 from aidial_sdk.chat_completion.request import ChatCompletionRequest
 from aidial_sdk.chat_completion.response import ChatCompletionResponse
 from aidial_sdk.header_propagation import HeaderPropogetaion
@@ -35,7 +35,7 @@ class DIALApp(FastAPI):
 
         self.add_api_route(
             "/openai/deployments/{deployment_id}/chat/completions",
-            self.__chat_completion,
+            self._chat_completion,
             methods=["POST"],
         )
 
@@ -44,7 +44,7 @@ class DIALApp(FastAPI):
     ) -> None:
         self.chat_completion_impls[deployment_name] = impl
 
-    async def __chat_completion(
+    async def _chat_completion(
         self, deployment_id: str, original_request: Request
     ) -> Response:
         impl = self.chat_completion_impls.get(deployment_id, None)
@@ -73,11 +73,12 @@ class DIALApp(FastAPI):
         request = ChatCompletionRequest(
             **body,
             api_key=headers["Api-Key"],
-            jwt=headers.get("Authorization", None),
+            jwt=headers.get("Authorization"),
             deployment_id=deployment_id,
         )
 
-        logging.getLogger(deployment_id).debug(f"Request body: {body}")
+        deployment_logger = logging.getLogger(deployment_id)
+        deployment_logger.debug(f"Request body: {body}")
 
         response = ChatCompletionResponse(request)
         await response._generator(impl.chat_completion, request)
@@ -87,6 +88,7 @@ class DIALApp(FastAPI):
                 response._generate_stream(), media_type="text/event-stream"
             )
         else:
-            return JSONResponse(
-                content=await merge_chunks(response._generate_stream())
-            )
+            response_body = await merge_chunks(response._generate_stream())
+
+            deployment_logger.debug(f"Response body: {response_body}")
+            return JSONResponse(content=response_body)

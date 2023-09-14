@@ -26,7 +26,7 @@ class FastAPIMiddleware:
         await self.app(scope, receive, send)
 
 
-class HeaderPropogetaion:
+class HeaderPropagation:
     _dial_url: str
 
     def __init__(self, app: FastAPI, dial_url: str):

@@ -22,8 +22,7 @@ class ExampleApplication(ChatCompletion):
             choice.append_content("Content")
             choice.append_content("Content2")
 
-            await response.aflush()
-
+            # await response.aflush()
             # raise HTTPException(
             #     message="some_text",
             #     status_code=423,
