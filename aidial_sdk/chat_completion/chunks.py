@@ -1,12 +1,12 @@
 from abc import ABC, abstractmethod
-from typing import Any, Optional
+from typing import Any, Dict, Optional
 
 from aidial_sdk.chat_completion.enums import FinishReason, Status
 
 
 class BaseChunk(ABC):
     @abstractmethod
-    def to_dict(self):
+    def dict(self) -> Dict[str, Any]:
         pass
 
 
@@ -16,7 +16,7 @@ class StartChoiceChunk(BaseChunk):
     def __init__(self, choice_index: int):
         self.choice_index = choice_index
 
-    def to_dict(self):
+    def dict(self):
         return {
             "choices": [
                 {
@@ -38,7 +38,7 @@ class EndChoiceChunk(BaseChunk):
         self.finish_reason = finish_reason
         self.index = index
 
-    def to_dict(self):
+    def dict(self):
         return {
             "choices": [
                 {
@@ -59,7 +59,7 @@ class ContentChunk(BaseChunk):
         self.content = content
         self.choice_index = choice_index
 
-    def to_dict(self):
+    def dict(self):
         return {
             "choices": [
                 {
@@ -81,7 +81,7 @@ class StartStageChunk(BaseChunk):
         self.stage_index = stage_index
         self.name = name
 
-    def to_dict(self):
+    def dict(self):
         return {
             "choices": [
                 {
@@ -114,7 +114,7 @@ class FinishStageChunk(BaseChunk):
         self.stage_index = stage_index
         self.status = status
 
-    def to_dict(self):
+    def dict(self):
         return {
             "choices": [
                 {
@@ -146,7 +146,7 @@ class ContentStageChunk(BaseChunk):
         self.stage_index = stage_index
         self.content = content
 
-    def to_dict(self):
+    def dict(self):
         return {
             "choices": [
                 {
@@ -204,7 +204,7 @@ class AttachmentStageChunk(BaseChunk):
         self.reference_url = reference_url
         self.reference_type = reference_type
 
-    def to_dict(self):
+    def dict(self):
         result = {
             "choices": [
                 {
@@ -255,7 +255,7 @@ class StateChunk(BaseChunk):
         self.state = state
         self.choice_index = choice_index
 
-    def to_dict(self):
+    def dict(self):
         return {
             "choices": [
                 {
@@ -299,7 +299,7 @@ class AttachmentChunk(BaseChunk):
         self.reference_url = reference_url
         self.reference_type = reference_type
 
-    def to_dict(self):
+    def dict(self):
         result = {
             "choices": [
                 {
@@ -342,7 +342,7 @@ class UsageChunk(BaseChunk):
         self.prompt_tokens = prompt_tokens
         self.completion_tokens = completion_tokens
 
-    def to_dict(self):
+    def dict(self):
         return {
             "usage": {
                 "prompt_tokens": self.prompt_tokens,
@@ -370,7 +370,7 @@ class UsagePerModelChunk(BaseChunk):
         self.prompt_tokens = prompt_tokens
         self.completion_tokens = completion_tokens
 
-    def to_dict(self):
+    def dict(self):
         return {
             "statistics": {
                 "usage_per_model": [

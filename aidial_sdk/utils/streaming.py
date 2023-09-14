@@ -25,7 +25,7 @@ async def merge_chunks(
 ) -> Dict[str, Any]:
     response: Any = None
     async for chunk in chunk_stream:
-        if response == None:
+        if response is None:
             response = chunk
         else:
             response["choices"] = merge_recursive(
@@ -34,7 +34,7 @@ async def merge_chunks(
 
         statistics = chunk.get("statistics", None)
         if statistics:
-            if response.get("statistics", None) == None:
+            if response.get("statistics", None) is None:
                 response["statistics"] = statistics
             else:
                 response["statistics"] = merge_recursive(

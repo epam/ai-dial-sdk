@@ -56,7 +56,7 @@ class ChatCompletionResponse:
         self._created = int(time())
 
     async def _generate_stream(self) -> AsyncGenerator[Any, None]:
-        chunk = self.first_chunk.to_dict()
+        chunk = self.first_chunk.dict()
         add_default_fields(
             chunk,
             self._response_id,
@@ -81,9 +81,12 @@ class ChatCompletionResponse:
         usage_chunk = {}
         while True:
             get_task = asyncio.create_task(self._queue.get())
-            done, pending = await asyncio.wait(
-                [get_task, self.user_task], return_when=asyncio.FIRST_COMPLETED
-            )
+            done = (
+                await asyncio.wait(
+                    [get_task, self.user_task],
+                    return_when=asyncio.FIRST_COMPLETED,
+                )
+            )[0]
             if self.user_task in done:
                 if not user_task_finished:
                     end_chunk_generated = False
@@ -125,7 +128,7 @@ class ChatCompletionResponse:
 
             if isinstance(item, EndChoiceChunk):
                 if item.index == (self.request.n or 1) - 1:
-                    last_end_choice_chunk = item.to_dict()
+                    last_end_choice_chunk = item.dict()
                     self._queue.task_done()
                     continue
 
@@ -133,16 +136,16 @@ class ChatCompletionResponse:
                 item,
                 (UsageChunk, UsagePerModelChunk),
             ):
-                if last_end_choice_chunk == None:
+                if last_end_choice_chunk is None:
                     usage_chunk = merge_recursive(
-                        usage_chunk, item.to_dict(), path=[]
+                        usage_chunk, item.dict(), path=[]
                     )
                 else:
                     last_end_choice_chunk = merge_recursive(
-                        last_end_choice_chunk, item.to_dict(), path=[]
+                        last_end_choice_chunk, item.dict(), path=[]
                     )
             elif isinstance(item, BaseChunk):
-                chunk = item.to_dict()
+                chunk = item.dict()
 
                 if self.request.stream:
                     add_default_fields(
@@ -233,9 +236,11 @@ class ChatCompletionResponse:
         self.user_task = asyncio.create_task(producer(request, self))
 
         get_task = asyncio.create_task(self._queue.get())
-        done, pending = await asyncio.wait(
-            [get_task, self.user_task], return_when=asyncio.FIRST_COMPLETED
-        )
+        done = (
+            await asyncio.wait(
+                [get_task, self.user_task], return_when=asyncio.FIRST_COMPLETED
+            )
+        )[0]
         if self.user_task in done:
             try:
                 self.user_task.result()
@@ -249,7 +254,7 @@ class ChatCompletionResponse:
                         code=e.code,
                     ),
                 )
-            except Exception as e:
+            except Exception:
                 self._log.error(format_exc(limit=None, chain=True))
                 raise HTTPException(
                     status_code=500,

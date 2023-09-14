@@ -6,8 +6,9 @@ from aidial_sdk import (
     ChatCompletionResponse,
     DIALApp,
 )
-from aidial_sdk.chat_completion.enums import FinishReason, Status
-from aidial_sdk.exceptions import HTTPException
+from aidial_sdk.chat_completion.enums import Status
+
+# from aidial_sdk.exceptions import HTTPException
 
 
 class ExampleApplication(ChatCompletion):
@@ -19,7 +20,7 @@ class ExampleApplication(ChatCompletion):
         response.set_response_id("random")
 
         with response.create_single_choice() as choice:
-            choice.append_content("Content")
+            choice.append_content("123")
             choice.append_content("Content2")
 
             # await response.aflush()
