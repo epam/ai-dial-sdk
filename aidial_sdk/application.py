@@ -75,6 +75,7 @@ class DIALApp(FastAPI):
             api_key=headers["Api-Key"],
             jwt=headers.get("Authorization"),
             deployment_id=deployment_id,
+            headers=headers,
         )
 
         deployment_logger = logging.getLogger(deployment_id)

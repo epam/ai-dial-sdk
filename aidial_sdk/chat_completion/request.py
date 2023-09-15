@@ -2,18 +2,19 @@ from typing import Any, List, Literal, Mapping, Optional, Union
 
 from aidial_sdk.pydantic_v1 import (
     BaseModel,
-    ConfigDict,
     ConstrainedFloat,
     ConstrainedInt,
     ConstrainedList,
-    Extra,
     PositiveInt,
 )
 
-MODEL_CONFIG = ConfigDict(extra=Extra.forbid)
+
+class ExtraForbidModel(BaseModel):
+    class Config:
+        extra = "forbid"
 
 
-class Attachment(BaseModel):
+class Attachment(ExtraForbidModel):
     type: str = "text/markdown"
     title: Optional[str] = None
     data: Optional[str] = None
@@ -21,39 +22,29 @@ class Attachment(BaseModel):
     reference_type: Optional[str] = None
     reference_url: Optional[str] = None
 
-    model_config = MODEL_CONFIG
 
-
-class CustomContent(BaseModel):
+class CustomContent(ExtraForbidModel):
     attachments: Optional[List[Attachment]] = None
     state: Optional[Any] = None
 
-    model_config = MODEL_CONFIG
 
-
-class Message(BaseModel):
+class Message(ExtraForbidModel):
     role: Literal["system", "user", "assistant", "function"]
     content: Optional[str] = None
     custom_content: Optional[CustomContent] = None
     name: Optional[str] = None
     function_call: Optional[str] = None
 
-    model_config = MODEL_CONFIG
 
-
-class Addon(BaseModel):
+class Addon(ExtraForbidModel):
     name: Optional[str] = None
     url: Optional[str] = None
 
-    model_config = MODEL_CONFIG
 
-
-class Function(BaseModel):
+class Function(ExtraForbidModel):
     name: str
     description: str
     parameters: str
-
-    model_config = MODEL_CONFIG
 
 
 class Temperature(ConstrainedFloat):
@@ -81,7 +72,7 @@ class Penalty(ConstrainedFloat):
     le = 2
 
 
-class ChatCompletionRequest(BaseModel):
+class ChatCompletionRequest(ExtraForbidModel):
     model: Optional[str] = None
     messages: List[Message]
     functions: Optional[List[Function]] = None
@@ -101,5 +92,4 @@ class ChatCompletionRequest(BaseModel):
     api_key: str
     jwt: Optional[str] = None
     deployment_id: str
-
-    model_config = MODEL_CONFIG
+    headers: Mapping[str, str]

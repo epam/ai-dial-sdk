@@ -76,7 +76,9 @@ class StartStageChunk(BaseChunk):
     choice_index: int
     stage_index: int
 
-    def __init__(self, choice_index: int, stage_index: int, name: str):
+    def __init__(
+        self, choice_index: int, stage_index: int, name: Optional[str] = None
+    ):
         self.choice_index = choice_index
         self.stage_index = stage_index
         self.name = name
@@ -158,6 +160,39 @@ class ContentStageChunk(BaseChunk):
                                 {
                                     "index": self.stage_index,
                                     "content": self.content,
+                                    "status": None,
+                                }
+                            ]
+                        }
+                    },
+                }
+            ],
+            "usage": None,
+        }
+
+
+class NameStageChunk(BaseChunk):
+    choice_index: int
+    stage_index: int
+    name: str
+
+    def __init__(self, choice_index: int, stage_index: int, name: str):
+        self.choice_index = choice_index
+        self.stage_index = stage_index
+        self.name = name
+
+    def dict(self):
+        return {
+            "choices": [
+                {
+                    "index": self.choice_index,
+                    "finish_reason": None,
+                    "delta": {
+                        "custom_content": {
+                            "stages": [
+                                {
+                                    "index": self.stage_index,
+                                    "name": self.name,
                                     "status": None,
                                 }
                             ]

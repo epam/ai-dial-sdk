@@ -111,7 +111,7 @@ class Choice:
         self._state_submitted = True
         self._queue.put_nowait(StateChunk(self._index, state))
 
-    def create_stage(self, name: str) -> Stage:
+    def create_stage(self, name: Optional[str] = None) -> Stage:
         if not self._opened:
             runtime_error(
                 self._log, "Trying to create stage for an unopened choice"
@@ -122,7 +122,7 @@ class Choice:
             )
 
         stage = Stage(
-            self._queue, self._index, self._last_stage_index, name, self._log
+            self._queue, self._index, self._last_stage_index, self._log, name
         )
         self._last_stage_index += 1
 

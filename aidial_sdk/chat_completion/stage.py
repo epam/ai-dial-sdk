@@ -7,6 +7,7 @@ from aidial_sdk.chat_completion.chunks import (
     AttachmentStageChunk,
     ContentStageChunk,
     FinishStageChunk,
+    NameStageChunk,
     StartStageChunk,
 )
 from aidial_sdk.chat_completion.enums import Status
@@ -17,7 +18,7 @@ class Stage:
     _queue: Queue
     _choice_index: int
     _stage_index: int
-    _name: str
+    _name: Optional[str]
     _last_attachment_index: int
     _closed: bool
     _opened: bool
@@ -27,8 +28,8 @@ class Stage:
         queue: Queue,
         choice_index: int,
         stage_index: int,
-        name: str,
         log: Logger,
+        name: Optional[str] = None,
     ):
         self._queue = queue
         self._choice_index = choice_index
@@ -36,8 +37,8 @@ class Stage:
         self._last_attachment_index = 0
         self._opened = False
         self._closed = False
-        self._name = name
         self._log = log
+        self._name = name
 
     def __enter__(self):
         self.open()
@@ -68,6 +69,18 @@ class Stage:
 
         self._queue.put_nowait(
             ContentStageChunk(self._choice_index, self._stage_index, content)
+        )
+
+    def append_name(self, name: str):
+        if not self._opened:
+            runtime_error(
+                self._log, "Trying to append name for an unopened stage"
+            )
+        if self._closed:
+            runtime_error(self._log, "Trying to append name for a closed stage")
+
+        self._queue.put_nowait(
+            NameStageChunk(self._choice_index, self._stage_index, name)
         )
 
     def add_attachment(
