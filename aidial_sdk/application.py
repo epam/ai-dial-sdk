@@ -9,6 +9,7 @@ from aidial_sdk.chat_completion.chat_completion import ChatCompletion
 from aidial_sdk.chat_completion.request import ChatCompletionRequest
 from aidial_sdk.chat_completion.response import ChatCompletionResponse
 from aidial_sdk.header_propagation import HeaderPropagation
+from aidial_sdk.pydantic_v1 import ValidationError
 from aidial_sdk.utils.log_config import LogConfig
 from aidial_sdk.utils.streaming import json_error, merge_chunks
 
@@ -64,20 +65,31 @@ class DIALApp(FastAPI):
             return JSONResponse(
                 status_code=400,
                 content=json_error(
-                    message="Your request contained invalid JSON: " + str(e),
+                    message=f"Your request contained invalid JSON: {str(e)}",
                     type="invalid_request_error",
                 ),
             )
 
         headers = original_request.headers
-        request = ChatCompletionRequest(
-            **body,
-            api_key=headers["Api-Key"],
-            jwt=headers.get("Authorization"),
-            deployment_id=deployment_id,
-            api_version=original_request.query_params.get("api-version"),
-            headers=headers,
-        )
+        try:
+            request = ChatCompletionRequest(
+                **body,
+                api_key=headers["Api-Key"],
+                jwt=headers.get("Authorization"),
+                deployment_id=deployment_id,
+                api_version=original_request.query_params.get("api-version"),
+                headers=headers,
+            )
+        except ValidationError as e:
+            error = e.errors()[0]
+            path = "->".join(map(str, e.errors()[0]["loc"]))
+            return JSONResponse(
+                status_code=400,
+                content=json_error(
+                    message=f"Your request contained invalid structure on path {path}. {error['msg']}",
+                    type="invalid_request_error",
+                ),
+            )
 
         deployment_logger = logging.getLogger(deployment_id)
         deployment_logger.debug(f"Request body: {body}")

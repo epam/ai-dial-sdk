@@ -1,14 +1,13 @@
 from enum import Enum
 from typing import Any, List, Mapping, Optional, Union
 
-from typing_extensions import Literal
-
 from aidial_sdk.pydantic_v1 import (
     BaseModel,
     ConstrainedFloat,
     ConstrainedInt,
     ConstrainedList,
     PositiveInt,
+    StrictStr,
 )
 
 
@@ -18,12 +17,12 @@ class ExtraForbidModel(BaseModel):
 
 
 class Attachment(ExtraForbidModel):
-    type: Optional[str] = "text/markdown"
-    title: Optional[str] = None
-    data: Optional[str] = None
-    url: Optional[str] = None
-    reference_type: Optional[str] = None
-    reference_url: Optional[str] = None
+    type: Optional[StrictStr] = "text/markdown"
+    title: Optional[StrictStr] = None
+    data: Optional[StrictStr] = None
+    url: Optional[StrictStr] = None
+    reference_type: Optional[StrictStr] = None
+    reference_url: Optional[StrictStr] = None
 
 
 class CustomContent(ExtraForbidModel):
@@ -38,23 +37,23 @@ class Role(Enum):
     FUNCTION = "function"
 
 
-class Message(BaseModel):
+class Message(ExtraForbidModel):
     role: Role
-    content: Optional[str] = None
+    content: Optional[StrictStr] = None
     custom_content: Optional[CustomContent] = None
-    name: Optional[str] = None
-    function_call: Optional[str] = None
+    name: Optional[StrictStr] = None
+    function_call: Optional[StrictStr] = None
 
 
 class Addon(ExtraForbidModel):
-    name: Optional[str] = None
-    url: Optional[str] = None
+    name: Optional[StrictStr] = None
+    url: Optional[StrictStr] = None
 
 
 class Function(ExtraForbidModel):
-    name: str
-    description: str
-    parameters: str
+    name: StrictStr
+    description: StrictStr
+    parameters: StrictStr
 
 
 class Temperature(ConstrainedFloat):
@@ -74,7 +73,7 @@ class N(ConstrainedInt):
 
 class Stop(ConstrainedList):
     max_items: int = 4
-    __args__ = tuple([str])
+    __args__ = tuple([StrictStr])
 
 
 class Penalty(ConstrainedFloat):
@@ -83,24 +82,26 @@ class Penalty(ConstrainedFloat):
 
 
 class ChatCompletionRequest(ExtraForbidModel):
-    model: Optional[str] = None
+    model: Optional[StrictStr] = None
     messages: List[Message]
     functions: Optional[List[Function]] = None
-    function_call: Optional[Union[str, Mapping[str, str]]] = None
+    function_call: Optional[
+        Union[StrictStr, Mapping[StrictStr, StrictStr]]
+    ] = None
     addons: Optional[List[Addon]] = None
     stream: bool = False
     temperature: Optional[Temperature] = None
     top_p: Optional[TopP] = None
     n: Optional[N] = None
-    stop: Optional[Union[str, Stop]] = None
+    stop: Optional[Union[StrictStr, Stop]] = None
     max_tokens: Optional[PositiveInt] = None
     presence_penalty: Optional[Penalty] = None
     frequency_penalty: Optional[Penalty] = None
     logit_bias: Optional[Mapping[int, float]] = None
-    user: Optional[str] = None
+    user: Optional[StrictStr] = None
 
-    api_key: str
-    jwt: Optional[str] = None
-    deployment_id: str
-    api_version: Optional[str] = None
-    headers: Mapping[str, str]
+    api_key: StrictStr
+    jwt: Optional[StrictStr] = None
+    deployment_id: StrictStr
+    api_version: Optional[StrictStr] = None
+    headers: Mapping[StrictStr, StrictStr]
