@@ -1,4 +1,6 @@
-from typing import Any, List, Literal, Mapping, Optional, Union
+from typing import Any, List, Mapping, Optional, Union
+
+from typing_extensions import Literal
 
 from aidial_sdk.pydantic_v1 import (
     BaseModel,
@@ -15,7 +17,7 @@ class ExtraForbidModel(BaseModel):
 
 
 class Attachment(ExtraForbidModel):
-    type: str = "text/markdown"
+    type: Optional[str] = "text/markdown"
     title: Optional[str] = None
     data: Optional[str] = None
     url: Optional[str] = None
@@ -28,7 +30,7 @@ class CustomContent(ExtraForbidModel):
     state: Optional[Any] = None
 
 
-class Message(ExtraForbidModel):
+class Message(BaseModel):
     role: Literal["system", "user", "assistant", "function"]
     content: Optional[str] = None
     custom_content: Optional[CustomContent] = None

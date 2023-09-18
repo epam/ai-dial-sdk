@@ -9,24 +9,29 @@ repository = "https://gitlab.deltixhub.com/Deltix/openai-apps/dial-python-sdk.gi
 
 [tool.poetry.dependencies]
 python = ">=3.8.1,<4.0"
-fastapi = "^0.103.1"
-uvicorn = "^0.23.2"
-pydantic = "^1.10.12"
-requests = "^2.31.0"
-wrapt = "^1.15.0"
-aiohttp = "^3.8.5"
+fastapi = ">=0.51,<1.0"
+uvicorn = "^0.19.0"
+pydantic = ">=1.10,<3"
+requests = ">=2.19,<3.0"
+wrapt = "^1.14"
+aiohttp = "^3.8.3"
 
-#[tool.poetry.group.test.dependencies]
-#pytest = "^7.4.2"
-#pytest-asyncio = "^0.21.1"
-#httpx = "^0.25.0"
+[tool.poetry.group.test.dependencies]
+pytest = "^7.4.2"
+httpx = "^0.25.0"
+nox = "^2023.4.22"
 
 [tool.poetry.group.lint.dependencies]
 flake8 = "^6.0.0"
-black = { version = "^23.3.0", extras = ["jupyter"] }
+black = { version = "^23.3.0" }
 isort = "^5.12.0"
 pyright = "^1.1.324"
 autoflake = "^2.2.0"
+
+[tool.pytest.ini_options]
+testpaths = [
+    "tests"
+]
 
 [tool.pyright]
 typeCheckingMode = "basic"
@@ -35,6 +40,8 @@ reportIncompatibleMethodOverride = "error"
 exclude = [
     ".git",
     ".venv",
+    ".nox",
+    ".pytest_cache",
     "**/__pycache__"
 ]
 
@@ -44,6 +51,8 @@ exclude = '''
 /(
     \.git
   | \.venv
+  | \.nox
+  | \.pytest_cache
   | \.__pycache__
 )/
 '''
@@ -59,5 +68,7 @@ in_place = true
 recursive = true
 quiet = true
 exclude = [
+    ".nox",
+    ".pytest_cache",
     "\\.venv"
 ]

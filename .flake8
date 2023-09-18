@@ -8,5 +8,7 @@ exclude =
     .tmp,
     .venv,
     .conda,
+    .nox,
+    .pytest_cache
     __pycache__,
     __init__.py

@@ -3,7 +3,7 @@ from typing import Any, AsyncGenerator, Dict, Optional
 
 from aidial_sdk.utils.merge_chunks import merge_recursive
 
-DONE_CHUNK = "data: [DONE]\n"
+DONE_CHUNK = "data: [DONE]\n\n"
 
 
 def add_default_fields(

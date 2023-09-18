@@ -8,8 +8,6 @@ from aidial_sdk import (
 )
 from aidial_sdk.chat_completion.enums import Status
 
-# from aidial_sdk.exceptions import HTTPException
-
 
 class ExampleApplication(ChatCompletion):
     async def chat_completion(
@@ -23,19 +21,14 @@ class ExampleApplication(ChatCompletion):
             choice.append_content("123")
             choice.append_content("Content2")
 
-            # await response.aflush()
-            # raise HTTPException(
-            #     message="some_text",
-            #     status_code=423,
-            # )
-            # raise ValueError("save must be True if recurse is True")
-
             choice.add_attachment(
                 title="Some document title", data="Some document content..."
             )
 
-            stage = choice.create_stage("Some stage #1")
+            stage = choice.create_stage()
             stage.open()
+            stage.append_name("Some ")
+            stage.append_name("stage #1")
             stage.append_content("12")
             stage.close(Status.FAILED)
 
@@ -53,8 +46,8 @@ class ExampleApplication(ChatCompletion):
         response.add_usage_per_model("gpt-5", 23, 15)
 
 
-app = DIALApp()
-app.add_chat_completion("app", ExampleApplication())
-
 if __name__ == "__main__":
+    app = DIALApp()
+    app.add_chat_completion("app", ExampleApplication())
+
     uvicorn.run(app, port=5000)
