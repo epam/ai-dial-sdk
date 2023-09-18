@@ -75,6 +75,7 @@ class DIALApp(FastAPI):
             api_key=headers["Api-Key"],
             jwt=headers.get("Authorization"),
             deployment_id=deployment_id,
+            api_version=original_request.query_params.get("api-version"),
             headers=headers,
         )
 

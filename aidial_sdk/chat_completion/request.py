@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import Any, List, Mapping, Optional, Union
 
 from typing_extensions import Literal
@@ -30,8 +31,15 @@ class CustomContent(ExtraForbidModel):
     state: Optional[Any] = None
 
 
+class Role(Enum):
+    SYSTEM = "system"
+    USER = "user"
+    ASSISTANT = "assistant"
+    FUNCTION = "function"
+
+
 class Message(BaseModel):
-    role: Literal["system", "user", "assistant", "function"]
+    role: Role
     content: Optional[str] = None
     custom_content: Optional[CustomContent] = None
     name: Optional[str] = None
@@ -94,4 +102,5 @@ class ChatCompletionRequest(ExtraForbidModel):
     api_key: str
     jwt: Optional[str] = None
     deployment_id: str
+    api_version: Optional[str] = None
     headers: Mapping[str, str]
