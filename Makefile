@@ -32,7 +32,7 @@ format: install
 	$(POETRY) run black . $(ARGS)
 
 test: install
-	$(POETRY) run nox
+	$(POETRY) run pytest
 
 PLATFORM ?= linux/amd64
 
