@@ -1,0 +1,16 @@
+name: Code checks - tests
+
+on:
+  push:
+    branches: [ development, release-* ] #TODO: drop once debug finished
+  pull_request:
+    branches:
+      - development
+      - release-*
+
+jobs:
+  run_tests:
+    uses: epam/ai-dial-ci/.github/workflows/test_python_package.yml@feat/test-ci
+    with:
+      bypass_checks: false
+      python_version: 3.11
