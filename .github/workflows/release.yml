@@ -1,0 +1,12 @@
+name: Release version
+
+on:
+  push:
+    branches: [ development, release-* ]
+
+jobs:
+  release:
+    uses: epam/ai-dial-ci/.github/workflows/publish_package_python.yml@feat/test-ci
+    with:
+      bypass_checks: false
+      python_version: 3.11
