@@ -15,7 +15,7 @@ pydantic = ">=1.10,<3"
 requests = ">=2.19,<3.0"
 wrapt = "^1.14"
 aiohttp = "^3.8.3"
-langchain = "0.0.207"
+langchain = "0.0.246"
 
 [tool.poetry.group.test.dependencies]
 pytest = "^7.4.2"
