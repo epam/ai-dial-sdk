@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "aidial-sdk"
-version = "0.1.0"
+version = "0.1.0rc"
 description = "Framework to create applications and model adapters for AI DIAL"
 authors = ["DIAL Team"]
 license = "Apache-2.0"
