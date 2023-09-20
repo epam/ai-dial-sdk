@@ -1,12 +1,12 @@
 name: Release version
 
 on:
-  push:
+  pull_request:
     branches: [ development, release-* ]
+  issue_comment:
+    types: [created]
 
 jobs:
-  release:
-    uses: epam/ai-dial-ci/.github/workflows/publish_package_python.yml@feat/test-ci
-    with:
-      bypass_checks: false
-      python_version: 3.11
+  integration_tests:
+    uses: epam/ai-dial-ci/.github/workflows/trigger_integration_tests.yml@feat/test-ci
+    secrets: inherit
