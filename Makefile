@@ -16,6 +16,9 @@ clean:
 build: install
 	$(POETRY) build
 
+publish: build
+	$(POETRY) twine upload -u __token__ -p ${PYPI_TOKEN} --skip-existing dist/*.whl
+
 lint: install
 	@error=0; \
 	$(POETRY) run pyright || error=1; \
@@ -41,6 +44,7 @@ help:
 	@echo 'install                      - set up virtual env and install project depedencies'
 	@echo 'clean                        - clean virtual env and build artifacts'
 	@echo 'build                        - build the library'
+	@echo 'publish                      - publish the library to Pypi'
 	@echo '-- LINTING --'
 	@echo 'format                       - run code formatters'
 	@echo 'lint                         - run linters'
