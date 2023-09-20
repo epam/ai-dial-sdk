@@ -1,0 +1,31 @@
+stages:
+  - lint
+  - test
+
+lint:
+  image: python:3.11-slim
+  stage: lint
+  before_script:
+    - apt-get update && apt-get install -y make
+  script:
+    - make install_poetry
+    - make lint POETRY=/opt/poetry/bin/poetry
+  rules:
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "development"
+    - if: $CI_COMMIT_BRANCH  == "development"
+  tags:
+    - kubernetes
+
+test:
+  image: python:3.11-slim
+  stage: test
+  before_script:
+    - apt-get update && apt-get install -y make
+  script:
+    - make install_poetry
+    - make test POETRY=/opt/poetry/bin/poetry
+  rules:
+    - if: $CI_MERGE_REQUEST_TARGET_BRANCH_NAME == "development"
+    - if: $CI_COMMIT_BRANCH  == "development"
+  tags:
+    - kubernetes
