@@ -4,7 +4,7 @@ ARGS=
 all: help
 
 install:
-	$(POETRY) install
+	$(POETRY) install --all-extras
 
 clean:
 	rm -rf $$($(POETRY) env info --path)
