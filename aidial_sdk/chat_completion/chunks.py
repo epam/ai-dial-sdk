@@ -228,7 +228,22 @@ class Attachment(BaseModel):
         return values
 
     def attachment_dict(self, index: int):
-        return self.dict() | {"index": index}
+        attachment: Dict[str, Any] = {"index": index}
+
+        if self.type:
+            attachment["type"] = self.type
+        if self.title:
+            attachment["title"] = self.title
+        if self.data:
+            attachment["data"] = self.data
+        if self.url:
+            attachment["url"] = self.url
+        if self.reference_url:
+            attachment["reference_url"] = self.reference_url
+        if self.reference_type:
+            attachment["reference_type"] = self.reference_type
+
+        return attachment
 
 
 class AttachmentChunk(Attachment, BaseChunk):
