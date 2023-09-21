@@ -12,4 +12,4 @@ jobs:
     secrets: inherit
     with:
       bypass_checks: false
-      python_version: 3.11
+      python_version: 3.8
