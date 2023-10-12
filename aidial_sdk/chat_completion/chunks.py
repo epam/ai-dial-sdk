@@ -370,6 +370,20 @@ class UsagePerModelChunk(BaseChunk):
         }
 
 
+class DiscardedMessagesChunk(BaseChunk):
+    discarded_messages: int
+
+    def __init__(self, discarded_messages: int):
+        self.discarded_messages = discarded_messages
+
+    def to_dict(self):
+        return {
+            "statistics": {
+                "discarded_messages": self.discarded_messages,
+            }
+        }
+
+
 class EndChunk:
     exc: Optional[Exception]
 
