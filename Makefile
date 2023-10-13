@@ -1,7 +1,7 @@
 all: build
 
 install:
-	poetry install
+	poetry install --all-extras
 
 build: install
 	poetry build
