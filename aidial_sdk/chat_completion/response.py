@@ -134,7 +134,7 @@ class Response:
 
             if isinstance(
                 item,
-                (UsageChunk, UsagePerModelChunk),
+                (UsageChunk, UsagePerModelChunk, DiscardedMessagesChunk),
             ):
                 usage_chunk = merge(usage_chunk, item.to_dict())
             elif isinstance(item, BaseChunk):
