@@ -100,6 +100,7 @@ class Request(ExtraForbidModel):
     n: Optional[N] = None
     stop: Optional[Union[StrictStr, Stop]] = None
     max_tokens: Optional[PositiveInt] = None
+    max_prompt_tokens: Optional[PositiveInt] = None
     presence_penalty: Optional[Penalty] = None
     frequency_penalty: Optional[Penalty] = None
     logit_bias: Optional[Mapping[int, float]] = None
