@@ -8,6 +8,7 @@ from fastapi import HTTPException
 from aidial_sdk.chat_completion.choice import Choice
 from aidial_sdk.chat_completion.chunks import (
     BaseChunk,
+    DiscardedMessagesChunk,
     EndChoiceChunk,
     EndChunk,
     UsageChunk,
@@ -28,6 +29,7 @@ class Response:
     _last_choice_index: int
     _last_usage_per_model_index: int
     _generation_started: bool
+    _discarded_messages_generated: bool
     _usage_generated: bool
     _response_id: str
     _model: Optional[str]
@@ -38,6 +40,7 @@ class Response:
         self._last_choice_index = 0
         self._last_usage_per_model_index = 0
         self._generation_started = False
+        self._discarded_messages_generated = False
         self._usage_generated = False
 
         self.request = request
@@ -131,7 +134,7 @@ class Response:
 
             if isinstance(
                 item,
-                (UsageChunk, UsagePerModelChunk),
+                (UsageChunk, UsagePerModelChunk, DiscardedMessagesChunk),
             ):
                 usage_chunk = merge(usage_chunk, item.to_dict())
             elif isinstance(item, BaseChunk):
@@ -279,6 +282,19 @@ class Response:
             )
         )
         self._last_usage_per_model_index += 1
+
+    def set_discarded_messages(self, discarded_messages: int):
+        self._generation_started = True
+
+        if self._discarded_messages_generated:
+            runtime_error('Trying to set "discarded_messages" twice')
+        if self._last_choice_index != (self.request.n or 1):
+            runtime_error(
+                'Trying to set "discarded_messages" before generating all choices',
+            )
+
+        self._discarded_messages_generated = True
+        self._queue.put_nowait(DiscardedMessagesChunk(discarded_messages))
 
     def set_usage(self, prompt_tokens: int = 0, completion_tokens: int = 0):
         self._generation_started = True
