@@ -1,5 +1,8 @@
 from fastapi import FastAPI
 from opentelemetry.exporter.prometheus import PrometheusMetricReader
+from opentelemetry.instrumentation.aiohttp_client import (
+    AioHttpClientInstrumentor,
+)
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
 from opentelemetry.instrumentation.logging import LoggingInstrumentor
 from opentelemetry.instrumentation.requests import RequestsInstrumentor
@@ -23,6 +26,7 @@ def init_telemetry(app: FastAPI, service_name: str):
     )
 
     FastAPIInstrumentor.instrument_app(app)
-    LoggingInstrumentor().instrument(set_logging_format=True)
     RequestsInstrumentor().instrument()
+    AioHttpClientInstrumentor().instrument()
+    LoggingInstrumentor().instrument(set_logging_format=True)
     SystemMetricsInstrumentor().instrument()
