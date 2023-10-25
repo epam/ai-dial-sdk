@@ -2,7 +2,7 @@ import logging.config
 from json import JSONDecodeError
 from typing import Dict, Optional
 
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 
 from aidial_sdk.chat_completion.base import ChatCompletion
@@ -44,6 +44,8 @@ class DIALApp(FastAPI):
             self._chat_completion,
             methods=["POST"],
         )
+
+        self.add_exception_handler(HTTPException, DIALApp._exception_handler)
 
     def add_chat_completion(
         self, deployment_name: str, impl: ChatCompletion
@@ -114,3 +116,10 @@ class DIALApp(FastAPI):
 
             log_debug(f"response: {response_body}")
             return JSONResponse(content=response_body)
+
+    @staticmethod
+    def _exception_handler(request: Request, exc: HTTPException):
+        return JSONResponse(
+            status_code=exc.status_code,
+            content=exc.detail,
+        )
