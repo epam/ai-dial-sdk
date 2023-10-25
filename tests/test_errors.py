@@ -1,5 +1,6 @@
 import json
 
+import pytest
 from starlette.testclient import TestClient
 
 from aidial_sdk import DIALApp
@@ -8,8 +9,38 @@ from tests.applications.runtime_broken_application import (
     RuntimeBrokenApplication,
 )
 
+DEFAULT_RUNTIME_ERROR = {
+    "error": {
+        "message": "Error during processing the request",
+        "type": "runtime_error",
+        "code": None,
+        "param": None,
+    }
+}
 
-def test_error():
+error_testdata = [
+    (
+        "sdk_exception",
+        503,
+        {
+            "error": {
+                "message": "Test error",
+                "type": "runtime_error",
+                "code": None,
+                "param": None,
+            }
+        },
+    ),
+    ("fastapi_exception", 500, DEFAULT_RUNTIME_ERROR),
+    ("value_error_exception", 500, DEFAULT_RUNTIME_ERROR),
+    ("zero_division_exception", 500, DEFAULT_RUNTIME_ERROR),
+]
+
+
+@pytest.mark.parametrize(
+    "type, response_status_code, response_content", error_testdata
+)
+def test_error(type, response_status_code, response_content):
     dial_app = DIALApp()
     dial_app.add_chat_completion("test_app", BrokenApplication())
 
@@ -18,23 +49,22 @@ def test_error():
     response = test_app.post(
         "/openai/deployments/test_app/chat/completions",
         json={
-            "messages": [{"role": "user", "content": "Test content"}],
+            "messages": [{"role": "user", "content": type}],
             "stream": False,
         },
         headers={"Api-Key": "TEST_API_KEY"},
     )
 
-    assert response.status_code == 503 and response.json() == {
-        "error": {
-            "message": "Test error",
-            "type": "runtime_error",
-            "code": None,
-            "param": None,
-        }
-    }
+    assert (
+        response.status_code == response_status_code
+        and response.json() == response_content
+    )
 
 
-def test_streaming_error():
+@pytest.mark.parametrize(
+    "type, response_status_code, response_content", error_testdata
+)
+def test_streaming_error(type, response_status_code, response_content):
     dial_app = DIALApp()
     dial_app.add_chat_completion("test_app", BrokenApplication())
 
@@ -43,23 +73,22 @@ def test_streaming_error():
     response = test_app.post(
         "/openai/deployments/test_app/chat/completions",
         json={
-            "messages": [{"role": "user", "content": "Test content"}],
+            "messages": [{"role": "user", "content": type}],
             "stream": True,
         },
         headers={"Api-Key": "TEST_API_KEY"},
     )
 
-    assert response.status_code == 503 and response.json() == {
-        "error": {
-            "message": "Test error",
-            "type": "runtime_error",
-            "code": None,
-            "param": None,
-        }
-    }
+    assert (
+        response.status_code == response_status_code
+        and response.json() == response_content
+    )
 
 
-def test_runtime_streaming_error():
+@pytest.mark.parametrize(
+    "type, response_status_code, response_content", error_testdata
+)
+def test_runtime_streaming_error(type, response_status_code, response_content):
     dial_app = DIALApp()
     dial_app.add_chat_completion("test_app", RuntimeBrokenApplication())
 
@@ -68,7 +97,7 @@ def test_runtime_streaming_error():
     response = test_app.post(
         "/openai/deployments/test_app/chat/completions",
         json={
-            "messages": [{"role": "user", "content": "Test content"}],
+            "messages": [{"role": "user", "content": type}],
             "stream": True,
         },
         headers={"Api-Key": "TEST_API_KEY"},
@@ -119,13 +148,6 @@ def test_runtime_streaming_error():
                 "object": "chat.completion.chunk",
             }
         elif index == 6:
-            assert json.loads(data) == {
-                "error": {
-                    "message": "Test error",
-                    "type": "runtime_error",
-                    "param": None,
-                    "code": None,
-                }
-            }
+            assert json.loads(data) == response_content
         elif index == 8:
             assert data == "[DONE]"

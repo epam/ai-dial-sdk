@@ -1,5 +1,5 @@
-from aidial_sdk import HTTPException
 from aidial_sdk.chat_completion import ChatCompletion, Request, Response
+from tests.applications.broken_application import raise_exception
 
 
 class RuntimeBrokenApplication(ChatCompletion):
@@ -13,4 +13,4 @@ class RuntimeBrokenApplication(ChatCompletion):
             choice.append_content("Test content")
             await response.aflush()
 
-            raise HTTPException("Test error", 503)
+            raise_exception(request.messages[0].content or "")

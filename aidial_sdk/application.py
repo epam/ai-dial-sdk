@@ -45,7 +45,7 @@ class DIALApp(FastAPI):
             methods=["POST"],
         )
 
-        self.add_exception_handler(HTTPException, self._exception_handler)
+        self.add_exception_handler(HTTPException, DIALApp._exception_handler)
 
     def add_chat_completion(
         self, deployment_name: str, impl: ChatCompletion
@@ -117,7 +117,8 @@ class DIALApp(FastAPI):
             log_debug(f"response: {response_body}")
             return JSONResponse(content=response_body)
 
-    def _exception_handler(self, request: Request, exc: HTTPException):
+    @staticmethod
+    def _exception_handler(request: Request, exc: HTTPException):
         return JSONResponse(
             status_code=exc.status_code,
             content=exc.detail,
