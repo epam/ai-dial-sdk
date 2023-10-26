@@ -28,12 +28,15 @@ class DIALApp(FastAPI):
         dial_url: Optional[str] = None,
         propagation_auth_headers: bool = False,
         telemetry_service_name: Optional[str] = None,
+        telemetry_oltp_export: bool = False,
         **fast_api_kwargs,
     ):
         super().__init__(**fast_api_kwargs)
 
         if telemetry_service_name is not None:
-            self.configure_telemetry(telemetry_service_name)
+            self.configure_telemetry(
+                telemetry_service_name, telemetry_oltp_export
+            )
 
         if propagation_auth_headers:
             if not dial_url:
@@ -51,7 +54,7 @@ class DIALApp(FastAPI):
 
         self.add_exception_handler(HTTPException, DIALApp._exception_handler)
 
-    def configure_telemetry(self, service_name: str):
+    def configure_telemetry(self, service_name: str, enable_oltp_export: bool):
         try:
             from aidial_sdk.telemetry import init_telemetry
         except ImportError:
@@ -60,7 +63,7 @@ class DIALApp(FastAPI):
                 "Install the package with the extras: aidial-sdk[telemetry]"
             )
 
-        init_telemetry(self, service_name)
+        init_telemetry(self, service_name, enable_oltp_export)
 
     def add_chat_completion(
         self, deployment_name: str, impl: ChatCompletion

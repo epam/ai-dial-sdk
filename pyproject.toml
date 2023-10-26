@@ -16,15 +16,16 @@ pydantic = ">=1.10,<3"
 requests = "^2.19"
 wrapt = "^1.14"
 aiohttp = "^3.8.3"
-opentelemetry-sdk = {version = "1.19.0", optional = true}
-opentelemetry-api = {version = "1.19.0", optional = true}
-opentelemetry-distro ={version =  "0.40b0", optional = true}
-opentelemetry-instrumentation = {version = "0.40b0", optional = true}
-opentelemetry-instrumentation-aiohttp-client = {version = "0.40b0", optional = true}
-opentelemetry-instrumentation-fastapi = {version = "0.40b0", optional = true}
-opentelemetry-instrumentation-logging = {version = "0.40b0", optional = true}
-opentelemetry-instrumentation-requests = {version = "0.40b0", optional = true}
-opentelemetry-instrumentation-system-metrics = {version = "0.40b0", optional = true}
+opentelemetry-sdk = {version = "1.20.0", optional = true}
+opentelemetry-api = {version = "1.20.0", optional = true}
+opentelemetry-exporter-otlp-proto-grpc = {version = "1.20.0", optional = true}
+opentelemetry-distro ={version =  "0.41b0", optional = true}
+opentelemetry-instrumentation = {version = "0.41b0", optional = true}
+opentelemetry-instrumentation-aiohttp-client = {version = "0.41b0", optional = true}
+opentelemetry-instrumentation-fastapi = {version = "0.41b0", optional = true}
+opentelemetry-instrumentation-logging = {version = "0.41b0", optional = true}
+opentelemetry-instrumentation-requests = {version = "0.41b0", optional = true}
+opentelemetry-instrumentation-system-metrics = {version = "0.41b0", optional = true}
 opentelemetry-exporter-prometheus = {version = "1.12.0rc1", optional = true}
 starlette-exporter = {version = "0.16.0", optional = true}
 
@@ -32,6 +33,7 @@ starlette-exporter = {version = "0.16.0", optional = true}
 telemetry = [
     "opentelemetry-sdk",
     "opentelemetry-api",
+    "opentelemetry-exporter-otlp-proto-grpc",
     "opentelemetry-distro",
     "opentelemetry-instrumentation",
     "opentelemetry-instrumentation-aiohttp-client",
