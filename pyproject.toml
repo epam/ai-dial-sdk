@@ -71,7 +71,8 @@ exclude = [
     ".venv",
     ".nox",
     ".pytest_cache",
-    "**/__pycache__"
+    "**/__pycache__",
+    "build"
 ]
 
 [tool.black]
