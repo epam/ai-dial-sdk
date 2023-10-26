@@ -12,6 +12,7 @@ from opentelemetry.instrumentation.requests import RequestsInstrumentor
 from opentelemetry.instrumentation.system_metrics import (
     SystemMetricsInstrumentor,
 )
+from opentelemetry.instrumentation.urllib import URLLibInstrumentor
 from opentelemetry.metrics import set_meter_provider
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.resources import SERVICE_NAME, Resource
@@ -49,4 +50,5 @@ def init_telemetry(
     FastAPIInstrumentor.instrument_app(app)
     RequestsInstrumentor().instrument()
     AioHttpClientInstrumentor().instrument()
+    URLLibInstrumentor().instrument()
     SystemMetricsInstrumentor().instrument()

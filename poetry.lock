@@ -1156,6 +1156,26 @@ instruments = ["psutil (>=5)"]
 test = ["opentelemetry-instrumentation-system-metrics[instruments]", "opentelemetry-test-utils (==0.41b0)"]
 
 [[package]]
+name = "opentelemetry-instrumentation-urllib"
+version = "0.41b0"
+description = "OpenTelemetry urllib instrumentation"
+optional = true
+python-versions = ">=3.7"
+files = [
+    {file = "opentelemetry_instrumentation_urllib-0.41b0-py3-none-any.whl", hash = "sha256:cee9e95f55a73480df0915358ce8668bbeda53324c9426847e2ccaea0cac1a87"},
+    {file = "opentelemetry_instrumentation_urllib-0.41b0.tar.gz", hash = "sha256:113416b8bd9c2d5c890cb6f86737886e209a3776c2ecdc023887bd78634d5ef3"},
+]
+
+[package.dependencies]
+opentelemetry-api = ">=1.12,<2.0"
+opentelemetry-instrumentation = "0.41b0"
+opentelemetry-semantic-conventions = "0.41b0"
+opentelemetry-util-http = "0.41b0"
+
+[package.extras]
+test = ["httpretty (>=1.0,<2.0)", "opentelemetry-test-utils (==0.41b0)"]
+
+[[package]]
 name = "opentelemetry-proto"
 version = "1.20.0"
 description = "OpenTelemetry Python Proto"
@@ -1866,9 +1886,9 @@ docs = ["furo", "jaraco.packaging (>=9.3)", "jaraco.tidelift (>=1.4)", "rst.link
 testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "pytest (>=6)", "pytest-black (>=0.3.7)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=2.2)", "pytest-ignore-flaky", "pytest-mypy (>=0.9.1)", "pytest-ruff"]
 
 [extras]
-telemetry = ["opentelemetry-api", "opentelemetry-distro", "opentelemetry-exporter-otlp-proto-grpc", "opentelemetry-exporter-prometheus", "opentelemetry-instrumentation", "opentelemetry-instrumentation-aiohttp-client", "opentelemetry-instrumentation-fastapi", "opentelemetry-instrumentation-logging", "opentelemetry-instrumentation-requests", "opentelemetry-instrumentation-system-metrics", "opentelemetry-sdk", "starlette-exporter"]
+telemetry = ["opentelemetry-api", "opentelemetry-distro", "opentelemetry-exporter-otlp-proto-grpc", "opentelemetry-exporter-prometheus", "opentelemetry-instrumentation", "opentelemetry-instrumentation-aiohttp-client", "opentelemetry-instrumentation-fastapi", "opentelemetry-instrumentation-logging", "opentelemetry-instrumentation-requests", "opentelemetry-instrumentation-system-metrics", "opentelemetry-instrumentation-urllib", "opentelemetry-sdk", "starlette-exporter"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8.1,<4.0"
-content-hash = "cf074edfe13d86bea287ecf8968ba1e08c9826d703f2526c23b5a35960a70064"
+content-hash = "a724038298b00da8fc30020f8a20352c5c706d90c6200198c4bc49e805ddcd24"
