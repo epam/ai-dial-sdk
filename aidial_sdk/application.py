@@ -12,6 +12,7 @@ from aidial_sdk.chat_completion.response import (
 )
 from aidial_sdk.header_propagator import HeaderPropagator
 from aidial_sdk.pydantic_v1 import ValidationError
+from aidial_sdk.telemetry.types import TelemetryConfig
 from aidial_sdk.utils.errors import json_error
 from aidial_sdk.utils.log_config import LogConfig
 from aidial_sdk.utils.logging import log_debug, set_log_deployment
@@ -27,9 +28,13 @@ class DIALApp(FastAPI):
         self,
         dial_url: Optional[str] = None,
         propagation_auth_headers: bool = False,
+        telemetry_config: Optional[TelemetryConfig] = None,
         **fast_api_kwargs,
     ):
         super().__init__(**fast_api_kwargs)
+
+        if telemetry_config is not None:
+            self.configure_telemetry(telemetry_config)
 
         if propagation_auth_headers:
             if not dial_url:
@@ -46,6 +51,17 @@ class DIALApp(FastAPI):
         )
 
         self.add_exception_handler(HTTPException, DIALApp._exception_handler)
+
+    def configure_telemetry(self, config: TelemetryConfig):
+        try:
+            from aidial_sdk.telemetry.init import init_telemetry
+        except ImportError:
+            raise ValueError(
+                "Missing telemetry dependencies. "
+                "Install the package with the extras: aidial-sdk[telemetry]"
+            )
+
+        init_telemetry(app=self, config=config)
 
     def add_chat_completion(
         self, deployment_name: str, impl: ChatCompletion

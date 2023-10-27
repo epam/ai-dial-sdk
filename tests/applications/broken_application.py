@@ -12,7 +12,7 @@ def raise_exception(exception_type: str):
     elif exception_type == "value_error_exception":
         raise ValueError("Test value error")
     elif exception_type == "zero_division_exception":
-        1 / 0
+        return 1 / 0
     else:
         raise HTTPException("Unexpected error")
 
