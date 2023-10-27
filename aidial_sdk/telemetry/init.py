@@ -1,5 +1,3 @@
-from typing import Optional
-
 from fastapi import FastAPI
 from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
     OTLPSpanExporter,
@@ -21,25 +19,10 @@ from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.trace import set_tracer_provider
-from pydantic import BaseModel
 from starlette_exporter import handle_metrics
 
+from aidial_sdk.telemetry.types import TelemetryConfig
 from aidial_sdk.utils.logging import logger
-
-
-class TracingConfig(BaseModel):
-    oltp_export: bool = False
-    logging: bool = False
-
-
-class MetricsConfig(BaseModel):
-    pass
-
-
-class TelemetryConfig(BaseModel):
-    service_name: str
-    tracing: Optional[TracingConfig] = None
-    metrics: Optional[MetricsConfig] = None
 
 
 def init_telemetry(
