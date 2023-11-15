@@ -6,6 +6,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 
 from aidial_sdk.chat_completion.base import ChatCompletion
+from aidial_sdk.chat_completion.request import RateRequest
 from aidial_sdk.chat_completion.request import Request as ChatCompletionRequest
 from aidial_sdk.chat_completion.response import (
     Response as ChatCompletionResponse,
@@ -50,6 +51,12 @@ class DIALApp(FastAPI):
             methods=["POST"],
         )
 
+        self.add_api_route(
+            "/openai/deployments/{deployment_id}/rate",
+            self._rate_response,
+            methods=["POST"],
+        )
+
         self.add_exception_handler(HTTPException, DIALApp._exception_handler)
 
     def configure_telemetry(self, config: TelemetryConfig):
@@ -67,6 +74,49 @@ class DIALApp(FastAPI):
         self, deployment_name: str, impl: ChatCompletion
     ) -> None:
         self.chat_completion_impls[deployment_name] = impl
+
+    async def _rate_response(
+        self, deployment_id: str, original_request: Request
+    ) -> Response:
+        set_log_deployment(deployment_id)
+        impl = self.chat_completion_impls.get(deployment_id, None)
+
+        if not impl:
+            return JSONResponse(
+                status_code=404,
+                content=json_error(
+                    message="The API deployment for this resource does not exist.",
+                    code="deployment_not_found",
+                ),
+            )
+
+        try:
+            body = await original_request.json()
+        except JSONDecodeError as e:
+            return JSONResponse(
+                status_code=400,
+                content=json_error(
+                    message=f"Your request contained invalid JSON: {str(e)}",
+                    type="invalid_request_error",
+                ),
+            )
+        log_debug(f"request: {body}")
+        try:
+            request = RateRequest(
+                **body,
+            )
+        except ValidationError as e:
+            error = e.errors()[0]
+            path = ".".join(map(str, e.errors()[0]["loc"]))
+            return JSONResponse(
+                status_code=400,
+                content=json_error(
+                    message=f"Your request contained invalid structure on path {path}. {error['msg']}",
+                    type="invalid_request_error",
+                ),
+            )
+        await impl.rate_response(request)
+        return Response(status_code=200)
 
     async def _chat_completion(
         self, deployment_id: str, original_request: Request
