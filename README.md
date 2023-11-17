@@ -44,7 +44,7 @@ class EchoApplication(ChatCompletion):
 app = DIALApp()
 app.add_chat_completion("echo", EchoApplication())
 
-# Run builded app
+# Run built app
 if __name__ == "__main__":
     uvicorn.run(app, port=5000)
 ```
