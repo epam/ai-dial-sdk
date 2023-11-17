@@ -6,6 +6,7 @@ from aidial_sdk.pydantic_v1 import (
     ConstrainedFloat,
     ConstrainedInt,
     ConstrainedList,
+    Field,
     PositiveInt,
     StrictStr,
 )
@@ -111,3 +112,8 @@ class Request(ExtraForbidModel):
     deployment_id: StrictStr
     api_version: Optional[StrictStr] = None
     headers: Mapping[StrictStr, StrictStr]
+
+
+class RateRequest(ExtraForbidModel):
+    response_id: StrictStr = Field(None, alias="responseId")
+    rate: bool = False
