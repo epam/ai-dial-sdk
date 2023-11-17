@@ -9,7 +9,7 @@ class TracingConfig(BaseModel):
 
 
 class MetricsConfig(BaseModel):
-    pass
+    port: int = 9464
 
 
 class TelemetryConfig(BaseModel):
