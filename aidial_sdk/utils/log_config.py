@@ -9,7 +9,7 @@ class LogConfig(BaseModel):
     formatters = {
         "default": {
             "()": "uvicorn.logging.DefaultFormatter",
-            "fmt": "%(levelprefix)s | %(asctime)s | %(process)d | %(name)s | %(message)s",
+            "fmt": "%(levelprefix)s | %(asctime)s | %(name)s | %(process)d | %(message)s",
             "datefmt": "%Y-%m-%d %H:%M:%S",
             "use_colors": True,
         },
