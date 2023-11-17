@@ -12,4 +12,4 @@ class ChatCompletion(ABC):
         """Implement chat completion logic"""
 
     async def rate_response(self, request: RateRequest) -> None:
-        pass
+        """Implement rate response logic"""
