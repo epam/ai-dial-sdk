@@ -19,7 +19,7 @@ from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.trace import set_tracer_provider
-from starlette_exporter import handle_metrics
+from prometheus_client import start_http_server
 
 from aidial_sdk.telemetry.types import TelemetryConfig
 from aidial_sdk.utils.logging import logger
@@ -60,7 +60,7 @@ def init_telemetry(
 
         SystemMetricsInstrumentor().instrument()
 
-        app.add_route("/metrics", handle_metrics)
+        start_http_server(port=config.metrics.port)
 
     if config.tracing is not None or config.metrics is not None:
         # FastAPI instrumentor reports both metrics and traces
