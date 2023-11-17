@@ -96,7 +96,7 @@ class DIALApp(FastAPI):
             return JSONResponse(
                 status_code=400,
                 content=json_error(
-                    message=f"Your request contained invalid JSON: {str(e)}",
+                    message=f"Your request contained invalid JSON: {str(e.msg)}",
                     type="invalid_request_error",
                 ),
             )
@@ -139,7 +139,7 @@ class DIALApp(FastAPI):
             return JSONResponse(
                 status_code=400,
                 content=json_error(
-                    message=f"Your request contained invalid JSON: {str(e)}",
+                    message=f"Your request contained invalid JSON: {str(e.msg)}",
                     type="invalid_request_error",
                 ),
             )
