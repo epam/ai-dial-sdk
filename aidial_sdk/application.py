@@ -1,6 +1,6 @@
 import logging.config
 from json import JSONDecodeError
-from typing import Dict, Optional
+from typing import Dict, Optional, Union
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
@@ -79,42 +79,21 @@ class DIALApp(FastAPI):
         self, deployment_id: str, original_request: Request
     ) -> Response:
         set_log_deployment(deployment_id)
-        impl = self.chat_completion_impls.get(deployment_id, None)
+        impl = self._get_deployment(deployment_id)
 
-        if not impl:
-            return JSONResponse(
-                status_code=404,
-                content=json_error(
-                    message="The API deployment for this resource does not exist.",
-                    code="deployment_not_found",
-                ),
-            )
+        if isinstance(impl, JSONResponse):
+            return impl
 
-        try:
-            body = await original_request.json()
-        except JSONDecodeError as e:
-            return JSONResponse(
-                status_code=400,
-                content=json_error(
-                    message=f"Your request contained invalid JSON: {str(e.msg)}",
-                    type="invalid_request_error",
-                ),
-            )
+        body = await DIALApp._get_json_body(original_request)
+        if isinstance(body, JSONResponse):
+            return body
         log_debug(f"request: {body}")
+
         try:
-            request = RateRequest(
-                **body,
-            )
+            request = RateRequest(**body)
         except ValidationError as e:
-            error = e.errors()[0]
-            path = ".".join(map(str, e.errors()[0]["loc"]))
-            return JSONResponse(
-                status_code=400,
-                content=json_error(
-                    message=f"Your request contained invalid structure on path {path}. {error['msg']}",
-                    type="invalid_request_error",
-                ),
-            )
+            return DIALApp._get_validation_error_response(e)
+
         await impl.rate_response(request)
         return Response(status_code=200)
 
@@ -122,27 +101,14 @@ class DIALApp(FastAPI):
         self, deployment_id: str, original_request: Request
     ) -> Response:
         set_log_deployment(deployment_id)
-        impl = self.chat_completion_impls.get(deployment_id, None)
+        impl = self._get_deployment(deployment_id)
 
-        if not impl:
-            return JSONResponse(
-                status_code=404,
-                content=json_error(
-                    message="The API deployment for this resource does not exist.",
-                    code="deployment_not_found",
-                ),
-            )
+        if isinstance(impl, JSONResponse):
+            return impl
 
-        try:
-            body = await original_request.json()
-        except JSONDecodeError as e:
-            return JSONResponse(
-                status_code=400,
-                content=json_error(
-                    message=f"Your request contained invalid JSON: {str(e.msg)}",
-                    type="invalid_request_error",
-                ),
-            )
+        body = await DIALApp._get_json_body(original_request)
+        if isinstance(body, JSONResponse):
+            return body
 
         headers = original_request.headers
         try:
@@ -155,15 +121,7 @@ class DIALApp(FastAPI):
                 headers=headers,
             )
         except ValidationError as e:
-            error = e.errors()[0]
-            path = ".".join(map(str, e.errors()[0]["loc"]))
-            return JSONResponse(
-                status_code=400,
-                content=json_error(
-                    message=f"Your request contained invalid structure on path {path}. {error['msg']}",
-                    type="invalid_request_error",
-                ),
-            )
+            return DIALApp._get_validation_error_response(e)
 
         log_debug(f"request: {body}")
 
@@ -182,6 +140,48 @@ class DIALApp(FastAPI):
 
             log_debug(f"response: {response_body}")
             return JSONResponse(content=response_body)
+
+    def _get_deployment(
+        self, deployment_id: str
+    ) -> Union[ChatCompletion, JSONResponse]:
+        impl = self.chat_completion_impls.get(deployment_id, None)
+
+        if not impl:
+            return JSONResponse(
+                status_code=404,
+                content=json_error(
+                    message="The API deployment for this resource does not exist.",
+                    code="deployment_not_found",
+                ),
+            )
+        return impl
+
+    @staticmethod
+    async def _get_json_body(request: Request) -> Union[dict, JSONResponse]:
+        try:
+            return await request.json()
+        except JSONDecodeError as e:
+            return JSONResponse(
+                status_code=400,
+                content=json_error(
+                    message=f"Your request contained invalid JSON: {str(e.msg)}",
+                    type="invalid_request_error",
+                ),
+            )
+
+    @staticmethod
+    def _get_validation_error_response(
+        e: ValidationError,
+    ) -> JSONResponse:
+        error = e.errors()[0]
+        path = ".".join(map(str, e.errors()[0]["loc"]))
+        return JSONResponse(
+            status_code=400,
+            content=json_error(
+                message=f"Your request contained invalid structure on path {path}. {error['msg']}",
+                type="invalid_request_error",
+            ),
+        )
 
     @staticmethod
     def _exception_handler(request: Request, exc: HTTPException):
