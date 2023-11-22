@@ -88,7 +88,7 @@ class SimpleRAGApplication(ChatCompletion):
             if len(request.messages) == 1:
                 # Create the download stage to show to the user the active process.
                 # After the loading is complete, the stage will auto finished.
-                with choice.create_stage("Download the resource"):
+                with choice.create_stage("Downloading the resource"):
                     try:
                         documents = loader.load()
                     except Exception:
@@ -99,13 +99,13 @@ class SimpleRAGApplication(ChatCompletion):
 
                 # Show the user the total number of parts in the resource
                 with choice.create_stage(
-                    "Split the resource into parts"
+                    "Splitting the resource into parts"
                 ) as stage:
                     texts = text_splitter.split_documents(documents)
                     stage.append_content(f"Total number of parts: {len(texts)}")
 
                 # Show the user start of calculating embeddings stage
-                with choice.create_stage("Calculate embeddings"):
+                with choice.create_stage("Calculating embeddings"):
                     docsearch = Chroma.from_documents(
                         texts, embeddings, collection_name=collection_name
                     )
@@ -121,7 +121,7 @@ class SimpleRAGApplication(ChatCompletion):
                     texts, embeddings, collection_name=collection_name
                 )
 
-                # DIAL Api Key and authorization headers will be detected automaticly and taken from the original application request
+                # DIAL Api Key and authorization headers will be detected automatically and taken from the original application request
                 # because propagation_auth_headers is enabled.
                 # CustomCallbackHandler allows to pass tokens to the users as they are generated, so as not to wait for a complete response.
                 llm = AzureChatOpenAI(
@@ -136,7 +136,7 @@ class SimpleRAGApplication(ChatCompletion):
                     callbacks=[CustomCallbackHandler(choice)],
                 )
 
-                with choice.create_stage("Generate the answer"):
+                with choice.create_stage("Generating the answer"):
                     await response.aflush()
 
                     qa = RetrievalQA.from_chain_type(
