@@ -74,7 +74,8 @@ exclude = [
     ".nox",
     ".pytest_cache",
     "**/__pycache__",
-    "build"
+    "build",
+    "examples"
 ]
 
 [tool.black]
