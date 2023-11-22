@@ -30,7 +30,7 @@ class ImageEchoApplication(ChatCompletion):
                 f"![Image](data:image/{image_extension};base64,{image_base64})"
             )
 
-            # Add an attachment with the same user image, but with using url
+            # Add an attachment with the same user image, but using url
             choice.add_attachment(
                 type=f"image/{image_extension}",
                 url=image_url,
