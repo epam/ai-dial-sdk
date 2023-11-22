@@ -1,0 +1,7 @@
+---
+excludes:
+  paths:
+  - pattern: "examples/**"
+    reason: "EXAMPLE_OF"
+    comment: >-
+      This directory contains example files with licenses that do not apply to the AI-DIAL-SDK.
