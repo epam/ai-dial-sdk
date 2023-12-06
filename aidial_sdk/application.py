@@ -38,6 +38,7 @@ class DIALApp(FastAPI):
         dial_url: Optional[str] = None,
         propagation_auth_headers: bool = False,
         telemetry_config: Optional[TelemetryConfig] = None,
+        add_healthcheck: bool = False,
         **fast_api_kwargs,
     ):
         super().__init__(**fast_api_kwargs)
@@ -52,6 +53,9 @@ class DIALApp(FastAPI):
                 )
 
             HeaderPropagator(self, dial_url).enable()
+
+        if add_healthcheck:
+            self.add_api_route("/health", DIALApp._healthcheck, methods=["GET"])
 
         self.add_api_route(
             "/openai/deployments/{deployment_id}/chat/completions",
@@ -180,6 +184,10 @@ class DIALApp(FastAPI):
 
             log_debug(f"response: {response_json}")
             return JSONResponse(content=response_json)
+
+    @staticmethod
+    async def _healthcheck() -> JSONResponse:
+        return JSONResponse(content={"status": "ok"})
 
     @staticmethod
     def _parse_model(ty: Type["Model"], data: Any) -> "Model":
