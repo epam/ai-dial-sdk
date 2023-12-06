@@ -70,7 +70,8 @@ def default_truncate_prompt(
         token_count = _count_tokens_selected(all_indices)
         if token_count > model_max_prompt_tokens:
             return TruncatePromptError(
-                error=f"Token count of all messages ({token_count}) exceeds the model maximum prompt tokens ({model_max_prompt_tokens}).",
+                error=f"Token count of all messages ({token_count}) exceeds"
+                f" the model maximum prompt tokens ({model_max_prompt_tokens}).",
             )
         return TruncatePromptSuccess(discarded_messages=[])
 
@@ -97,7 +98,8 @@ def default_truncate_prompt(
 
     if token_count > max_prompt_tokens:
         return TruncatePromptError(
-            error=f"Token count of the last user message and all system messages ({token_count}) exceeds the maximum prompt tokens ({max_prompt_tokens}).",
+            error="Token count of the last user message and all system messages "
+            f"({token_count}) exceeds the maximum prompt tokens ({max_prompt_tokens}).",
         )
 
     for idx in reversed(range(0, len(request.messages))):
