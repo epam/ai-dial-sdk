@@ -17,7 +17,7 @@ CHAT_COMPLETION_REQUEST = {
 }
 
 
-def get_truncate_prompt_request(max_prompt_tokens: Optional[int]):
+def create_request(max_prompt_tokens: Optional[int]):
     return {
         "requests": [
             {
@@ -28,9 +28,8 @@ def get_truncate_prompt_request(max_prompt_tokens: Optional[int]):
     }
 
 
-def get_truncate_prompt_response(
-    model_max_prompt_tokens: int,
-    max_prompt_tokens: Optional[int],
+def create_response(
+    model_max_prompt_tokens: int, max_prompt_tokens: Optional[int]
 ):
     if max_prompt_tokens is None:
         if model_max_prompt_tokens >= 4:
@@ -42,7 +41,8 @@ def get_truncate_prompt_response(
                 "responses": [
                     {
                         "status": "error",
-                        "error": f"Token count of all messages (4) exceeds the model maximum prompt tokens ({model_max_prompt_tokens}).",
+                        "error": "Token count of all messages (4) exceeds "
+                        f"the model maximum prompt tokens ({model_max_prompt_tokens}).",
                     }
                 ]
             }
@@ -52,7 +52,8 @@ def get_truncate_prompt_response(
             "responses": [
                 {
                     "status": "error",
-                    "error": "Token count of the last user message and all system messages (2) exceeds the maximum prompt tokens (1).",
+                    "error": "Token count of the last user message and all "
+                    "system messages (2) exceeds the maximum prompt tokens (1).",
                 }
             ]
         }
@@ -72,21 +73,21 @@ testcases: List[TestCase] = [
     TestCase(
         simple,
         "truncate_prompt",
-        get_truncate_prompt_request(None),
+        create_request(None),
         not_implemented_error("truncate_prompt"),
     ),
     TestCase(
         simple,
         "truncate_prompts",
-        get_truncate_prompt_request(None),
+        create_request(None),
         route_not_found_error,
     ),
     *[
         TestCase(
             echo(4),
             "truncate_prompt",
-            get_truncate_prompt_request(max_prompt_tokens),
-            get_truncate_prompt_response(4, max_prompt_tokens),
+            create_request(max_prompt_tokens),
+            create_response(4, max_prompt_tokens),
         )
         for max_prompt_tokens in range(1, 6)
     ],
@@ -94,8 +95,8 @@ testcases: List[TestCase] = [
         TestCase(
             echo(model_limit),
             "truncate_prompt",
-            get_truncate_prompt_request(None),
-            get_truncate_prompt_response(model_limit, None),
+            create_request(None),
+            create_response(model_limit, None),
         )
         for model_limit in [3, 4]
     ],
