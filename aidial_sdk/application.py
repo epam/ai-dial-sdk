@@ -30,7 +30,7 @@ class DIALApp(FastAPI):
         dial_url: Optional[str] = None,
         propagation_auth_headers: bool = False,
         telemetry_config: Optional[TelemetryConfig] = None,
-        add_healthcheck=False,
+        add_healthcheck: bool = False,
         **fast_api_kwargs,
     ):
         super().__init__(**fast_api_kwargs)
