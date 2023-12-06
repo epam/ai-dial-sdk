@@ -30,7 +30,7 @@ class DIALApp(FastAPI):
         dial_url: Optional[str] = None,
         propagation_auth_headers: bool = False,
         telemetry_config: Optional[TelemetryConfig] = None,
-        healthcheck_enabled=False,
+        add_healthcheck=False,
         **fast_api_kwargs,
     ):
         super().__init__(**fast_api_kwargs)
@@ -46,7 +46,7 @@ class DIALApp(FastAPI):
 
             HeaderPropagator(self, dial_url).enable()
 
-        if healthcheck_enabled:
+        if add_healthcheck:
             self.add_api_route("/health", DIALApp._healthcheck, methods=["GET"])
 
         self.add_api_route(
