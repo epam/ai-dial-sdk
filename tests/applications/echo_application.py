@@ -21,10 +21,10 @@ from tests.utils.tokenization import (
 
 
 class EchoApplication(ChatCompletion):
-    default_max_prompt_tokens: int
+    model_max_prompt_tokens: int
 
-    def __init__(self, default_max_prompt_tokens: int):
-        self.default_max_prompt_tokens = default_max_prompt_tokens
+    def __init__(self, model_max_prompt_tokens: int):
+        self.model_max_prompt_tokens = model_max_prompt_tokens
 
     async def chat_completion(
         self, request: Request, response: Response
@@ -47,6 +47,6 @@ class EchoApplication(ChatCompletion):
     ) -> TruncatePromptResponse:
         return make_batched_truncate_prompt(
             lambda req: default_truncate_prompt(
-                req, word_count_request, self.default_max_prompt_tokens
+                req, word_count_request, self.model_max_prompt_tokens
             )
         )(request)

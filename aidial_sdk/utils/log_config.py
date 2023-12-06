@@ -22,7 +22,7 @@ class LogConfig(BaseModel):
         },
     }
     loggers = {
-        "aidial_sdk": {"handlers": ["default"], "level": "DEBUG"},
+        "aidial_sdk": {"handlers": ["default"], "level": "WARNING"},
         "uvicorn": {
             "handlers": ["default"],
             "propagate": False,

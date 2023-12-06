@@ -118,10 +118,10 @@ def test_discarded_messages_is_set_twice():
     with response.create_single_choice():
         pass
 
-    response.set_discarded_messages([1])
+    response.set_discarded_messages(DISCARDED_MESSAGES)
 
     with pytest.raises(HTTPException):
-        response.set_discarded_messages([1])
+        response.set_discarded_messages(DISCARDED_MESSAGES)
 
 
 def test_discarded_messages_is_set_before_choice():
@@ -129,4 +129,4 @@ def test_discarded_messages_is_set_before_choice():
     response = Response(request)
 
     with pytest.raises(HTTPException):
-        response.set_discarded_messages([1])
+        response.set_discarded_messages(DISCARDED_MESSAGES)

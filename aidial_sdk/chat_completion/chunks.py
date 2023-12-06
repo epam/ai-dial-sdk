@@ -370,7 +370,7 @@ class UsagePerModelChunk(BaseChunk):
         }
 
 
-class discardedMessagesChunk(BaseChunk):
+class DiscardedMessagesChunk(BaseChunk):
     discarded_messages: List[int]
 
     def __init__(self, discarded_messages: List[int]):
