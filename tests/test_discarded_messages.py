@@ -7,6 +7,8 @@ from starlette.testclient import TestClient
 from aidial_sdk import DIALApp, HTTPException
 from aidial_sdk.chat_completion import ChatCompletion, Request, Response
 
+DISCARDED_MESSAGES = list(range(0, 12))
+
 
 def test_discarded_messages_returned():
     dial_app = DIALApp()
@@ -15,7 +17,7 @@ def test_discarded_messages_returned():
     async def chat_completion_side_effect(_, res: Response) -> None:
         with res.create_single_choice():
             pass
-        res.set_discarded_messages(12)
+        res.set_discarded_messages(DISCARDED_MESSAGES)
 
     chat_completion.chat_completion.side_effect = chat_completion_side_effect
     dial_app.add_chat_completion("test_app", chat_completion)
@@ -30,7 +32,10 @@ def test_discarded_messages_returned():
         headers={"Api-Key": "TEST_API_KEY"},
     )
 
-    assert response.json()["statistics"]["discarded_messages"] == 12
+    assert (
+        response.json()["statistics"]["discarded_messages"]
+        == DISCARDED_MESSAGES
+    )
 
 
 def test_discarded_messages_returned_as_last_chunk_in_stream():
@@ -44,7 +49,7 @@ def test_discarded_messages_returned_as_last_chunk_in_stream():
         with res.create_single_choice():
             pass
 
-        res.set_discarded_messages(12)
+        res.set_discarded_messages(DISCARDED_MESSAGES)
 
     chat_completion.chat_completion.side_effect = chat_completion_side_effect
     dial_app.add_chat_completion("test_app", chat_completion)
@@ -95,7 +100,7 @@ def test_discarded_messages_returned_as_last_chunk_in_stream():
         {
             "choices": [{"index": 0, "finish_reason": "stop", "delta": {}}],
             "usage": None,
-            "statistics": {"discarded_messages": 12},
+            "statistics": {"discarded_messages": DISCARDED_MESSAGES},
             "id": "test_id",
             "created": 123,
             "object": "chat.completion.chunk",
@@ -113,10 +118,10 @@ def test_discarded_messages_is_set_twice():
     with response.create_single_choice():
         pass
 
-    response.set_discarded_messages(1)
+    response.set_discarded_messages([1])
 
     with pytest.raises(HTTPException):
-        response.set_discarded_messages(1)
+        response.set_discarded_messages([1])
 
 
 def test_discarded_messages_is_set_before_choice():
@@ -124,4 +129,4 @@ def test_discarded_messages_is_set_before_choice():
     response = Response(request)
 
     with pytest.raises(HTTPException):
-        response.set_discarded_messages(1)
+        response.set_discarded_messages([1])

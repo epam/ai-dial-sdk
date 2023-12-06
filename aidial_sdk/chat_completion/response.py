@@ -1,6 +1,14 @@
 import asyncio
 from time import time
-from typing import Any, AsyncGenerator, Callable, Coroutine, Dict, Optional
+from typing import (
+    Any,
+    AsyncGenerator,
+    Callable,
+    Coroutine,
+    Dict,
+    List,
+    Optional,
+)
 from uuid import uuid4
 
 from fastapi import HTTPException
@@ -8,11 +16,11 @@ from fastapi import HTTPException
 from aidial_sdk.chat_completion.choice import Choice
 from aidial_sdk.chat_completion.chunks import (
     BaseChunk,
-    DiscardedMessagesChunk,
     EndChoiceChunk,
     EndChunk,
     UsageChunk,
     UsagePerModelChunk,
+    discardedMessagesChunk,
 )
 from aidial_sdk.chat_completion.request import Request
 from aidial_sdk.exceptions import HTTPException as DialHttpException
@@ -134,7 +142,7 @@ class Response:
 
             if isinstance(
                 item,
-                (UsageChunk, UsagePerModelChunk, DiscardedMessagesChunk),
+                (UsageChunk, UsagePerModelChunk, discardedMessagesChunk),
             ):
                 usage_chunk = merge(usage_chunk, item.to_dict())
             elif isinstance(item, BaseChunk):
@@ -283,7 +291,7 @@ class Response:
         )
         self._last_usage_per_model_index += 1
 
-    def set_discarded_messages(self, discarded_messages: int):
+    def set_discarded_messages(self, discarded_messages: List[int]):
         self._generation_started = True
 
         if self._discarded_messages_generated:
@@ -294,7 +302,7 @@ class Response:
             )
 
         self._discarded_messages_generated = True
-        self._queue.put_nowait(DiscardedMessagesChunk(discarded_messages))
+        self._queue.put_nowait(discardedMessagesChunk(discarded_messages))
 
     def set_usage(self, prompt_tokens: int = 0, completion_tokens: int = 0):
         self._generation_started = True

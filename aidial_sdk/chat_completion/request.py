@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any, List, Mapping, Optional, Union
+from typing import Any, List, Literal, Mapping, Optional, Union
 
 from aidial_sdk.pydantic_v1 import (
     BaseModel,
@@ -87,26 +87,31 @@ class Penalty(ConstrainedFloat):
     le = 2
 
 
-class Request(ExtraForbidModel):
-    model: Optional[StrictStr] = None
+class AzureChatCompletionRequest(ExtraForbidModel):
     messages: List[Message]
     functions: Optional[List[Function]] = None
     function_call: Optional[
         Union[StrictStr, Mapping[StrictStr, StrictStr]]
     ] = None
-    addons: Optional[List[Addon]] = None
     stream: bool = False
     temperature: Optional[Temperature] = None
     top_p: Optional[TopP] = None
     n: Optional[N] = None
     stop: Optional[Union[StrictStr, Stop]] = None
     max_tokens: Optional[PositiveInt] = None
-    max_prompt_tokens: Optional[PositiveInt] = None
     presence_penalty: Optional[Penalty] = None
     frequency_penalty: Optional[Penalty] = None
     logit_bias: Optional[Mapping[int, float]] = None
     user: Optional[StrictStr] = None
 
+
+class ChatCompletionRequest(AzureChatCompletionRequest):
+    model: Optional[StrictStr] = None
+    addons: Optional[List[Addon]] = None
+    max_prompt_tokens: Optional[PositiveInt] = None
+
+
+class ChatCompletionExtra(ExtraForbidModel):
     api_key: StrictStr
     jwt: Optional[StrictStr] = None
     deployment_id: StrictStr
@@ -114,6 +119,52 @@ class Request(ExtraForbidModel):
     headers: Mapping[StrictStr, StrictStr]
 
 
+class Request(ChatCompletionRequest, ChatCompletionExtra):
+    pass
+
+
 class RateRequest(ExtraForbidModel):
     response_id: StrictStr = Field(None, alias="responseId")
     rate: bool = False
+
+
+class TokenizeRequest(BaseModel):
+    requests: List[Union[ChatCompletionRequest, str]]
+
+
+class TokenizeSuccess(BaseModel):
+    status: Literal["success"] = "success"
+    token_count: int
+
+
+class TokenizeError(BaseModel):
+    status: Literal["error"] = "error"
+    error: str
+
+
+TokenizeResult = Union[TokenizeSuccess, TokenizeError]
+
+
+class TokenizeResponse(BaseModel):
+    responses: List[TokenizeResult]
+
+
+class TruncatePromptRequest(BaseModel):
+    requests: List[ChatCompletionRequest]
+
+
+class TruncatePromptSuccess(BaseModel):
+    status: Literal["success"] = "success"
+    discarded_messages: List[int]
+
+
+class TruncatePromptError(BaseModel):
+    status: Literal["error"] = "error"
+    error: str
+
+
+TruncatePromptResult = Union[TruncatePromptSuccess, TruncatePromptError]
+
+
+class TruncatePromptResponse(BaseModel):
+    responses: List[TruncatePromptResult]

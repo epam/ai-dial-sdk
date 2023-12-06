@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from aidial_sdk.chat_completion.enums import FinishReason, Status
 from aidial_sdk.pydantic_v1 import BaseModel, root_validator
@@ -370,10 +370,10 @@ class UsagePerModelChunk(BaseChunk):
         }
 
 
-class DiscardedMessagesChunk(BaseChunk):
-    discarded_messages: int
+class discardedMessagesChunk(BaseChunk):
+    discarded_messages: List[int]
 
-    def __init__(self, discarded_messages: int):
+    def __init__(self, discarded_messages: List[int]):
         self.discarded_messages = discarded_messages
 
     def to_dict(self):

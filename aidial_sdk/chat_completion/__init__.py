@@ -10,6 +10,14 @@ from aidial_sdk.chat_completion.request import (
     Message,
     Request,
     Role,
+    TokenizeError,
+    TokenizeRequest,
+    TokenizeResponse,
+    TokenizeSuccess,
+    TruncatePromptError,
+    TruncatePromptRequest,
+    TruncatePromptResponse,
+    TruncatePromptSuccess,
 )
 from aidial_sdk.chat_completion.response import Response
 from aidial_sdk.chat_completion.stage import Stage
