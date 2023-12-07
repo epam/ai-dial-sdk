@@ -1,14 +1,13 @@
 from abc import ABC, abstractmethod
 
-from aidial_sdk.chat_completion.request import (
-    RateRequest,
-    Request,
-    TokenizeRequest,
-    TokenizeResponse,
+from aidial_sdk.chat_completion.request import Request
+from aidial_sdk.chat_completion.response import Response
+from aidial_sdk.deployment.rate import RateRequest
+from aidial_sdk.deployment.tokenize import TokenizeRequest, TokenizeResponse
+from aidial_sdk.deployment.truncate_prompt import (
     TruncatePromptRequest,
     TruncatePromptResponse,
 )
-from aidial_sdk.chat_completion.response import Response
 
 
 class ChatCompletion(ABC):

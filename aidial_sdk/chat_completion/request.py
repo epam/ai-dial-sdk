@@ -1,20 +1,15 @@
 from enum import Enum
-from typing import Any, List, Literal, Mapping, Optional, Union
+from typing import Any, List, Mapping, Optional, Union
 
+from aidial_sdk.deployment.parameters import DeploymentParameters
 from aidial_sdk.pydantic_v1 import (
-    BaseModel,
     ConstrainedFloat,
     ConstrainedInt,
     ConstrainedList,
-    Field,
     PositiveInt,
     StrictStr,
 )
-
-
-class ExtraForbidModel(BaseModel):
-    class Config:
-        extra = "forbid"
+from aidial_sdk.utils.pydantic import ExtraForbidModel
 
 
 class Attachment(ExtraForbidModel):
@@ -111,60 +106,5 @@ class ChatCompletionRequest(AzureChatCompletionRequest):
     max_prompt_tokens: Optional[PositiveInt] = None
 
 
-class ChatCompletionExtra(ExtraForbidModel):
-    api_key: StrictStr
-    jwt: Optional[StrictStr] = None
-    deployment_id: StrictStr
-    api_version: Optional[StrictStr] = None
-    headers: Mapping[StrictStr, StrictStr]
-
-
-class Request(ChatCompletionRequest, ChatCompletionExtra):
+class Request(ChatCompletionRequest, DeploymentParameters):
     pass
-
-
-class RateRequest(ExtraForbidModel):
-    response_id: StrictStr = Field(None, alias="responseId")
-    rate: bool = False
-
-
-class TokenizeRequest(BaseModel):
-    requests: List[Union[ChatCompletionRequest, str]]
-
-
-class TokenizeSuccess(BaseModel):
-    status: Literal["success"] = "success"
-    token_count: int
-
-
-class TokenizeError(BaseModel):
-    status: Literal["error"] = "error"
-    error: str
-
-
-TokenizeResult = Union[TokenizeSuccess, TokenizeError]
-
-
-class TokenizeResponse(BaseModel):
-    responses: List[TokenizeResult]
-
-
-class TruncatePromptRequest(BaseModel):
-    requests: List[ChatCompletionRequest]
-
-
-class TruncatePromptSuccess(BaseModel):
-    status: Literal["success"] = "success"
-    discarded_messages: List[int]
-
-
-class TruncatePromptError(BaseModel):
-    status: Literal["error"] = "error"
-    error: str
-
-
-TruncatePromptResult = Union[TruncatePromptSuccess, TruncatePromptError]
-
-
-class TruncatePromptResponse(BaseModel):
-    responses: List[TruncatePromptResult]

@@ -1,13 +1,8 @@
 from typing_extensions import override
 
-from aidial_sdk.chat_completion import (
-    ChatCompletion,
-    Request,
-    Response,
-    TokenizeRequest,
-    TokenizeResponse,
-)
-from aidial_sdk.chat_completion.request import (
+from aidial_sdk.chat_completion import ChatCompletion, Request, Response
+from aidial_sdk.deployment.tokenize import TokenizeRequest, TokenizeResponse
+from aidial_sdk.deployment.truncate_prompt import (
     TruncatePromptRequest,
     TruncatePromptResponse,
 )

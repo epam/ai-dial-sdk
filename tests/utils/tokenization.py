@@ -4,10 +4,14 @@ from aidial_sdk.chat_completion.request import (
     ChatCompletionRequest,
     Message,
     Role,
+)
+from aidial_sdk.deployment.tokenize import (
     TokenizeRequest,
     TokenizeResponse,
     TokenizeResult,
     TokenizeSuccess,
+)
+from aidial_sdk.deployment.truncate_prompt import (
     TruncatePromptError,
     TruncatePromptRequest,
     TruncatePromptResponse,

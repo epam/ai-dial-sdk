@@ -1,6 +1,6 @@
 from typing import Optional
 
-from pydantic import BaseModel
+from aidial_sdk.pydantic_v1 import BaseModel
 
 
 class TracingConfig(BaseModel):

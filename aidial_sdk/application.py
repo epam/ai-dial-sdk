@@ -4,21 +4,18 @@ from typing import Dict, Optional, Type, TypeVar
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
-from pydantic import BaseModel
 
 from aidial_sdk.chat_completion.base import ChatCompletion
-from aidial_sdk.chat_completion.request import RateRequest
 from aidial_sdk.chat_completion.request import Request as ChatCompletionRequest
-from aidial_sdk.chat_completion.request import (
-    TokenizeRequest,
-    TruncatePromptRequest,
-)
 from aidial_sdk.chat_completion.response import (
     Response as ChatCompletionResponse,
 )
+from aidial_sdk.deployment.rate import RateRequest
+from aidial_sdk.deployment.tokenize import TokenizeRequest
+from aidial_sdk.deployment.truncate_prompt import TruncatePromptRequest
 from aidial_sdk.exceptions import HTTPException as DIALException
 from aidial_sdk.header_propagator import HeaderPropagator
-from aidial_sdk.pydantic_v1 import ValidationError
+from aidial_sdk.pydantic_v1 import BaseModel, ValidationError
 from aidial_sdk.telemetry.types import TelemetryConfig
 from aidial_sdk.utils.errors import json_error
 from aidial_sdk.utils.log_config import LogConfig
