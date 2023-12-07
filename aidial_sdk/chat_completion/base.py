@@ -22,10 +22,10 @@ class ChatCompletion(ABC):
 
     async def tokenize(self, request: TokenizeRequest) -> TokenizeResponse:
         """Implement tokenize logic"""
-        raise NotImplementedError("tokenize method is not implemented")
+        raise NotImplementedError()
 
     async def truncate_prompt(
         self, request: TruncatePromptRequest
     ) -> TruncatePromptResponse:
         """Implement truncate prompt logic"""
-        raise NotImplementedError("truncate_prompt method is not implemented")
+        raise NotImplementedError()

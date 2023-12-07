@@ -9,22 +9,22 @@ from aidial_sdk.chat_completion.request import Request as ChatCompletionRequest
 from aidial_sdk.chat_completion.response import (
     Response as ChatCompletionResponse,
 )
+from aidial_sdk.deployment.from_request_mixin import FromRequestMixin
 from aidial_sdk.deployment.rate import RateRequest
 from aidial_sdk.deployment.tokenize import TokenizeRequest
 from aidial_sdk.deployment.truncate_prompt import TruncatePromptRequest
 from aidial_sdk.exceptions import HTTPException as DIALException
 from aidial_sdk.header_propagator import HeaderPropagator
-from aidial_sdk.pydantic_v1 import BaseModel, ValidationError
+from aidial_sdk.pydantic_v1 import ValidationError
 from aidial_sdk.telemetry.types import TelemetryConfig
 from aidial_sdk.utils.errors import json_error
-from aidial_sdk.utils.fastapi import get_request_body
 from aidial_sdk.utils.log_config import LogConfig
 from aidial_sdk.utils.logging import log_debug, set_log_deployment
 from aidial_sdk.utils.streaming import merge_chunks
 
 logging.config.dictConfig(LogConfig().dict())
 
-Model = TypeVar("Model", bound=BaseModel)
+RequestType = TypeVar("RequestType", bound=FromRequestMixin)
 
 
 class DIALApp(FastAPI):
@@ -68,13 +68,13 @@ class DIALApp(FastAPI):
 
         self.add_api_route(
             "/openai/deployments/{deployment_id}/tokenize",
-            self._endpoint_factory("tokenize", TokenizeRequest),  # type: ignore
+            self._endpoint_factory("tokenize", TokenizeRequest),
             methods=["POST"],
         )
 
         self.add_api_route(
             "/openai/deployments/{deployment_id}/truncate_prompt",
-            self._endpoint_factory("truncate_prompt", TruncatePromptRequest),  # type: ignore
+            self._endpoint_factory("truncate_prompt", TruncatePromptRequest),
             methods=["POST"],
         )
 
@@ -106,20 +106,18 @@ class DIALApp(FastAPI):
     ) -> None:
         self.chat_completion_impls[deployment_name] = impl
 
-    def _endpoint_factory(self, endpoint: str, request_type: Type["Model"]):
+    def _endpoint_factory(
+        self, endpoint: str, request_type: Type["RequestType"]
+    ):
         async def _handler(
             deployment_id: str, original_request: Request
         ) -> Response:
             set_log_deployment(deployment_id)
+            deployment = self._get_deployment(deployment_id)
 
-            impl = self._get_deployment(deployment_id)
-            request_json = await get_request_body(original_request)
+            request = await request_type.from_request(original_request)
 
-            log_debug(f"request [{endpoint}]: {request_json}")
-
-            request = request_type(**request_json)
-
-            endpoint_impl = getattr(impl, endpoint)
+            endpoint_impl = getattr(deployment, endpoint)
             if not endpoint_impl:
                 raise self._get_missing_endpoint_error(endpoint)
 
@@ -138,25 +136,25 @@ class DIALApp(FastAPI):
         self, deployment_id: str, original_request: Request
     ) -> Response:
         set_log_deployment(deployment_id)
-        impl = self._get_deployment(deployment_id)
-        request_json = await get_request_body(original_request)
-        log_debug(f"request: {request_json}")
+        deployment = self._get_deployment(deployment_id)
 
-        request = RateRequest(**request_json)
+        request = await RateRequest.from_request(original_request)
 
-        await impl.rate_response(request)
+        await deployment.rate_response(request)
         return Response(status_code=200)
 
     async def _chat_completion(
         self, deployment_id: str, original_request: Request
     ) -> Response:
         set_log_deployment(deployment_id)
-        impl = self._get_deployment(deployment_id)
+        deployment = self._get_deployment(deployment_id)
 
         request = await ChatCompletionRequest.from_request(original_request)
 
         response = ChatCompletionResponse(request)
-        first_chunk = await response._generator(impl.chat_completion, request)
+        first_chunk = await response._generator(
+            deployment.chat_completion, request
+        )
 
         if request.stream:
             return StreamingResponse(
@@ -200,7 +198,7 @@ class DIALApp(FastAPI):
         request: Request, exc: ValidationError
     ) -> JSONResponse:
         error = exc.errors()[0]
-        path = ".".join(map(str, exc.errors()[0]["loc"]))
+        path = ".".join(map(str, error["loc"]))
         message = f"Your request contained invalid structure on path {path}. {error['msg']}"
         return JSONResponse(
             status_code=400,

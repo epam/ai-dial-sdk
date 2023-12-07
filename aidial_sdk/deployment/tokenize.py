@@ -1,11 +1,11 @@
 from typing import List, Literal, Union
 
 from aidial_sdk.chat_completion.request import ChatCompletionRequest
+from aidial_sdk.deployment.from_request_mixin import FromRequestDeploymentMixin
 from aidial_sdk.pydantic_v1 import BaseModel
-from aidial_sdk.utils.pydantic import ExtraForbidModel
 
 
-class TokenizeRequest(ExtraForbidModel):
+class TokenizeRequest(FromRequestDeploymentMixin):
     requests: List[Union[ChatCompletionRequest, str]]
 
 
