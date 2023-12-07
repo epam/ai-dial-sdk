@@ -1,6 +1,6 @@
 import logging.config
 from json import JSONDecodeError
-from typing import Any, Dict, Optional, Type, TypeVar
+from typing import Dict, Optional, Type, TypeVar
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
@@ -82,6 +82,10 @@ class DIALApp(FastAPI):
         )
 
         self.add_exception_handler(
+            ValidationError, DIALApp._pydantic_validation_exception_handler
+        )
+
+        self.add_exception_handler(
             HTTPException, DIALApp._fastapi_exception_handler
         )
 
@@ -112,11 +116,11 @@ class DIALApp(FastAPI):
             set_log_deployment(deployment_id)
 
             impl = self._get_deployment(deployment_id)
-            request_json = await DIALApp._get_json_body(original_request)
+            request_json = await DIALApp._get_request_body(original_request)
 
             log_debug(f"request [{endpoint}]: {request_json}")
 
-            request = self._parse_model(request_type, request_json)
+            request = request_type(**request_json)
 
             endpoint_impl = getattr(impl, endpoint)
             if not endpoint_impl:
@@ -138,12 +142,10 @@ class DIALApp(FastAPI):
     ) -> Response:
         set_log_deployment(deployment_id)
         impl = self._get_deployment(deployment_id)
-        request_json = await DIALApp._get_json_body(original_request)
+        request_json = await DIALApp._get_request_body(original_request)
         log_debug(f"request: {request_json}")
 
-        request = self._parse_model(RateRequest, request_json)  # type: ignore
-
-        log_debug(f"parsed request: {request}")
+        request = RateRequest(**request_json)
 
         await impl.rate_response(request)
         return Response(status_code=200)
@@ -153,21 +155,18 @@ class DIALApp(FastAPI):
     ) -> Response:
         set_log_deployment(deployment_id)
         impl = self._get_deployment(deployment_id)
-        request_json = await DIALApp._get_json_body(original_request)
+        request_json = await DIALApp._get_request_body(original_request)
         log_debug(f"request: {request_json}")
 
         headers = original_request.headers
-        try:
-            request = ChatCompletionRequest(
-                **request_json,
-                api_key=headers["Api-Key"],
-                jwt=headers.get("Authorization"),
-                deployment_id=deployment_id,
-                api_version=original_request.query_params.get("api-version"),
-                headers=headers,
-            )
-        except ValidationError as e:
-            raise DIALApp._get_validation_error(e)
+        request = ChatCompletionRequest(
+            **request_json,
+            api_key=headers["Api-Key"],
+            jwt=headers.get("Authorization"),
+            deployment_id=deployment_id,
+            api_version=original_request.query_params.get("api-version"),
+            headers=headers,
+        )
 
         response = ChatCompletionResponse(request)
         first_chunk = await response._generator(impl.chat_completion, request)
@@ -188,13 +187,6 @@ class DIALApp(FastAPI):
     @staticmethod
     async def _healthcheck() -> JSONResponse:
         return JSONResponse(content={"status": "ok"})
-
-    @staticmethod
-    def _parse_model(ty: Type["Model"], data: Any) -> "Model":
-        try:
-            return ty(**data)
-        except ValidationError as e:
-            raise DIALApp._get_validation_error(e)
 
     def _get_deployment(self, deployment_id: str) -> ChatCompletion:
         impl = self.chat_completion_impls.get(deployment_id, None)
@@ -217,7 +209,7 @@ class DIALApp(FastAPI):
         )
 
     @staticmethod
-    async def _get_json_body(request: Request) -> dict:
+    async def _get_request_body(request: Request) -> dict:
         try:
             return await request.json()
         except JSONDecodeError as e:
@@ -228,24 +220,30 @@ class DIALApp(FastAPI):
             )
 
     @staticmethod
-    def _get_validation_error(e: ValidationError) -> DIALException:
-        error = e.errors()[0]
-        path = ".".join(map(str, e.errors()[0]["loc"]))
-        return DIALException(
+    def _pydantic_validation_exception_handler(
+        request: Request, exc: ValidationError
+    ) -> JSONResponse:
+        error = exc.errors()[0]
+        path = ".".join(map(str, exc.errors()[0]["loc"]))
+        message = f"Your request contained invalid structure on path {path}. {error['msg']}"
+        return JSONResponse(
             status_code=400,
-            type="invalid_request_error",
-            message=f"Your request contained invalid structure on path {path}. {error['msg']}",
+            content=json_error(message=message, type="invalid_request_error"),
         )
 
     @staticmethod
-    def _fastapi_exception_handler(request: Request, exc: HTTPException):
+    def _fastapi_exception_handler(
+        request: Request, exc: HTTPException
+    ) -> JSONResponse:
         return JSONResponse(
             status_code=exc.status_code,
             content=exc.detail,
         )
 
     @staticmethod
-    def _dial_exception_handler(request: Request, exc: DIALException):
+    def _dial_exception_handler(
+        request: Request, exc: DIALException
+    ) -> JSONResponse:
         return JSONResponse(
             status_code=exc.status_code,
             content=json_error(

@@ -212,7 +212,7 @@ class Response:
 
     async def _generator(
         self,
-        producer: Callable[[Any, Any], Coroutine[Any, Any, Any]],
+        producer: Callable[[Request, "Response"], Coroutine[Any, Any, Any]],
         request: Request,
     ) -> BaseChunk:
         self.user_task = asyncio.create_task(producer(request, self))
