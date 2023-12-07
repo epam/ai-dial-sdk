@@ -1,5 +1,4 @@
 import logging.config
-from json import JSONDecodeError
 from typing import Dict, Optional, Type, TypeVar
 
 from fastapi import FastAPI, HTTPException, Request
@@ -18,6 +17,7 @@ from aidial_sdk.header_propagator import HeaderPropagator
 from aidial_sdk.pydantic_v1 import BaseModel, ValidationError
 from aidial_sdk.telemetry.types import TelemetryConfig
 from aidial_sdk.utils.errors import json_error
+from aidial_sdk.utils.fastapi import get_request_body
 from aidial_sdk.utils.log_config import LogConfig
 from aidial_sdk.utils.logging import log_debug, set_log_deployment
 from aidial_sdk.utils.streaming import merge_chunks
@@ -113,7 +113,7 @@ class DIALApp(FastAPI):
             set_log_deployment(deployment_id)
 
             impl = self._get_deployment(deployment_id)
-            request_json = await DIALApp._get_request_body(original_request)
+            request_json = await get_request_body(original_request)
 
             log_debug(f"request [{endpoint}]: {request_json}")
 
@@ -139,7 +139,7 @@ class DIALApp(FastAPI):
     ) -> Response:
         set_log_deployment(deployment_id)
         impl = self._get_deployment(deployment_id)
-        request_json = await DIALApp._get_request_body(original_request)
+        request_json = await get_request_body(original_request)
         log_debug(f"request: {request_json}")
 
         request = RateRequest(**request_json)
@@ -152,18 +152,8 @@ class DIALApp(FastAPI):
     ) -> Response:
         set_log_deployment(deployment_id)
         impl = self._get_deployment(deployment_id)
-        request_json = await DIALApp._get_request_body(original_request)
-        log_debug(f"request: {request_json}")
 
-        headers = original_request.headers
-        request = ChatCompletionRequest(
-            **request_json,
-            api_key=headers["Api-Key"],
-            jwt=headers.get("Authorization"),
-            deployment_id=deployment_id,
-            api_version=original_request.query_params.get("api-version"),
-            headers=headers,
-        )
+        request = await ChatCompletionRequest.from_request(original_request)
 
         response = ChatCompletionResponse(request)
         first_chunk = await response._generator(impl.chat_completion, request)
@@ -204,17 +194,6 @@ class DIALApp(FastAPI):
             code="endpoint_not_found",
             message=f"The deployment doesn't implement '{endpoint}' endpoint.",
         )
-
-    @staticmethod
-    async def _get_request_body(request: Request) -> dict:
-        try:
-            return await request.json()
-        except JSONDecodeError as e:
-            raise DIALException(
-                status_code=400,
-                type="invalid_request_error",
-                message=f"Your request contained invalid JSON: {str(e.msg)}",
-            )
 
     @staticmethod
     def _pydantic_validation_exception_handler(

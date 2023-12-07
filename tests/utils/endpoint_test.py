@@ -28,7 +28,7 @@ class TestCase:
         self.response = response
 
 
-def run_endpoint_test_case(testcase: TestCase):
+def run_endpoint_test(testcase: TestCase):
     dial_app = DIALApp()
     dial_app.add_chat_completion("test_app", testcase.app)
 

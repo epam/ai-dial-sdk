@@ -3,8 +3,8 @@ from typing import List
 import pytest
 
 from tests.applications.echo_application import EchoApplication
-from tests.applications.single_choice_application import SingleChoiceApplication
-from tests.utils.endpoint_test import TestCase, run_endpoint_test_case
+from tests.applications.noop_application import NoopApplication
+from tests.utils.endpoint_test import TestCase, run_endpoint_test
 from tests.utils.errors import (
     bad_request_error,
     not_implemented_error,
@@ -41,17 +41,17 @@ TOKENIZE_RESPONSE_FAIL = {
     ]
 }
 
-simple = SingleChoiceApplication()
+noop = NoopApplication()
 echo = EchoApplication
 
 testcases: List[TestCase] = [
     TestCase(
-        simple,
+        noop,
         "tokenize",
         TOKENIZE_REQUEST_OK1,
         not_implemented_error("tokenize"),
     ),
-    TestCase(simple, "tokenizer", TOKENIZE_REQUEST_OK1, route_not_found_error),
+    TestCase(noop, "tokenizer", TOKENIZE_REQUEST_OK1, route_not_found_error),
     TestCase(echo(0), "tokenize", TOKENIZE_REQUEST_OK1, TOKENIZE_RESPONSE_OK1),
     TestCase(echo(0), "tokenize", TOKENIZE_REQUEST_OK2, TOKENIZE_RESPONSE_OK2),
     TestCase(
@@ -65,4 +65,4 @@ testcases: List[TestCase] = [
 
 @pytest.mark.parametrize("testcase", testcases)
 def test_tokenize(testcase: TestCase):
-    run_endpoint_test_case(testcase)
+    run_endpoint_test(testcase)

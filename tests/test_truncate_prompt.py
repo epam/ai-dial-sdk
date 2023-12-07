@@ -3,8 +3,8 @@ from typing import List, Optional
 import pytest
 
 from tests.applications.echo_application import EchoApplication
-from tests.applications.single_choice_application import SingleChoiceApplication
-from tests.utils.endpoint_test import TestCase, run_endpoint_test_case
+from tests.applications.noop_application import NoopApplication
+from tests.utils.endpoint_test import TestCase, run_endpoint_test
 from tests.utils.errors import not_implemented_error, route_not_found_error
 
 CHAT_COMPLETION_REQUEST = {
@@ -66,18 +66,18 @@ def create_response(
     return {"responses": [{"status": "success", "discarded_messages": []}]}
 
 
-simple = SingleChoiceApplication()
+noop = NoopApplication()
 echo = EchoApplication
 
 testcases: List[TestCase] = [
     TestCase(
-        simple,
+        noop,
         "truncate_prompt",
         create_request(None),
         not_implemented_error("truncate_prompt"),
     ),
     TestCase(
-        simple,
+        noop,
         "truncate_prompts",
         create_request(None),
         route_not_found_error,
@@ -105,4 +105,4 @@ testcases: List[TestCase] = [
 
 @pytest.mark.parametrize("testcase", testcases)
 def test_truncate_prompt(testcase: TestCase):
-    run_endpoint_test_case(testcase)
+    run_endpoint_test(testcase)

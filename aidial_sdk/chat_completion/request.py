@@ -1,7 +1,7 @@
 from enum import Enum
 from typing import Any, List, Mapping, Optional, Union
 
-from aidial_sdk.deployment.parameters import DeploymentParameters
+from aidial_sdk.deployment.parameters import DeploymentParametersMixin
 from aidial_sdk.pydantic_v1 import (
     ConstrainedFloat,
     ConstrainedInt,
@@ -106,5 +106,5 @@ class ChatCompletionRequest(AzureChatCompletionRequest):
     max_prompt_tokens: Optional[PositiveInt] = None
 
 
-class Request(ChatCompletionRequest, DeploymentParameters):
+class Request(ChatCompletionRequest, DeploymentParametersMixin):
     pass

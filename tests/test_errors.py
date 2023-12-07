@@ -5,6 +5,7 @@ from starlette.testclient import TestClient
 
 from aidial_sdk import DIALApp
 from tests.applications.broken_application import BrokenApplication
+from tests.applications.noop_application import NoopApplication
 from tests.applications.runtime_broken_application import (
     RuntimeBrokenApplication,
 )
@@ -15,6 +16,15 @@ DEFAULT_RUNTIME_ERROR = {
         "type": "runtime_error",
         "code": None,
         "param": None,
+    }
+}
+
+API_KEY_IS_MISSING = {
+    "error": {
+        "code": None,
+        "message": "Api-Key header is required",
+        "param": None,
+        "type": "invalid_request_error",
     }
 }
 
@@ -151,3 +161,20 @@ def test_runtime_streaming_error(type, response_status_code, response_content):
             assert json.loads(data) == response_content
         elif index == 8:
             assert data == "[DONE]"
+
+
+def test_no_api_key():
+    dial_app = DIALApp()
+    dial_app.add_chat_completion("test_app", NoopApplication())
+
+    test_app = TestClient(dial_app)
+
+    response = test_app.post(
+        "/openai/deployments/test_app/chat/completions",
+        json={
+            "messages": [{"role": "user", "content": "test"}],
+            "stream": False,
+        },
+    )
+
+    assert response.status_code == 400 and response.json() == API_KEY_IS_MISSING
