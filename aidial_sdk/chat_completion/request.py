@@ -1,4 +1,6 @@
-from typing import Annotated, Any, Dict, List, Literal, Mapping, Optional, Union
+from typing import Any, Dict, List, Literal, Mapping, Optional, Union
+
+from typing_extensions import Annotated
 
 from aidial_sdk.pydantic_v1 import (
     BaseModel,
