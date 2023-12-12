@@ -3,12 +3,17 @@ from aidial_sdk.chat_completion.choice import Choice
 from aidial_sdk.chat_completion.enums import FinishReason, Status
 from aidial_sdk.chat_completion.request import (
     Addon,
+    AssistantMessage,
     Attachment,
     CustomContent,
     Function,
     FunctionCall,
+    FunctionMessage,
     Message,
     Request,
+    SystemMessage,
+    ToolMessage,
+    UserMessage,
 )
 from aidial_sdk.chat_completion.response import Response
 from aidial_sdk.chat_completion.stage import Stage
