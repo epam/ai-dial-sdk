@@ -1,5 +1,4 @@
-from enum import Enum
-from typing import Any, List, Mapping, Optional, Union
+from typing import Annotated, Any, Dict, List, Literal, Mapping, Optional, Union
 
 from aidial_sdk.pydantic_v1 import (
     BaseModel,
@@ -31,24 +30,59 @@ class CustomContent(ExtraForbidModel):
     state: Optional[Any] = None
 
 
-class Role(Enum):
-    SYSTEM = "system"
-    USER = "user"
-    ASSISTANT = "assistant"
-    FUNCTION = "function"
-
-
 class FunctionCall(ExtraForbidModel):
     name: str
     arguments: str
 
 
-class Message(ExtraForbidModel):
-    role: Role
-    content: Optional[StrictStr] = None
-    custom_content: Optional[CustomContent] = None
+class ToolCall(ExtraForbidModel):
+    id: StrictStr
+    type: Literal["function"]
+    function: FunctionCall
+
+
+class SystemMessage(ExtraForbidModel):
+    role: Literal["system"]
+    content: StrictStr
     name: Optional[StrictStr] = None
+
+
+class UserMessage(ExtraForbidModel):
+    role: Literal["user"]
+    content: StrictStr
+    name: Optional[StrictStr] = None
+
+
+class AssistantMessage(ExtraForbidModel):
+    role: Literal["assistant"]
+    content: StrictStr
+    name: Optional[StrictStr] = None
+    tool_calls: Optional[List[ToolCall]] = None
     function_call: Optional[FunctionCall] = None
+
+
+class ToolMessage(ExtraForbidModel):
+    role: Literal["tool"]
+    content: StrictStr
+    tool_call_id: StrictStr
+
+
+class FunctionMessage(ExtraForbidModel):
+    role: Literal["function"]
+    content: StrictStr
+    name: StrictStr
+
+
+Message = Annotated[
+    Union[
+        SystemMessage,
+        UserMessage,
+        AssistantMessage,
+        ToolMessage,
+        FunctionMessage,
+    ],
+    Field(discriminator="role"),
+]
 
 
 class Addon(ExtraForbidModel):
@@ -58,8 +92,8 @@ class Addon(ExtraForbidModel):
 
 class Function(ExtraForbidModel):
     name: StrictStr
-    description: StrictStr
-    parameters: StrictStr
+    description: Optional[StrictStr] = None
+    parameters: Dict
 
 
 class Temperature(ConstrainedFloat):
@@ -87,11 +121,20 @@ class Penalty(ConstrainedFloat):
     le = 2
 
 
+class Tool(ExtraForbidModel):
+    type: StrictStr
+    function: Function
+
+
 class Request(ExtraForbidModel):
     model: Optional[StrictStr] = None
     messages: List[Message]
     functions: Optional[List[Function]] = None
     function_call: Optional[
+        Union[StrictStr, Mapping[StrictStr, StrictStr]]
+    ] = None
+    tools: Optional[Tool] = None
+    tool_choice: Optional[
         Union[StrictStr, Mapping[StrictStr, StrictStr]]
     ] = None
     addons: Optional[List[Addon]] = None

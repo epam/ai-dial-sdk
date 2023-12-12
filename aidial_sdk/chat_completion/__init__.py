@@ -9,7 +9,6 @@ from aidial_sdk.chat_completion.request import (
     FunctionCall,
     Message,
     Request,
-    Role,
 )
 from aidial_sdk.chat_completion.response import Response
 from aidial_sdk.chat_completion.stage import Stage
