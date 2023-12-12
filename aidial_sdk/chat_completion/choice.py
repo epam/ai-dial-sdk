@@ -4,6 +4,7 @@ from typing import Any, List, Optional, Type
 
 from aidial_sdk.chat_completion.chunks import (
     AttachmentChunk,
+    BaseChunk,
     ContentChunk,
     EndChoiceChunk,
     FunctionCallChunk,
@@ -16,6 +17,7 @@ from aidial_sdk.chat_completion.request import FunctionCall, ToolCall
 from aidial_sdk.chat_completion.stage import Stage
 from aidial_sdk.pydantic_v1 import ValidationError
 from aidial_sdk.utils.errors import runtime_error
+from aidial_sdk.utils.logging import log_debug
 
 
 class Choice:
@@ -49,13 +51,17 @@ class Choice:
         self.close()
         return False
 
+    def _enqueue(self, chunk: BaseChunk) -> None:
+        log_debug("added chunk:\n", chunk.to_dict())
+        self._queue.put_nowait(chunk)
+
     def append_content(self, content: str) -> None:
         if not self._opened:
             runtime_error("Trying to append content to an unopened choice")
         if self._closed:
             runtime_error("Trying to append content to a closed choice")
 
-        self._queue.put_nowait(ContentChunk(content, self._index))
+        self._enqueue(ContentChunk(content, self._index))
 
     def add_tool_calls(self, tool_calls: List[ToolCall]) -> None:
         if not self._opened:
@@ -63,7 +69,7 @@ class Choice:
         if self._closed:
             runtime_error("Trying to add tool call to a closed choice")
 
-        self._queue.put_nowait(ToolCallsChunk(tool_calls, self._index))
+        self._enqueue(ToolCallsChunk(tool_calls, self._index))
 
     def add_function_call(self, function_call: FunctionCall) -> None:
         if not self._opened:
@@ -71,7 +77,7 @@ class Choice:
         if self._closed:
             runtime_error("Trying to add function call to a closed choice")
 
-        self._queue.put_nowait(FunctionCallChunk(function_call, self._index))
+        self._enqueue(FunctionCallChunk(function_call, self._index))
 
     def add_attachment(
         self,
@@ -102,7 +108,9 @@ class Choice:
         except ValidationError as e:
             runtime_error(e.errors()[0]["msg"])
 
-        self._queue.put_nowait(attachment_chunk)
+        # FIXME: remove the assert
+        assert attachment_chunk is not None
+        self._enqueue(attachment_chunk)
         self._last_attachment_index += 1
 
     def set_state(self, state: Any) -> None:
@@ -115,7 +123,7 @@ class Choice:
             runtime_error("Trying to append state to a closed choice")
 
         self._state_submitted = True
-        self._queue.put_nowait(StateChunk(self._index, state))
+        self._enqueue(StateChunk(self._index, state))
 
     def create_stage(self, name: Optional[str] = None) -> Stage:
         if not self._opened:
@@ -133,7 +141,7 @@ class Choice:
             runtime_error("The choice is already open")
 
         self._opened = True
-        self._queue.put_nowait(StartChoiceChunk(choice_index=self._index))
+        self._enqueue(StartChoiceChunk(choice_index=self._index))
 
     def close(self, finish_reason: FinishReason = FinishReason.STOP) -> None:
         if not self._opened:
@@ -142,4 +150,4 @@ class Choice:
             runtime_error("The choice is already closed")
 
         self._closed = True
-        self._queue.put_nowait(EndChoiceChunk(finish_reason, self._index))
+        self._enqueue(EndChoiceChunk(finish_reason, self._index))
