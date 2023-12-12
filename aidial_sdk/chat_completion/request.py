@@ -144,7 +144,7 @@ class Request(ExtraForbidModel):
     function_call: Optional[
         Union[Literal["auto", "none"], FunctionChoice]
     ] = None
-    tools: Optional[Tool] = None
+    tools: Optional[List[Tool]] = None
     tool_choice: Optional[Union[Literal["auto", "none"], ToolChoice]] = None
     addons: Optional[List[Addon]] = None
     stream: bool = False
