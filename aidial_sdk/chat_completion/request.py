@@ -128,17 +128,24 @@ class Tool(ExtraForbidModel):
     function: Function
 
 
+class FunctionChoice(ExtraForbidModel):
+    name: StrictStr
+
+
+class ToolChoice(ExtraForbidModel):
+    type: Literal["function"]
+    function: FunctionChoice
+
+
 class Request(ExtraForbidModel):
     model: Optional[StrictStr] = None
     messages: List[Message]
     functions: Optional[List[Function]] = None
     function_call: Optional[
-        Union[StrictStr, Mapping[StrictStr, StrictStr]]
+        Union[Literal["auto", "none"], FunctionChoice]
     ] = None
     tools: Optional[Tool] = None
-    tool_choice: Optional[
-        Union[StrictStr, Mapping[StrictStr, StrictStr]]
-    ] = None
+    tool_choice: Optional[Union[Literal["auto", "none"], ToolChoice]] = None
     addons: Optional[List[Addon]] = None
     stream: bool = False
     temperature: Optional[Temperature] = None
