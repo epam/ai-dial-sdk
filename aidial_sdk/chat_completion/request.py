@@ -57,7 +57,7 @@ class UserMessage(ExtraForbidModel):
 
 class AssistantMessage(ExtraForbidModel):
     role: Literal["assistant"]
-    content: StrictStr
+    content: Optional[StrictStr] = None
     name: Optional[StrictStr] = None
     tool_calls: Optional[List[ToolCall]] = None
     function_call: Optional[FunctionCall] = None
