@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from aidial_sdk.chat_completion.enums import FinishReason, Status
+from aidial_sdk.chat_completion.request import FunctionCall, ToolCall
 from aidial_sdk.pydantic_v1 import BaseModel, root_validator
 
 
@@ -66,6 +67,50 @@ class ContentChunk(BaseChunk):
                     "index": self.choice_index,
                     "finish_reason": None,
                     "delta": {"content": self.content},
+                }
+            ],
+            "usage": None,
+        }
+
+
+class ToolCallsChunk(BaseChunk):
+    tool_calls: List[ToolCall]
+    choice_index: int
+
+    def __init__(self, tool_calls: List[ToolCall], choice_index: int):
+        self.tool_calls = tool_calls
+        self.choice_index = choice_index
+
+    def to_dict(self):
+        return {
+            "choices": [
+                {
+                    "index": self.choice_index,
+                    "finish_reason": "tool_calls",
+                    "delta": {
+                        "tool_calls": [c.dict() for c in self.tool_calls]
+                    },
+                }
+            ],
+            "usage": None,
+        }
+
+
+class FunctionCallChunk(BaseChunk):
+    function_call: FunctionCall
+    choice_index: int
+
+    def __init__(self, function_call: FunctionCall, choice_index: int):
+        self.function_call = function_call
+        self.choice_index = choice_index
+
+    def to_dict(self):
+        return {
+            "choices": [
+                {
+                    "index": self.choice_index,
+                    "finish_reason": "function_call",
+                    "delta": {"function_call": self.function_call.dict()},
                 }
             ],
             "usage": None,

@@ -65,14 +65,14 @@ class AssistantMessage(ExtraForbidModel):
 
 class ToolMessage(ExtraForbidModel):
     role: Literal["tool"]
-    content: StrictStr
     tool_call_id: StrictStr
+    content: StrictStr
 
 
 class FunctionMessage(ExtraForbidModel):
     role: Literal["function"]
-    content: StrictStr
     name: StrictStr
+    content: StrictStr
 
 
 Message = Annotated[

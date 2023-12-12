@@ -1,15 +1,18 @@
 from asyncio import Queue
 from types import TracebackType
-from typing import Any, Optional, Type
+from typing import Any, List, Optional, Type
 
 from aidial_sdk.chat_completion.chunks import (
     AttachmentChunk,
     ContentChunk,
     EndChoiceChunk,
+    FunctionCallChunk,
     StartChoiceChunk,
     StateChunk,
+    ToolCallsChunk,
 )
 from aidial_sdk.chat_completion.enums import FinishReason
+from aidial_sdk.chat_completion.request import FunctionCall, ToolCall
 from aidial_sdk.chat_completion.stage import Stage
 from aidial_sdk.pydantic_v1 import ValidationError
 from aidial_sdk.utils.errors import runtime_error
@@ -53,6 +56,22 @@ class Choice:
             runtime_error("Trying to append content to a closed choice")
 
         self._queue.put_nowait(ContentChunk(content, self._index))
+
+    def add_tool_calls(self, tool_calls: List[ToolCall]) -> None:
+        if not self._opened:
+            runtime_error("Trying to add tool call to an unopened choice")
+        if self._closed:
+            runtime_error("Trying to add tool call to a closed choice")
+
+        self._queue.put_nowait(ToolCallsChunk(tool_calls, self._index))
+
+    def add_function_call(self, function_call: FunctionCall) -> None:
+        if not self._opened:
+            runtime_error("Trying to add function call to an unopened choice")
+        if self._closed:
+            runtime_error("Trying to add function call to a closed choice")
+
+        self._queue.put_nowait(FunctionCallChunk(function_call, self._index))
 
     def add_attachment(
         self,
