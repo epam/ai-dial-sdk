@@ -1,6 +1,5 @@
+from enum import Enum
 from typing import Any, Dict, List, Literal, Mapping, Optional, Union
-
-from typing_extensions import Annotated
 
 from aidial_sdk.pydantic_v1 import (
     BaseModel,
@@ -43,48 +42,21 @@ class ToolCall(ExtraForbidModel):
     function: FunctionCall
 
 
-class SystemMessage(ExtraForbidModel):
-    role: Literal["system"]
-    content: StrictStr
-    name: Optional[StrictStr] = None
+class Role(Enum):
+    SYSTEM = "system"
+    USER = "user"
+    ASSISTANT = "assistant"
+    FUNCTION = "function"
+    TOOL = "tool"
 
 
-class UserMessage(ExtraForbidModel):
-    role: Literal["user"]
-    content: StrictStr
-    name: Optional[StrictStr] = None
-
-
-class AssistantMessage(ExtraForbidModel):
-    role: Literal["assistant"]
+class Message(ExtraForbidModel):
+    role: Role
     content: Optional[StrictStr] = None
     name: Optional[StrictStr] = None
     tool_calls: Optional[List[ToolCall]] = None
+    tool_call_id: Optional[StrictStr] = None
     function_call: Optional[FunctionCall] = None
-
-
-class ToolMessage(ExtraForbidModel):
-    role: Literal["tool"]
-    tool_call_id: StrictStr
-    content: StrictStr
-
-
-class FunctionMessage(ExtraForbidModel):
-    role: Literal["function"]
-    name: StrictStr
-    content: StrictStr
-
-
-Message = Annotated[
-    Union[
-        SystemMessage,
-        UserMessage,
-        AssistantMessage,
-        ToolMessage,
-        FunctionMessage,
-    ],
-    Field(discriminator="role"),
-]
 
 
 class Addon(ExtraForbidModel):
