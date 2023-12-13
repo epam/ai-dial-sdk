@@ -21,7 +21,7 @@ from aidial_sdk.utils.logging import log_debug
 
 
 class Choice:
-    _queue: Queue
+    _queue: Queue[BaseChunk]
     _index: int
     _last_attachment_index: int
     _last_stage_index: int
@@ -57,25 +57,31 @@ class Choice:
 
     def append_content(self, content: str) -> None:
         if not self._opened:
-            runtime_error("Trying to append content to an unopened choice")
+            raise runtime_error(
+                "Trying to append content to an unopened choice"
+            )
         if self._closed:
-            runtime_error("Trying to append content to a closed choice")
+            raise runtime_error("Trying to append content to a closed choice")
 
         self._enqueue(ContentChunk(content, self._index))
 
     def add_tool_calls(self, tool_calls: List[ToolCall]) -> None:
         if not self._opened:
-            runtime_error("Trying to add tool call to an unopened choice")
+            raise runtime_error("Trying to add tool call to an unopened choice")
         if self._closed:
-            runtime_error("Trying to add tool call to a closed choice")
+            raise runtime_error("Trying to add tool call to a closed choice")
 
         self._enqueue(ToolCallsChunk(tool_calls, self._index))
 
     def add_function_call(self, function_call: FunctionCall) -> None:
         if not self._opened:
-            runtime_error("Trying to add function call to an unopened choice")
+            raise runtime_error(
+                "Trying to add function call to an unopened choice"
+            )
         if self._closed:
-            runtime_error("Trying to add function call to a closed choice")
+            raise runtime_error(
+                "Trying to add function call to a closed choice"
+            )
 
         self._enqueue(FunctionCallChunk(function_call, self._index))
 
@@ -89,9 +95,11 @@ class Choice:
         reference_type: Optional[str] = None,
     ) -> None:
         if not self._opened:
-            runtime_error("Trying to add attachment to an unopened choice")
+            raise runtime_error(
+                "Trying to add attachment to an unopened choice"
+            )
         if self._closed:
-            runtime_error("Trying to add attachment to a closed choice")
+            raise runtime_error("Trying to add attachment to a closed choice")
 
         attachment_chunk = None
         try:
@@ -106,30 +114,28 @@ class Choice:
                 reference_type=reference_type,
             )
         except ValidationError as e:
-            runtime_error(e.errors()[0]["msg"])
+            raise runtime_error(e.errors()[0]["msg"])
 
-        # FIXME: remove the assert
-        assert attachment_chunk is not None
         self._enqueue(attachment_chunk)
         self._last_attachment_index += 1
 
     def set_state(self, state: Any) -> None:
         if self._state_submitted:
-            runtime_error('Trying to set "state" twice')
+            raise runtime_error('Trying to set "state" twice')
 
         if not self._opened:
-            runtime_error("Trying to append state to an unopened choice")
+            raise runtime_error("Trying to append state to an unopened choice")
         if self._closed:
-            runtime_error("Trying to append state to a closed choice")
+            raise runtime_error("Trying to append state to a closed choice")
 
         self._state_submitted = True
         self._enqueue(StateChunk(self._index, state))
 
     def create_stage(self, name: Optional[str] = None) -> Stage:
         if not self._opened:
-            runtime_error("Trying to create stage to an unopened choice")
+            raise runtime_error("Trying to create stage to an unopened choice")
         if self._closed:
-            runtime_error("Trying to create stage to a closed choice")
+            raise runtime_error("Trying to create stage to a closed choice")
 
         stage = Stage(self._queue, self._index, self._last_stage_index, name)
         self._last_stage_index += 1
@@ -138,16 +144,16 @@ class Choice:
 
     def open(self):
         if self._opened:
-            runtime_error("The choice is already open")
+            raise runtime_error("The choice is already open")
 
         self._opened = True
         self._enqueue(StartChoiceChunk(choice_index=self._index))
 
     def close(self, finish_reason: FinishReason = FinishReason.STOP) -> None:
         if not self._opened:
-            runtime_error("Trying to close an unopened choice")
+            raise runtime_error("Trying to close an unopened choice")
         if self._closed:
-            runtime_error("The choice is already closed")
+            raise runtime_error("The choice is already closed")
 
         self._closed = True
         self._enqueue(EndChoiceChunk(finish_reason, self._index))
