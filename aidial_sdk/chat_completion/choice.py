@@ -1,3 +1,4 @@
+import json
 from asyncio import Queue
 from types import TracebackType
 from typing import Any, List, Optional, Type
@@ -54,7 +55,7 @@ class Choice:
         return False
 
     def _enqueue(self, chunk: BaseChunk) -> None:
-        log_debug("added chunk:\n", chunk.to_dict())
+        log_debug("chunk: " + json.dumps(chunk.to_dict()))
         self._queue.put_nowait(chunk)
 
     def append_content(self, content: str) -> None:
