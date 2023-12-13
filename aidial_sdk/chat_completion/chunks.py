@@ -86,9 +86,8 @@ class ToolCallsChunk(BaseChunk):
             "choices": [
                 {
                     "index": self.choice_index,
-                    "finish_reason": "tool_calls",
                     "delta": {
-                        "content": "",
+                        "content": None,
                         "tool_calls": [c.dict() for c in self.tool_calls],
                     },
                 }
@@ -110,9 +109,8 @@ class FunctionCallChunk(BaseChunk):
             "choices": [
                 {
                     "index": self.choice_index,
-                    "finish_reason": "function_call",
                     "delta": {
-                        "content": "",
+                        "content": None,
                         "function_call": self.function_call.dict(),
                     },
                 }
