@@ -96,7 +96,7 @@ class Penalty(ConstrainedFloat):
 
 
 class Tool(ExtraForbidModel):
-    type: StrictStr
+    type: Literal["function"]
     function: Function
 
 
