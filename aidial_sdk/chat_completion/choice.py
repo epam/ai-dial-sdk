@@ -29,7 +29,7 @@ class Choice:
     _opened: bool
     _closed: bool
     _state_submitted: bool
-    _finish_reason: Optional[FinishReason]
+    _last_finish_reason: Optional[FinishReason]
 
     def __init__(self, queue: Queue, choice_index: int):
         self._queue = queue
@@ -39,7 +39,7 @@ class Choice:
         self._opened = False
         self._closed = False
         self._state_submitted = False
-        self._finish_reason = None
+        self._last_finish_reason = None
 
     def __enter__(self):
         self.open()
@@ -65,18 +65,9 @@ class Choice:
             )
         if self._closed:
             raise runtime_error("Trying to append content to a closed choice")
-        if (
-            self._finish_reason is not None
-            and self._finish_reason != FinishReason.STOP
-        ):
-            raise runtime_error(
-                "Trying to append content to a choice "
-                "which is not allowed to have content, "
-                f"because it's marked with '{self._finish_reason}' finish reason"
-            )
 
         self._enqueue(ContentChunk(content, self._index))
-        self._finish_reason = FinishReason.STOP
+        self._last_finish_reason = FinishReason.STOP
 
     def add_tool_calls(self, tool_calls: List[ToolCall]) -> None:
         if not self._opened:
@@ -85,15 +76,9 @@ class Choice:
             )
         if self._closed:
             raise runtime_error("Trying to add tool calls to a closed choice")
-        if self._finish_reason is not None:
-            raise runtime_error(
-                "Trying to add tool calls to a choice which "
-                "is not allowed to have tool calls, "
-                f"because it's marked with '{self._finish_reason}' finish reason"
-            )
 
         self._enqueue(ToolCallsChunk(tool_calls, self._index))
-        self._finish_reason = FinishReason.TOOL_CALLS
+        self._last_finish_reason = FinishReason.TOOL_CALLS
 
     def add_function_call(self, function_call: FunctionCall) -> None:
         if not self._opened:
@@ -104,14 +89,9 @@ class Choice:
             raise runtime_error(
                 "Trying to add function call to a closed choice"
             )
-        if self._finish_reason is not None:
-            raise runtime_error(
-                "Trying to add function call to a choice which, "
-                f"because it's marked with '{self._finish_reason}' finish reason"
-            )
 
         self._enqueue(FunctionCallChunk(function_call, self._index))
-        self._finish_reason = FinishReason.FUNCTION_CALL
+        self._last_finish_reason = FinishReason.FUNCTION_CALL
 
     def add_attachment(
         self,
@@ -185,26 +165,7 @@ class Choice:
                 "Trying to close a choice which is already closed"
             )
 
-        if (
-            self._finish_reason is not None
-            and finish_reason is not None
-            and finish_reason != self._finish_reason
-        ):
-            raise runtime_error(
-                f"Trying to close a choice with a finish reason '{finish_reason}' "
-                f"which doesn't match the previously set one '{self._finish_reason}'"
-            )
-
-        if self._finish_reason is None and finish_reason in [
-            FinishReason.FUNCTION_CALL,
-            FinishReason.TOOL_CALLS,
-        ]:
-            raise runtime_error(
-                f"Can't close a choice with a finish reason '{finish_reason}' without "
-                " setting corresponding content"
-            )
-
-        reason = self._finish_reason or finish_reason or FinishReason.STOP
+        reason = finish_reason or self._last_finish_reason or FinishReason.STOP
 
         self._closed = True
         self._enqueue(EndChoiceChunk(reason, self._index))
