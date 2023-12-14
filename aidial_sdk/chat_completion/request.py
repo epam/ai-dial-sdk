@@ -37,6 +37,8 @@ class FunctionCall(ExtraForbidModel):
 
 
 class ToolCall(ExtraForbidModel):
+    # OpenAI API doesn't strictly specify existence of the index field
+    index: Optional[int]
     id: StrictStr
     type: Literal["function"]
     function: FunctionCall
