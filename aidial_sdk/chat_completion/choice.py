@@ -1,7 +1,7 @@
 import json
 from asyncio import Queue
 from types import TracebackType
-from typing import Any, List, Optional, Type
+from typing import Any, Literal, Optional, Type
 
 from aidial_sdk.chat_completion.chunks import (
     AttachmentChunk,
@@ -9,12 +9,11 @@ from aidial_sdk.chat_completion.chunks import (
     ContentChunk,
     EndChoiceChunk,
     FunctionCallChunk,
+    FunctionToolCallsChunk,
     StartChoiceChunk,
     StateChunk,
-    ToolCallsChunk,
 )
 from aidial_sdk.chat_completion.enums import FinishReason
-from aidial_sdk.chat_completion.request import FunctionCall, ToolCall
 from aidial_sdk.chat_completion.stage import Stage
 from aidial_sdk.pydantic_v1 import ValidationError
 from aidial_sdk.utils.errors import runtime_error
@@ -69,7 +68,14 @@ class Choice:
         self._enqueue(ContentChunk(content, self._index))
         self._last_finish_reason = FinishReason.STOP
 
-    def add_tool_calls(self, tool_calls: List[ToolCall]) -> None:
+    def add_function_tool_call(
+        self,
+        call_index: int,
+        id: Optional[str] = None,
+        type: Optional[Literal["function"]] = None,
+        name: Optional[str] = None,
+        arguments: Optional[str] = None,
+    ) -> None:
         if not self._opened:
             raise runtime_error(
                 "Trying to add tool calls to an unopened choice"
@@ -77,10 +83,18 @@ class Choice:
         if self._closed:
             raise runtime_error("Trying to add tool calls to a closed choice")
 
-        self._enqueue(ToolCallsChunk(tool_calls, self._index))
+        self._enqueue(
+            FunctionToolCallsChunk(
+                self._index, call_index, id, type, name, arguments
+            )
+        )
         self._last_finish_reason = FinishReason.TOOL_CALLS
 
-    def add_function_call(self, function_call: FunctionCall) -> None:
+    def add_function_call(
+        self,
+        name: Optional[str] = None,
+        arguments: Optional[str] = None,
+    ) -> None:
         if not self._opened:
             raise runtime_error(
                 "Trying to add function call to an unopened choice"
@@ -90,7 +104,7 @@ class Choice:
                 "Trying to add function call to a closed choice"
             )
 
-        self._enqueue(FunctionCallChunk(function_call, self._index))
+        self._enqueue(FunctionCallChunk(self._index, name, arguments))
         self._last_finish_reason = FinishReason.FUNCTION_CALL
 
     def add_attachment(

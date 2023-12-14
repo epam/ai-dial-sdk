@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, Literal, Optional
 
 from aidial_sdk.chat_completion.enums import FinishReason, Status
-from aidial_sdk.chat_completion.request import FunctionCall, ToolCall
 from aidial_sdk.pydantic_v1 import BaseModel, root_validator
+from aidial_sdk.utils.json import remove_nones
 
 
 class BaseChunk(ABC):
@@ -73,13 +73,29 @@ class ContentChunk(BaseChunk):
         }
 
 
-class ToolCallsChunk(BaseChunk):
-    tool_calls: List[ToolCall]
+class FunctionToolCallsChunk(BaseChunk):
     choice_index: int
+    call_index: int
+    id: Optional[str]
+    type: Optional[Literal["function"]]
+    name: Optional[str]
+    arguments: Optional[str]
 
-    def __init__(self, tool_calls: List[ToolCall], choice_index: int):
-        self.tool_calls = tool_calls
+    def __init__(
+        self,
+        choice_index: int,
+        call_index: int,
+        id: Optional[str],
+        type: Optional[Literal["function"]],
+        name: Optional[str],
+        arguments: Optional[str],
+    ):
         self.choice_index = choice_index
+        self.call_index = call_index
+        self.id = id
+        self.type = type
+        self.name = name
+        self.arguments = arguments
 
     def to_dict(self):
         return {
@@ -88,7 +104,21 @@ class ToolCallsChunk(BaseChunk):
                     "index": self.choice_index,
                     "delta": {
                         "content": None,
-                        "tool_calls": [c.dict() for c in self.tool_calls],
+                        "tool_calls": [
+                            remove_nones(
+                                {
+                                    "index": self.call_index,
+                                    "id": self.id,
+                                    "type": self.type,
+                                    "function": remove_nones(
+                                        {
+                                            "name": self.name,
+                                            "arguments": self.arguments,
+                                        }
+                                    ),
+                                }
+                            )
+                        ],
                     },
                 }
             ],
@@ -97,12 +127,19 @@ class ToolCallsChunk(BaseChunk):
 
 
 class FunctionCallChunk(BaseChunk):
-    function_call: FunctionCall
     choice_index: int
+    name: Optional[str]
+    arguments: Optional[str]
 
-    def __init__(self, function_call: FunctionCall, choice_index: int):
-        self.function_call = function_call
+    def __init__(
+        self,
+        choice_index: int,
+        name: Optional[str],
+        arguments: Optional[str],
+    ):
         self.choice_index = choice_index
+        self.name = name
+        self.arguments = arguments
 
     def to_dict(self):
         return {
@@ -111,7 +148,12 @@ class FunctionCallChunk(BaseChunk):
                     "index": self.choice_index,
                     "delta": {
                         "content": None,
-                        "function_call": self.function_call.dict(),
+                        "function_call": remove_nones(
+                            {
+                                "name": self.name,
+                                "arguments": self.arguments,
+                            }
+                        ),
                     },
                 }
             ],
