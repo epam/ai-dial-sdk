@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any, List, Mapping, Optional, Union
+from typing import Any, Dict, List, Literal, Mapping, Optional, Union
 
 from aidial_sdk.pydantic_v1 import (
     BaseModel,
@@ -31,16 +31,25 @@ class CustomContent(ExtraForbidModel):
     state: Optional[Any] = None
 
 
+class FunctionCall(ExtraForbidModel):
+    name: str
+    arguments: str
+
+
+class ToolCall(ExtraForbidModel):
+    # OpenAI API doesn't strictly specify existence of the index field
+    index: Optional[int]
+    id: StrictStr
+    type: Literal["function"]
+    function: FunctionCall
+
+
 class Role(Enum):
     SYSTEM = "system"
     USER = "user"
     ASSISTANT = "assistant"
     FUNCTION = "function"
-
-
-class FunctionCall(ExtraForbidModel):
-    name: str
-    arguments: str
+    TOOL = "tool"
 
 
 class Message(ExtraForbidModel):
@@ -48,6 +57,8 @@ class Message(ExtraForbidModel):
     content: Optional[StrictStr] = None
     custom_content: Optional[CustomContent] = None
     name: Optional[StrictStr] = None
+    tool_calls: Optional[List[ToolCall]] = None
+    tool_call_id: Optional[StrictStr] = None
     function_call: Optional[FunctionCall] = None
 
 
@@ -58,8 +69,8 @@ class Addon(ExtraForbidModel):
 
 class Function(ExtraForbidModel):
     name: StrictStr
-    description: StrictStr
-    parameters: StrictStr
+    description: Optional[StrictStr] = None
+    parameters: Dict
 
 
 class Temperature(ConstrainedFloat):
@@ -87,13 +98,29 @@ class Penalty(ConstrainedFloat):
     le = 2
 
 
+class Tool(ExtraForbidModel):
+    type: Literal["function"]
+    function: Function
+
+
+class FunctionChoice(ExtraForbidModel):
+    name: StrictStr
+
+
+class ToolChoice(ExtraForbidModel):
+    type: Literal["function"]
+    function: FunctionChoice
+
+
 class Request(ExtraForbidModel):
     model: Optional[StrictStr] = None
     messages: List[Message]
     functions: Optional[List[Function]] = None
     function_call: Optional[
-        Union[StrictStr, Mapping[StrictStr, StrictStr]]
+        Union[Literal["auto", "none"], FunctionChoice]
     ] = None
+    tools: Optional[List[Tool]] = None
+    tool_choice: Optional[Union[Literal["auto", "none"], ToolChoice]] = None
     addons: Optional[List[Addon]] = None
     stream: bool = False
     temperature: Optional[Temperature] = None
