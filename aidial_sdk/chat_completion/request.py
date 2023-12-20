@@ -55,6 +55,7 @@ class Role(Enum):
 class Message(ExtraForbidModel):
     role: Role
     content: Optional[StrictStr] = None
+    custom_content: Optional[CustomContent] = None
     name: Optional[StrictStr] = None
     tool_calls: Optional[List[ToolCall]] = None
     tool_call_id: Optional[StrictStr] = None
