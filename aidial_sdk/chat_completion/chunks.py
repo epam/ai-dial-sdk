@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Literal, Optional
+from typing import Any, Dict, Optional
 
 from aidial_sdk.chat_completion.enums import FinishReason, Status
 from aidial_sdk.pydantic_v1 import BaseModel, root_validator
@@ -73,11 +73,10 @@ class ContentChunk(BaseChunk):
         }
 
 
-class FunctionToolCallsChunk(BaseChunk):
+class FunctionToolCallChunk(BaseChunk):
     choice_index: int
     call_index: int
     id: Optional[str]
-    type: Optional[Literal["function"]]
     name: Optional[str]
     arguments: Optional[str]
 
@@ -86,14 +85,12 @@ class FunctionToolCallsChunk(BaseChunk):
         choice_index: int,
         call_index: int,
         id: Optional[str],
-        type: Optional[Literal["function"]],
         name: Optional[str],
         arguments: Optional[str],
     ):
         self.choice_index = choice_index
         self.call_index = call_index
         self.id = id
-        self.type = type
         self.name = name
         self.arguments = arguments
 
@@ -109,7 +106,7 @@ class FunctionToolCallsChunk(BaseChunk):
                                 {
                                     "index": self.call_index,
                                     "id": self.id,
-                                    "type": self.type,
+                                    "type": "function",
                                     "function": remove_nones(
                                         {
                                             "name": self.name,

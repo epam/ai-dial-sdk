@@ -1,30 +1,33 @@
 import json
 from asyncio import Queue
 from types import TracebackType
-from typing import Any, Literal, Optional, Type
+from typing import Any, Optional, Type
 
+from aidial_sdk.chat_completion.choice_base import ChoiceBase
 from aidial_sdk.chat_completion.chunks import (
     AttachmentChunk,
     BaseChunk,
     ContentChunk,
     EndChoiceChunk,
-    FunctionCallChunk,
-    FunctionToolCallsChunk,
     StartChoiceChunk,
     StateChunk,
 )
 from aidial_sdk.chat_completion.enums import FinishReason
+from aidial_sdk.chat_completion.function_call import FunctionCall
+from aidial_sdk.chat_completion.function_tool_call import FunctionToolCall
 from aidial_sdk.chat_completion.stage import Stage
 from aidial_sdk.pydantic_v1 import ValidationError
 from aidial_sdk.utils.errors import runtime_error
 from aidial_sdk.utils.logging import log_debug
 
 
-class Choice:
+class Choice(ChoiceBase):
     _queue: Queue
     _index: int
     _last_attachment_index: int
     _last_stage_index: int
+    _last_tool_call_index: int
+    _has_function_call: bool
     _opened: bool
     _closed: bool
     _state_submitted: bool
@@ -35,6 +38,8 @@ class Choice:
         self._index = choice_index
         self._last_attachment_index = 0
         self._last_stage_index = 0
+        self._last_tool_call_index = 0
+        self._has_function_call = False
         self._opened = False
         self._closed = False
         self._state_submitted = False
@@ -53,9 +58,25 @@ class Choice:
         self.close()
         return False
 
-    def _enqueue(self, chunk: BaseChunk) -> None:
+    def send_chunk(self, chunk: BaseChunk) -> None:
         log_debug("chunk: " + json.dumps(chunk.to_dict()))
         self._queue.put_nowait(chunk)
+
+    @property
+    def index(self) -> int:
+        return self._index
+
+    @property
+    def opened(self) -> bool:
+        return self._opened
+
+    @property
+    def closed(self) -> bool:
+        return self._closed
+
+    @property
+    def has_function_call(self) -> bool:
+        return self._has_function_call
 
     def append_content(self, content: str) -> None:
         if not self._opened:
@@ -65,47 +86,26 @@ class Choice:
         if self._closed:
             raise runtime_error("Trying to append content to a closed choice")
 
-        self._enqueue(ContentChunk(content, self._index))
+        self.send_chunk(ContentChunk(content, self._index))
         self._last_finish_reason = FinishReason.STOP
 
-    def add_function_tool_call(
-        self,
-        call_index: int,
-        id: Optional[str] = None,
-        type: Optional[Literal["function"]] = None,
-        name: Optional[str] = None,
-        arguments: Optional[str] = None,
-    ) -> None:
-        if not self._opened:
-            raise runtime_error(
-                "Trying to add tool calls to an unopened choice"
-            )
-        if self._closed:
-            raise runtime_error("Trying to add tool calls to a closed choice")
-
-        self._enqueue(
-            FunctionToolCallsChunk(
-                self._index, call_index, id, type, name, arguments
-            )
+    def create_function_tool_call(
+        self, id: str, name: str, arguments: Optional[str] = None
+    ) -> FunctionToolCall:
+        function_tool_call = FunctionToolCall.create_and_send(
+            self, self._last_tool_call_index, id, name, arguments
         )
+        self._last_tool_call_index += 1
         self._last_finish_reason = FinishReason.TOOL_CALLS
+        return function_tool_call
 
-    def add_function_call(
-        self,
-        name: Optional[str] = None,
-        arguments: Optional[str] = None,
-    ) -> None:
-        if not self._opened:
-            raise runtime_error(
-                "Trying to add function call to an unopened choice"
-            )
-        if self._closed:
-            raise runtime_error(
-                "Trying to add function call to a closed choice"
-            )
-
-        self._enqueue(FunctionCallChunk(self._index, name, arguments))
+    def create_function_call(
+        self, name: str, arguments: Optional[str] = None
+    ) -> FunctionCall:
+        function_call = FunctionCall.create_and_send(self, name, arguments)
+        self._has_function_call = True
         self._last_finish_reason = FinishReason.FUNCTION_CALL
+        return function_call
 
     def add_attachment(
         self,
@@ -138,7 +138,7 @@ class Choice:
         except ValidationError as e:
             raise runtime_error(e.errors()[0]["msg"])
 
-        self._enqueue(attachment_chunk)
+        self.send_chunk(attachment_chunk)
         self._last_attachment_index += 1
 
     def set_state(self, state: Any) -> None:
@@ -151,7 +151,7 @@ class Choice:
             raise runtime_error("Trying to append state to a closed choice")
 
         self._state_submitted = True
-        self._enqueue(StateChunk(self._index, state))
+        self.send_chunk(StateChunk(self._index, state))
 
     def create_stage(self, name: Optional[str] = None) -> Stage:
         if not self._opened:
@@ -169,7 +169,7 @@ class Choice:
             raise runtime_error("The choice is already open")
 
         self._opened = True
-        self._enqueue(StartChoiceChunk(choice_index=self._index))
+        self.send_chunk(StartChoiceChunk(choice_index=self._index))
 
     def close(self, finish_reason: Optional[FinishReason] = None) -> None:
         if not self._opened:
@@ -182,4 +182,4 @@ class Choice:
         reason = finish_reason or self._last_finish_reason or FinishReason.STOP
 
         self._closed = True
-        self._enqueue(EndChoiceChunk(reason, self._index))
+        self.send_chunk(EndChoiceChunk(reason, self._index))
