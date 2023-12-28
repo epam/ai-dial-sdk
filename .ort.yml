@@ -3,3 +3,10 @@ excludes:
   paths:
   - pattern: "examples/**"
     reason: "EXAMPLE_OF"
+  scopes:
+  - pattern: "lint"
+    reason: "DEV_DEPENDENCY_OF"
+    comment: "Packages for static code analysis only."
+  - pattern: "test"
+    reason: "TEST_DEPENDENCY_OF"
+    comment: "Packages for testing only."
