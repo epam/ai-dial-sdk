@@ -29,6 +29,7 @@ opentelemetry-instrumentation-requests = {version = "0.41b0", optional = true}
 opentelemetry-instrumentation-system-metrics = {version = "0.41b0", optional = true}
 opentelemetry-instrumentation-urllib = {version = "0.41b0", optional = true}
 opentelemetry-exporter-prometheus = {version = "1.12.0rc1", optional = true}
+prometheus-client = {version = "0.17.1", optional = true}
 
 [tool.poetry.extras]
 telemetry = [
@@ -45,6 +46,7 @@ telemetry = [
     "opentelemetry-instrumentation-system-metrics",
     "opentelemetry-instrumentation-urllib",
     "opentelemetry-exporter-prometheus",
+    "prometheus-client",
 ]
 
 [tool.poetry.group.test.dependencies]
