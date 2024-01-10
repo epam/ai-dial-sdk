@@ -23,6 +23,7 @@ opentelemetry-distro ={version =  "0.41b0", optional = true}
 opentelemetry-instrumentation = {version = "0.41b0", optional = true}
 opentelemetry-instrumentation-aiohttp-client = {version = "0.41b0", optional = true}
 opentelemetry-instrumentation-fastapi = {version = "0.41b0", optional = true}
+opentelemetry-instrumentation-httpx = {version = "0.41b0", optional = true}
 opentelemetry-instrumentation-logging = {version = "0.41b0", optional = true}
 opentelemetry-instrumentation-requests = {version = "0.41b0", optional = true}
 opentelemetry-instrumentation-system-metrics = {version = "0.41b0", optional = true}
@@ -39,6 +40,7 @@ telemetry = [
     "opentelemetry-instrumentation",
     "opentelemetry-instrumentation-aiohttp-client",
     "opentelemetry-instrumentation-fastapi",
+    "opentelemetry-instrumentation-httpx",
     "opentelemetry-instrumentation-logging",
     "opentelemetry-instrumentation-requests",
     "opentelemetry-instrumentation-system-metrics",
