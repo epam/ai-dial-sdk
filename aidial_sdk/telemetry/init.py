@@ -7,6 +7,7 @@ from opentelemetry.instrumentation.aiohttp_client import (
     AioHttpClientInstrumentor,
 )
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
+from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
 from opentelemetry.instrumentation.logging import LoggingInstrumentor
 from opentelemetry.instrumentation.requests import RequestsInstrumentor
 from opentelemetry.instrumentation.system_metrics import (
@@ -44,6 +45,7 @@ def init_telemetry(
         RequestsInstrumentor().instrument()
         AioHttpClientInstrumentor().instrument()
         URLLibInstrumentor().instrument()
+        HTTPXClientInstrumentor().instrument()
 
         if config.tracing.logging:
             LoggingInstrumentor().instrument(

@@ -23,12 +23,13 @@ opentelemetry-distro ={version =  "0.41b0", optional = true}
 opentelemetry-instrumentation = {version = "0.41b0", optional = true}
 opentelemetry-instrumentation-aiohttp-client = {version = "0.41b0", optional = true}
 opentelemetry-instrumentation-fastapi = {version = "0.41b0", optional = true}
+opentelemetry-instrumentation-httpx = {version = "0.41b0", optional = true}
 opentelemetry-instrumentation-logging = {version = "0.41b0", optional = true}
 opentelemetry-instrumentation-requests = {version = "0.41b0", optional = true}
 opentelemetry-instrumentation-system-metrics = {version = "0.41b0", optional = true}
 opentelemetry-instrumentation-urllib = {version = "0.41b0", optional = true}
 opentelemetry-exporter-prometheus = {version = "1.12.0rc1", optional = true}
-starlette-exporter = {version = "0.16.0", optional = true}
+prometheus-client = {version = "0.17.1", optional = true}
 
 [tool.poetry.extras]
 telemetry = [
@@ -39,12 +40,13 @@ telemetry = [
     "opentelemetry-instrumentation",
     "opentelemetry-instrumentation-aiohttp-client",
     "opentelemetry-instrumentation-fastapi",
+    "opentelemetry-instrumentation-httpx",
     "opentelemetry-instrumentation-logging",
     "opentelemetry-instrumentation-requests",
     "opentelemetry-instrumentation-system-metrics",
     "opentelemetry-instrumentation-urllib",
     "opentelemetry-exporter-prometheus",
-    "starlette-exporter",
+    "prometheus-client",
 ]
 
 [tool.poetry.group.test.dependencies]
