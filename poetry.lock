@@ -1615,21 +1615,6 @@ typing-extensions = {version = ">=3.10.0", markers = "python_version < \"3.10\""
 full = ["httpx (>=0.22.0)", "itsdangerous", "jinja2", "python-multipart", "pyyaml"]
 
 [[package]]
-name = "starlette-exporter"
-version = "0.16.0"
-description = "Prometheus metrics exporter for Starlette applications."
-optional = true
-python-versions = "*"
-files = [
-    {file = "starlette_exporter-0.16.0-py3-none-any.whl", hash = "sha256:9dbe8dc647acbeb8680d53cedbbb8042ca75ca1b6987f609c5601ea96ddb7422"},
-    {file = "starlette_exporter-0.16.0.tar.gz", hash = "sha256:728cccf975c85d3cf2844b0110b51e1fa2dce628ef68bc38da58ad691f9b5d68"},
-]
-
-[package.dependencies]
-prometheus-client = ">=0.12"
-starlette = "*"
-
-[[package]]
 name = "tomli"
 version = "2.0.1"
 description = "A lil' TOML parser"
@@ -1894,9 +1879,9 @@ docs = ["furo", "jaraco.packaging (>=9.3)", "jaraco.tidelift (>=1.4)", "rst.link
 testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "pytest (>=6)", "pytest-black (>=0.3.7)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=2.2)", "pytest-ignore-flaky", "pytest-mypy (>=0.9.1)", "pytest-ruff"]
 
 [extras]
-telemetry = ["opentelemetry-api", "opentelemetry-distro", "opentelemetry-exporter-otlp-proto-grpc", "opentelemetry-exporter-prometheus", "opentelemetry-instrumentation", "opentelemetry-instrumentation-aiohttp-client", "opentelemetry-instrumentation-fastapi", "opentelemetry-instrumentation-httpx", "opentelemetry-instrumentation-logging", "opentelemetry-instrumentation-requests", "opentelemetry-instrumentation-system-metrics", "opentelemetry-instrumentation-urllib", "opentelemetry-sdk", "starlette-exporter"]
+telemetry = ["opentelemetry-api", "opentelemetry-distro", "opentelemetry-exporter-otlp-proto-grpc", "opentelemetry-exporter-prometheus", "opentelemetry-instrumentation", "opentelemetry-instrumentation-aiohttp-client", "opentelemetry-instrumentation-fastapi", "opentelemetry-instrumentation-httpx", "opentelemetry-instrumentation-logging", "opentelemetry-instrumentation-requests", "opentelemetry-instrumentation-system-metrics", "opentelemetry-instrumentation-urllib", "opentelemetry-sdk"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8.1,<4.0"
-content-hash = "d3f6df3112114c297beb3fef65c653cc59858dcb435ab572171c25124864445b"
+content-hash = "529e3316778ad25d6b6324eb801da44251072628dbdf102cf2ccc57cb3e7c00f"

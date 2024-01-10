@@ -29,7 +29,6 @@ opentelemetry-instrumentation-requests = {version = "0.41b0", optional = true}
 opentelemetry-instrumentation-system-metrics = {version = "0.41b0", optional = true}
 opentelemetry-instrumentation-urllib = {version = "0.41b0", optional = true}
 opentelemetry-exporter-prometheus = {version = "1.12.0rc1", optional = true}
-starlette-exporter = {version = "0.16.0", optional = true}
 
 [tool.poetry.extras]
 telemetry = [
