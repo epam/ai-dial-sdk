@@ -45,7 +45,6 @@ telemetry = [
     "opentelemetry-instrumentation-system-metrics",
     "opentelemetry-instrumentation-urllib",
     "opentelemetry-exporter-prometheus",
-    "starlette-exporter",
 ]
 
 [tool.poetry.group.test.dependencies]
