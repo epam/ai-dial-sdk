@@ -35,7 +35,7 @@ def init_telemetry(
     if config.tracing is not None:
         tracer_provider = TracerProvider(resource=resource)
 
-        if config.tracing.oltp_export:
+        if config.tracing.otlp_export:
             tracer_provider.add_span_processor(
                 BatchSpanProcessor(OTLPSpanExporter())
             )
