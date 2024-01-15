@@ -4,7 +4,7 @@ from aidial_sdk.pydantic_v1 import BaseModel
 
 
 class TracingConfig(BaseModel):
-    oltp_export: bool = False
+    otlp_export: bool = False
     logging: bool = False
 
 

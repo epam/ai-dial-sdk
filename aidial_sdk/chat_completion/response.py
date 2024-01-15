@@ -252,7 +252,7 @@ class Response:
         self._generation_started = True
 
         if self._last_choice_index >= (self.request.n or 1):
-            runtime_error("Trying to generate more chunks than requested")
+            raise runtime_error("Trying to generate more chunks than requested")
 
         choice = Choice(self._queue, self._last_choice_index)
         self._last_choice_index += 1
@@ -261,7 +261,9 @@ class Response:
 
     def create_single_choice(self) -> Choice:
         if self._last_choice_index > 0:
-            runtime_error("Trying to generate a single choice after choice")
+            raise runtime_error(
+                "Trying to generate a single choice after choice"
+            )
         if (self.request.n or 1) > 1:
             raise DialHttpException(
                 status_code=422,
@@ -277,7 +279,7 @@ class Response:
         self._generation_started = True
 
         if self._last_choice_index != (self.request.n or 1):
-            runtime_error(
+            raise runtime_error(
                 'Trying to set "usage_per_model" before generating all choices',
             )
 
@@ -295,9 +297,9 @@ class Response:
         self._generation_started = True
 
         if self._discarded_messages_generated:
-            runtime_error('Trying to set "discarded_messages" twice')
+            raise runtime_error('Trying to set "discarded_messages" twice')
         if self._last_choice_index != (self.request.n or 1):
-            runtime_error(
+            raise runtime_error(
                 'Trying to set "discarded_messages" before generating all choices',
             )
 
@@ -308,9 +310,9 @@ class Response:
         self._generation_started = True
 
         if self._usage_generated:
-            runtime_error('Trying to set "usage" twice')
+            raise runtime_error('Trying to set "usage" twice')
         if self._last_choice_index != (self.request.n or 1):
-            runtime_error(
+            raise runtime_error(
                 'Trying to set "usage" before generating all choices',
             )
 
@@ -322,19 +324,23 @@ class Response:
 
     def set_created(self, created: int):
         if self._generation_started:
-            runtime_error('Trying to set "created" after start of generation')
+            raise runtime_error(
+                'Trying to set "created" after start of generation'
+            )
 
         self._created = created
 
     def set_model(self, model: str):
         if self._generation_started:
-            runtime_error('Trying to set "model" after start of generation')
+            raise runtime_error(
+                'Trying to set "model" after start of generation'
+            )
 
         self._model = model
 
     def set_response_id(self, response_id: str):
         if self._generation_started:
-            runtime_error(
+            raise runtime_error(
                 'Trying to set "response_id" after start of generation',
             )
 

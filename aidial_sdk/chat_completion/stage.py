@@ -57,9 +57,9 @@ class Stage:
 
     def append_content(self, content: str):
         if not self._opened:
-            runtime_error("Trying to append content to an unopened stage")
+            raise runtime_error("Trying to append content to an unopened stage")
         if self._closed:
-            runtime_error("Trying to append content to a closed stage")
+            raise runtime_error("Trying to append content to a closed stage")
 
         self._queue.put_nowait(
             ContentStageChunk(self._choice_index, self._stage_index, content)
@@ -67,9 +67,9 @@ class Stage:
 
     def append_name(self, name: str):
         if not self._opened:
-            runtime_error("Trying to append name to an unopened stage")
+            raise runtime_error("Trying to append name to an unopened stage")
         if self._closed:
-            runtime_error("Trying to append name to a closed stage")
+            raise runtime_error("Trying to append name to a closed stage")
 
         self._queue.put_nowait(
             NameStageChunk(self._choice_index, self._stage_index, name)
@@ -85,9 +85,9 @@ class Stage:
         reference_type: Optional[str] = None,
     ) -> None:
         if not self._opened:
-            runtime_error("Trying to add attachment to an unopened stage")
+            raise runtime_error("Trying to add attachment to an unopened stage")
         if self._closed:
-            runtime_error("Trying to add attachment to a closed stage")
+            raise runtime_error("Trying to add attachment to a closed stage")
 
         attachment_stage_chunk = None
         try:
@@ -103,14 +103,14 @@ class Stage:
                 reference_type=reference_type,
             )
         except ValidationError as e:
-            runtime_error(e.errors()[0]["msg"])
+            raise runtime_error(e.errors()[0]["msg"])
 
         self._queue.put_nowait(attachment_stage_chunk)
         self._last_attachment_index += 1
 
     def open(self):
         if self._opened:
-            runtime_error("The stage is already open")
+            raise runtime_error("The stage is already open")
 
         self._opened = True
         self._queue.put_nowait(
@@ -119,9 +119,9 @@ class Stage:
 
     def close(self, status: Status = Status.COMPLETED):
         if not self._opened:
-            runtime_error("Trying to close an unopened stage")
+            raise runtime_error("Trying to close an unopened stage")
         if self._closed:
-            runtime_error("The stage is already closed")
+            raise runtime_error("The stage is already closed")
 
         self._closed = True
         self._queue.put_nowait(
