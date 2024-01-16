@@ -13,6 +13,6 @@ class MetricsConfig(BaseModel):
 
 
 class TelemetryConfig(BaseModel):
-    service_name: str
+    service_name: Optional[str] = None
     tracing: Optional[TracingConfig] = None
     metrics: Optional[MetricsConfig] = None
