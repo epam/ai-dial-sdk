@@ -117,7 +117,7 @@ class DIALApp(FastAPI):
 
             request = await request_type.from_request(original_request)
 
-            endpoint_impl = getattr(deployment, endpoint)
+            endpoint_impl = getattr(deployment, endpoint, None)
             if not endpoint_impl:
                 raise self._get_missing_endpoint_error(endpoint)
 

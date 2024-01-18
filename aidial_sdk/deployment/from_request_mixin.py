@@ -70,5 +70,5 @@ async def _get_request_body(request: Request) -> Any:
         raise DIALException(
             status_code=400,
             type="invalid_request_error",
-            message=f"Your request contained invalid JSON: {str(e.msg)}",
+            message=f"Your request contained invalid JSON: {e.msg}",
         )
