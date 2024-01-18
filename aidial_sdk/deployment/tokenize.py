@@ -5,8 +5,21 @@ from aidial_sdk.deployment.from_request_mixin import FromRequestDeploymentMixin
 from aidial_sdk.pydantic_v1 import BaseModel
 
 
+class TokenizeInputRequest(BaseModel):
+    type: Literal["request"] = "request"
+    value: ChatCompletionRequest
+
+
+class TokenizeInputString(BaseModel):
+    type: Literal["string"] = "string"
+    value: str
+
+
+TokenizeInput = Union[TokenizeInputRequest, TokenizeInputString]
+
+
 class TokenizeRequest(FromRequestDeploymentMixin):
-    requests: List[Union[ChatCompletionRequest, str]]
+    inputs: List[TokenizeInput]
 
 
 class TokenizeSuccess(BaseModel):
@@ -19,8 +32,8 @@ class TokenizeError(BaseModel):
     error: str
 
 
-TokenizeResult = Union[TokenizeSuccess, TokenizeError]
+TokenizeOutput = Union[TokenizeSuccess, TokenizeError]
 
 
 class TokenizeResponse(BaseModel):
-    responses: List[TokenizeResult]
+    outputs: List[TokenizeOutput]

@@ -6,7 +6,7 @@ from aidial_sdk.pydantic_v1 import BaseModel
 
 
 class TruncatePromptRequest(FromRequestDeploymentMixin):
-    requests: List[ChatCompletionRequest]
+    inputs: List[ChatCompletionRequest]
 
 
 class TruncatePromptSuccess(BaseModel):
@@ -23,4 +23,4 @@ TruncatePromptResult = Union[TruncatePromptSuccess, TruncatePromptError]
 
 
 class TruncatePromptResponse(BaseModel):
-    responses: List[TruncatePromptResult]
+    outputs: List[TruncatePromptResult]

@@ -20,26 +20,23 @@ CHAT_COMPLETION_REQUEST = {
     ],
 }
 
-TOKENIZE_REQUEST_OK1 = {"requests": [CHAT_COMPLETION_REQUEST, "test string"]}
+TOKENIZE_REQUEST_OK1 = {
+    "inputs": [
+        {"type": "request", "value": CHAT_COMPLETION_REQUEST},
+        {"type": "string", "value": "test string"},
+    ]
+}
 TOKENIZE_RESPONSE_OK1 = {
-    "responses": [
+    "outputs": [
         {"status": "success", "token_count": 4},
         {"status": "success", "token_count": 2},
     ]
 }
 
-TOKENIZE_REQUEST_OK2 = {"requests": []}
-TOKENIZE_RESPONSE_OK2 = {"responses": []}
+TOKENIZE_REQUEST_OK2 = {"inputs": []}
+TOKENIZE_RESPONSE_OK2 = {"outputs": []}
 
-TOKENIZE_REQUEST_FAIL = {"requests": [{}]}
-TOKENIZE_RESPONSE_FAIL = {
-    "responses": [
-        {
-            "status": "error",
-            "error": "Request must contain either 'requests' or 'request'",
-        }
-    ]
-}
+TOKENIZE_REQUEST_FAIL = {"inputs": [{}]}
 
 noop = NoopApplication()
 echo = EchoApplication
@@ -58,7 +55,7 @@ testcases: List[TestCase] = [
         echo(0),
         "tokenize",
         TOKENIZE_REQUEST_FAIL,
-        bad_request_error("requests.0.messages"),
+        bad_request_error("inputs.0.value"),
     ),
 ]
 

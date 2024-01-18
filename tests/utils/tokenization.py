@@ -1,4 +1,4 @@
-from typing import Callable, Optional, Set, Union
+from typing import Callable, Optional, Set
 
 from aidial_sdk.chat_completion.request import (
     ChatCompletionRequest,
@@ -6,9 +6,10 @@ from aidial_sdk.chat_completion.request import (
     Role,
 )
 from aidial_sdk.deployment.tokenize import (
+    TokenizeInput,
+    TokenizeOutput,
     TokenizeRequest,
     TokenizeResponse,
-    TokenizeResult,
     TokenizeSuccess,
 )
 from aidial_sdk.deployment.truncate_prompt import (
@@ -32,22 +33,23 @@ def word_count_request(request: ChatCompletionRequest) -> int:
     return sum(map(word_count_message, request.messages))
 
 
-def word_count_tokenize(
-    request: Union[ChatCompletionRequest, str]
-) -> TokenizeResult:
-    if isinstance(request, str):
-        token_count = word_count_string(request)
+def word_count_tokenize(request: TokenizeInput) -> TokenizeOutput:
+    if request.type == "request":
+        token_count = word_count_request(request.value)
+    elif request.type == "string":
+        token_count = word_count_string(request.value)
     else:
-        token_count = word_count_request(request)
+        raise ValueError(f"Unknown tokenize input type: {request.type}")
+
     return TokenizeSuccess(token_count=token_count)
 
 
 def make_batched_tokenize(
-    tokenize: Callable[[Union[ChatCompletionRequest, str]], TokenizeResult]
+    tokenize: Callable[[TokenizeInput], TokenizeOutput]
 ) -> Callable[[TokenizeRequest], TokenizeResponse]:
     def ret(request: TokenizeRequest) -> TokenizeResponse:
         return TokenizeResponse(
-            responses=[tokenize(req) for req in request.requests]
+            outputs=[tokenize(inp) for inp in request.inputs]
         )
 
     return ret
@@ -128,7 +130,7 @@ def make_batched_truncate_prompt(
 ) -> Callable[[TruncatePromptRequest], TruncatePromptResponse]:
     def ret(request: TruncatePromptRequest) -> TruncatePromptResponse:
         return TruncatePromptResponse(
-            responses=[truncate_prompt(req) for req in request.requests]
+            outputs=[truncate_prompt(req) for req in request.inputs]
         )
 
     return ret

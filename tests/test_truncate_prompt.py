@@ -19,7 +19,7 @@ CHAT_COMPLETION_REQUEST = {
 
 def create_request(max_prompt_tokens: Optional[int]):
     return {
-        "requests": [
+        "inputs": [
             {
                 **CHAT_COMPLETION_REQUEST,
                 "max_prompt_tokens": max_prompt_tokens,
@@ -34,11 +34,11 @@ def create_response(
     if max_prompt_tokens is None:
         if model_max_prompt_tokens >= 4:
             return {
-                "responses": [{"status": "success", "discarded_messages": []}]
+                "outputs": [{"status": "success", "discarded_messages": []}]
             }
         else:
             return {
-                "responses": [
+                "outputs": [
                     {
                         "status": "error",
                         "error": "Token count of all messages (4) exceeds "
@@ -49,7 +49,7 @@ def create_response(
 
     if max_prompt_tokens == 1:
         return {
-            "responses": [
+            "outputs": [
                 {
                     "status": "error",
                     "error": "Token count of the last user message and all "
@@ -59,11 +59,11 @@ def create_response(
         }
     if max_prompt_tokens == 2:
         return {
-            "responses": [{"status": "success", "discarded_messages": [1, 2]}]
+            "outputs": [{"status": "success", "discarded_messages": [1, 2]}]
         }
     if max_prompt_tokens == 3:
-        return {"responses": [{"status": "success", "discarded_messages": [1]}]}
-    return {"responses": [{"status": "success", "discarded_messages": []}]}
+        return {"outputs": [{"status": "success", "discarded_messages": [1]}]}
+    return {"outputs": [{"status": "success", "discarded_messages": []}]}
 
 
 noop = NoopApplication()
