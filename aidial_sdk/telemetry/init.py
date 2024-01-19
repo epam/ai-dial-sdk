@@ -30,7 +30,11 @@ def init_telemetry(
     app: FastAPI,
     config: TelemetryConfig,
 ):
-    resource = Resource(attributes={SERVICE_NAME: config.service_name})
+    resource = Resource.create(
+        attributes={SERVICE_NAME: config.service_name}
+        if config.service_name
+        else None
+    )
 
     if config.tracing is not None:
         tracer_provider = TracerProvider(resource=resource)
