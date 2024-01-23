@@ -17,6 +17,13 @@ class EchoApplication(ChatCompletion):
             # Fill the content of the response with the last user's content
             choice.append_content(last_user_message.content or "")
 
+            if last_user_message.custom_content is not None:
+                for attachment in (
+                    last_user_message.custom_content.attachments or []
+                ):
+                    # Add the same attachment to the response
+                    choice.add_attachment(**attachment.dict())
+
 
 # DIALApp extends FastAPI to provide an user-friendly interface for routing requests to your applications
 app = DIALApp()

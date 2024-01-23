@@ -1,4 +1,5 @@
 import base64
+import mimetypes
 
 import requests
 import uvicorn
@@ -15,7 +16,6 @@ class ImageEchoApplication(ChatCompletion):
 
         with response.create_single_choice() as choice:
             image_url = (last_user_message.content or "").strip()
-            image_extension = image_url.split(".")[-1]
 
             try:
                 image_bytes = requests.get(image_url).content
@@ -25,14 +25,16 @@ class ImageEchoApplication(ChatCompletion):
 
             image_base64 = base64.b64encode(image_bytes).decode("utf-8")
 
+            image_type = mimetypes.guess_type(image_url)[0]
+
             # Add content with the user image in base64
             choice.append_content(
-                f"![Image](data:image/{image_extension};base64,{image_base64})"
+                f"![Image](data:{image_type};base64,{image_base64})"
             )
 
             # Add an attachment with the same user image, but using url
             choice.add_attachment(
-                type=f"image/{image_extension}",
+                type=image_type,
                 url=image_url,
                 title="Attachment Image",
             )
