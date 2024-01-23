@@ -1,3 +1,7 @@
+"""
+A simple RAG application.
+"""
+
 import os
 from typing import Any, Dict, List, Optional, Union
 from uuid import UUID, uuid4

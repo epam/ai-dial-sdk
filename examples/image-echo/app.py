@@ -1,3 +1,8 @@
+"""
+A DIAL application which returns downloaded image
+which is specified in the user message via URL.
+"""
+
 import base64
 import mimetypes
 
