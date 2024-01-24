@@ -1,6 +1,6 @@
 from fastapi.testclient import TestClient
 
-from .app.main import app
+from examples.image_size.app.main import app
 
 http_client = TestClient(app)
 
