@@ -5,7 +5,7 @@ from typing import Tuple
 from fastapi.testclient import TestClient
 from PIL import Image
 
-from .app import app
+from .app.main import app
 
 http_client = TestClient(app)
 
