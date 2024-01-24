@@ -5,11 +5,12 @@ returns its width and height as text.
 """
 
 import uvicorn
-from image import get_image_base64_dimensions
 
 from aidial_sdk import DIALApp
 from aidial_sdk import HTTPException as DIALException
 from aidial_sdk.chat_completion import ChatCompletion, Request, Response
+
+from .image import get_image_base64_size
 
 
 # ChatCompletion is an abstract class for applications and model adapters
@@ -26,10 +27,10 @@ class ImageSizeApplication(ChatCompletion):
                     message="No image attachment was found in the last message",
                     status_code=422,
                 )
-            # Compute the dimensions
-            (w, h) = get_image_base64_dimensions(image)
-            # Return the dimensions as result
-            choice.append_content(f"Dimensions: {w}x{h}px")
+            # Compute the image size
+            (w, h) = get_image_base64_size(image)
+            # Display the image size
+            choice.append_content(f"Size: {w}x{h}px")
 
 
 # DIALApp extends FastAPI to provide a user-friendly interface for routing requests to your applications

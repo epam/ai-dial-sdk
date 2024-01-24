@@ -5,10 +5,11 @@ sends the image back to the user in an attachment.
 """
 
 import uvicorn
-from image import text_to_image_base64
 
 from aidial_sdk import DIALApp
 from aidial_sdk.chat_completion import ChatCompletion, Request, Response
+
+from .image import text_to_image_base64
 
 
 # ChatCompletion is an abstract class for applications and model adapters
@@ -18,7 +19,7 @@ class RenderTextApplication(ChatCompletion):
         with response.create_single_choice() as choice:
             # Get the last message content
             content = request.messages[-1].content or ""
-            # Return the reversed content
+            # Rasterize the user message to an image
             base64_image = text_to_image_base64(content)
             # Add the image as an attachment
             choice.add_attachment(
