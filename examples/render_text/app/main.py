@@ -19,14 +19,20 @@ class RenderTextApplication(ChatCompletion):
         with response.create_single_choice() as choice:
             # Get the last message content
             content = request.messages[-1].content or ""
+
             # Rasterize the user message to an image
-            base64_image = text_to_image_base64(content)
+            image_base64 = text_to_image_base64(content)
+            image_type = "image/png"
+
             # Add the image as an attachment
             choice.add_attachment(
-                type="image/png", title="Image", data=base64_image
+                type=image_type, title="Image", data=image_base64
             )
-            # Return the image generation status as a completion
-            choice.append_content("Image was generated successfully")
+
+            # Return the image in Markdown format
+            choice.append_content(
+                f"![Image](data:{image_type};base64,{image_base64})"
+            )
 
 
 # DIALApp extends FastAPI to provide a user-friendly interface for routing requests to your applications

@@ -28,7 +28,7 @@ def test_app():
 
     response_message = body["choices"][0]["message"]
     response_content = response_message["content"]
-    assert response_content == "Image was generated successfully"
+    assert response_content.startswith("![Image](data:image/png;base64,")
 
     attachment = response_message["custom_content"]["attachments"][0]
     assert attachment["type"] == "image/png"
