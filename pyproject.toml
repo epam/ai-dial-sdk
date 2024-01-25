@@ -53,6 +53,7 @@ telemetry = [
 pytest = "^7.4.2"
 httpx = "^0.25.0"
 nox = "^2023.4.22"
+pillow = "^10.2.0"
 
 [tool.poetry.group.lint.dependencies]
 flake8 = "^6.0.0"
@@ -77,7 +78,7 @@ exclude = [
     ".pytest_cache",
     "**/__pycache__",
     "build",
-    "examples"
+    "examples/langchain_rag"
 ]
 
 [tool.black]
