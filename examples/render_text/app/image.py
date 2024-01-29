@@ -1,7 +1,9 @@
 import base64
+import os
 import textwrap
 from io import BytesIO
 
+import requests
 from PIL import Image, ImageDraw, ImageFont
 
 
@@ -25,3 +27,17 @@ def text_to_image_base64(text, img_size=(200, 100), font_size=20) -> str:
     img_base64 = base64.b64encode(img_buffer.getvalue()).decode()
 
     return img_base64
+
+
+def upload_png_image(dial_url: str, filepath: str, image_base64: str) -> str:
+    bucket = requests.get(f"{dial_url}/v1/bucket").json()["bucket"]
+
+    image_bytes = base64.b64decode(image_base64)
+    image_file = BytesIO(image_bytes)
+    files = {"file": (os.path.basename(filepath), image_file, "image/png")}
+
+    metadata = requests.put(
+        f"{dial_url}/v1/files/{bucket}/{filepath}", files=files
+    ).json()
+
+    return metadata["url"]

@@ -55,10 +55,10 @@ class ImageSizeApplication(ChatCompletion):
 
                 # Download the image from the URL
                 if is_relative_url(image_url):
-                    if DIAL_URL is None:
-                        raise Exception(
-                            "DIAL_URL environment variable is not set"
-                        )
+                    assert (
+                        DIAL_URL is not None
+                    ), "DIAL_URL environment variable is not set"
+
                     image_abs_url = f"{DIAL_URL}/v1/{image_url}"
                 else:
                     image_abs_url = image_url
