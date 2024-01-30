@@ -7,7 +7,7 @@ import requests
 from PIL import Image, ImageDraw, ImageFont
 
 
-def text_to_image_base64(text, img_size=(200, 100), font_size=20) -> str:
+def text_to_image_base64(text: str, img_size=(200, 100), font_size=20) -> str:
     img = Image.new("RGB", img_size, color="yellow")
     d = ImageDraw.Draw(img)
 

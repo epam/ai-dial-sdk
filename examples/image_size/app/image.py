@@ -6,14 +6,14 @@ import requests
 from PIL import Image
 
 
-def get_image_base64_size(image_base64) -> Tuple[int, int]:
+def get_image_base64_size(image_base64: str) -> Tuple[int, int]:
     image_binary = base64.b64decode(image_base64)
     img = Image.open(BytesIO(image_binary))
     return img.size
 
 
-def bytes_to_base64(bytes: bytes) -> str:
-    return base64.b64encode(bytes).decode()
+def bytes_to_base64(data: bytes) -> str:
+    return base64.b64encode(data).decode()
 
 
 def download_image_as_bytes(url: str) -> bytes:
