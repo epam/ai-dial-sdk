@@ -30,14 +30,14 @@ def text_to_image_base64(text: str, img_size=(200, 100), font_size=20) -> str:
 
 
 def upload_png_image(dial_url: str, filepath: str, image_base64: str) -> str:
-    bucket = requests.get(f"{dial_url}/v1/bucket").json()["bucket"]
+    appdata = requests.get(f"{dial_url}/v1/bucket").json()["appdata"]
 
     image_bytes = base64.b64decode(image_base64)
     image_file = BytesIO(image_bytes)
     files = {"file": (os.path.basename(filepath), image_file, "image/png")}
 
     metadata = requests.put(
-        f"{dial_url}/v1/files/{bucket}/{filepath}", files=files
+        f"{dial_url}/v1/files/{appdata}/{filepath}", files=files
     ).json()
 
     return metadata["url"]
