@@ -18,7 +18,7 @@ def test_app():
             "messages": [
                 {
                     "role": "user",
-                    "content": "Hello world!",
+                    "content": "base64,Hello world!",
                 }
             ]
         },
