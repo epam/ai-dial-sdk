@@ -1,6 +1,6 @@
 """
 A DIAL application which returns back the content and attachments
-of the last user message.
+from the last user message.
 """
 
 import uvicorn
