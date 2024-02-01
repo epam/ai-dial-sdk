@@ -2,7 +2,7 @@ import base64
 from io import BytesIO
 from typing import Tuple
 
-import requests
+import aiohttp
 from PIL import Image
 
 
@@ -16,11 +16,12 @@ def bytes_to_base64(data: bytes) -> str:
     return base64.b64encode(data).decode()
 
 
-def download_image_as_bytes(url: str) -> bytes:
-    response = requests.get(url)
-    response.raise_for_status()
-    return response.content
+async def download_image_as_bytes(url: str) -> bytes:
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            response.raise_for_status()
+            return await response.content.read()
 
 
-def download_image_as_base64(url: str) -> str:
-    return bytes_to_base64(download_image_as_bytes(url))
+async def download_image_as_base64(url: str) -> str:
+    return bytes_to_base64(await download_image_as_bytes(url))

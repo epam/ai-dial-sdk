@@ -6,6 +6,8 @@ sends the image back to the user in an attachment.
 
 import os
 
+import uvicorn
+
 from aidial_sdk import DIALApp
 from aidial_sdk import HTTPException as DIALException
 from aidial_sdk.chat_completion import ChatCompletion, Request, Response
@@ -34,7 +36,7 @@ class RenderTextApplication(ChatCompletion):
                     )
             except ValueError:
                 raise DIALException(
-                    message="The content must be in the format '(data|url), <text>'",
+                    message="The content must be in the format '(base64|url),<text>'",
                     status_code=422,
                 )
 
@@ -55,7 +57,7 @@ class RenderTextApplication(ChatCompletion):
                 ), "DIAL_URL environment variable is not set"
 
                 # Upload the image to DIAL File storage
-                image_url = upload_png_image(
+                image_url = await upload_png_image(
                     DIAL_URL, "images/picture.png", image_base64
                 )
 
@@ -78,3 +80,6 @@ app = DIALApp(
 )
 
 app.add_chat_completion("render-text", RenderTextApplication())
+
+if __name__ == "__main__":
+    uvicorn.run(app, port=5000)

@@ -3,7 +3,7 @@ import os
 import textwrap
 from io import BytesIO
 
-import requests
+import aiohttp
 from PIL import Image, ImageDraw, ImageFont
 
 
@@ -29,15 +29,28 @@ def text_to_image_base64(text: str, img_size=(200, 100), font_size=20) -> str:
     return img_base64
 
 
-def upload_png_image(dial_url: str, filepath: str, image_base64: str) -> str:
-    appdata = requests.get(f"{dial_url}/v1/bucket").json()["appdata"]
+async def upload_png_image(
+    dial_url: str, filepath: str, image_base64: str
+) -> str:
+    async with aiohttp.ClientSession() as session:
+        async with session.get(f"{dial_url}/v1/bucket") as response:
+            response.raise_for_status()
+            appdata = (await response.json())["appdata"]
 
-    image_bytes = base64.b64decode(image_base64)
-    image_file = BytesIO(image_bytes)
-    files = {"file": (os.path.basename(filepath), image_file, "image/png")}
+        image_bytes = base64.b64decode(image_base64)
 
-    metadata = requests.put(
-        f"{dial_url}/v1/files/{appdata}/{filepath}", files=files
-    ).json()
+        data = aiohttp.FormData()
+        data.add_field(
+            name="file",
+            content_type="image/png",
+            value=BytesIO(image_bytes),
+            filename=os.path.basename(filepath),
+        )
+
+        async with session.put(
+            f"{dial_url}/v1/files/{appdata}/{filepath}", data=data
+        ) as response:
+            response.raise_for_status()
+            metadata = await response.json()
 
     return metadata["url"]

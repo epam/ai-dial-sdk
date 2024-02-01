@@ -1969,4 +1969,4 @@ telemetry = ["opentelemetry-api", "opentelemetry-distro", "opentelemetry-exporte
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8.1,<4.0"
-content-hash = "85c3829cf3e1b95f1c623cbb20f79beedf19679d93b2a7d2af388973dada47f5"
+content-hash = "1e0a18d177b08518fb7ee226d5f51ddd8e4cb38ba1ae94680c749e8731c7cd1f"
