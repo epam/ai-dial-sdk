@@ -52,9 +52,9 @@ class RenderTextApplication(ChatCompletion):
                 )
             else:
                 # As URL to DIAL File storage
-                assert (
-                    DIAL_URL is not None
-                ), "DIAL_URL environment variable is not set"
+                if DIAL_URL is None:
+                    # DIAL SDK automatically converts standard Python exceptions to 500 Internal Server Error
+                    raise ValueError("DIAL_URL environment variable is unset")
 
                 # Upload the image to DIAL File storage
                 image_url = await upload_png_image(

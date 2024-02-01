@@ -75,9 +75,11 @@ class ImageSizeApplication(ChatCompletion):
 
                 # Download the image from the URL
                 if is_relative_url(image_url):
-                    assert (
-                        DIAL_URL is not None
-                    ), "DIAL_URL environment variable is not set"
+                    if DIAL_URL is None:
+                        # DIAL SDK automatically converts standard Python exceptions to 500 Internal Server Error
+                        raise ValueError(
+                            "DIAL_URL environment variable is unset"
+                        )
 
                     image_abs_url = f"{DIAL_URL}/v1/{image_url}"
                 else:
