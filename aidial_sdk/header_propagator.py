@@ -8,10 +8,11 @@ import wrapt
 from fastapi import FastAPI
 from requests import PreparedRequest
 from requests.sessions import Session
+from starlette.middleware import _MiddlewareClass
 from starlette.middleware.exceptions import ExceptionMiddleware
 
 
-class FastAPIMiddleware:
+class FastAPIMiddleware(_MiddlewareClass):
     def __init__(
         self,
         app: ExceptionMiddleware,
