@@ -192,8 +192,11 @@ class DIALApp(FastAPI):
         return JSONResponse(content={"status": "ok"})
 
     @staticmethod
-    def _exception_handler(request: Request, exc: HTTPException):
-        return JSONResponse(
-            status_code=exc.status_code,
-            content=exc.detail,
-        )
+    def _exception_handler(request: Request, exc: Exception):
+        if isinstance(exc, HTTPException):
+            return JSONResponse(
+                status_code=exc.status_code,
+                content=exc.detail,
+            )
+        else:
+            raise exc
