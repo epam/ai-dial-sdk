@@ -56,7 +56,7 @@ class HeaderPropagator:
         self._enabled = True
 
     def _instrument_fast_api(self, app: FastAPI):
-        app.add_middleware(FastAPIMiddleware, self._api_key)
+        app.add_middleware(FastAPIMiddleware, api_key=self._api_key)
 
     def _instrument_aiohttp(self):
         def instrumented_init(wrapped, instance, args, kwargs):
