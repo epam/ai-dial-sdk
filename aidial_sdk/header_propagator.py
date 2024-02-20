@@ -8,19 +8,21 @@ import wrapt
 from fastapi import FastAPI
 from requests import PreparedRequest
 from requests.sessions import Session
-from starlette.middleware.exceptions import ExceptionMiddleware
+from starlette.types import ASGIApp, Receive, Scope, Send
 
 
 class FastAPIMiddleware:
     def __init__(
         self,
-        app: ExceptionMiddleware,
+        app: ASGIApp,
         api_key: ContextVar[Optional[str]],
     ) -> None:
         self.app = app
         self.api_key = api_key
 
-    async def __call__(self, scope, receive, send) -> None:
+    async def __call__(
+        self, scope: Scope, receive: Receive, send: Send
+    ) -> None:
         for header in scope["headers"]:
             if header[0] == b"api-key":
                 self.api_key.set(header[1].decode("utf-8"))
@@ -54,10 +56,7 @@ class HeaderPropagator:
         self._enabled = True
 
     def _instrument_fast_api(self, app: FastAPI):
-        app.add_middleware(
-            FastAPIMiddleware,
-            api_key=self._api_key,
-        )
+        app.add_middleware(FastAPIMiddleware, api_key=self._api_key)
 
     def _instrument_aiohttp(self):
         def instrumented_init(wrapped, instance, args, kwargs):

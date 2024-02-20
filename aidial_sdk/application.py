@@ -195,8 +195,10 @@ class DIALApp(FastAPI):
 
     @staticmethod
     def _pydantic_validation_exception_handler(
-        request: Request, exc: ValidationError
+        request: Request, exc: Exception
     ) -> JSONResponse:
+        assert isinstance(exc, ValidationError)
+
         error = exc.errors()[0]
         path = ".".join(map(str, error["loc"]))
         message = f"Your request contained invalid structure on path {path}. {error['msg']}"
@@ -207,8 +209,9 @@ class DIALApp(FastAPI):
 
     @staticmethod
     def _fastapi_exception_handler(
-        request: Request, exc: HTTPException
+        request: Request, exc: Exception
     ) -> JSONResponse:
+        assert isinstance(exc, HTTPException)
         return JSONResponse(
             status_code=exc.status_code,
             content=exc.detail,
@@ -216,8 +219,9 @@ class DIALApp(FastAPI):
 
     @staticmethod
     def _dial_exception_handler(
-        request: Request, exc: DIALException
+        request: Request, exc: Exception
     ) -> JSONResponse:
+        assert isinstance(exc, DIALException)
         return JSONResponse(
             status_code=exc.status_code,
             content=json_error(

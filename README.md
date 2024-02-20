@@ -40,7 +40,7 @@ class EchoApplication(ChatCompletion):
             choice.append_content(last_user_message.content or "")
 
 
-# DIALApp extends FastAPI to provide an user-friendly interface for routing requests to your applications
+# DIALApp extends FastAPI to provide a user-friendly interface for routing requests to your applications
 app = DIALApp()
 app.add_chat_completion("echo", EchoApplication())
 
