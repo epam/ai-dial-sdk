@@ -44,6 +44,19 @@ error_testdata = [
     ("fastapi_exception", 500, DEFAULT_RUNTIME_ERROR),
     ("value_error_exception", 500, DEFAULT_RUNTIME_ERROR),
     ("zero_division_exception", 500, DEFAULT_RUNTIME_ERROR),
+    (
+        "sdk_exception_with_display_message",
+        503,
+        {
+            "error": {
+                "message": "Test error",
+                "type": "runtime_error",
+                "code": None,
+                "param": None,
+                "display_message": "I'm broken",
+            }
+        },
+    ),
 ]
 
 

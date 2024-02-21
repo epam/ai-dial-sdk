@@ -19,8 +19,9 @@ def json_error(
     type: Optional[str] = None,
     param: Optional[str] = None,
     code: Optional[str] = None,
+    display_message: Optional[str] = None,
 ):
-    return {
+    error = {
         "error": {
             "message": message,
             "type": type,
@@ -28,3 +29,8 @@ def json_error(
             "code": code,
         }
     }
+
+    if display_message:
+        error["error"].update({"display_message": display_message})
+
+    return error

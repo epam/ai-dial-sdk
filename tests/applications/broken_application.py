@@ -13,6 +13,8 @@ def raise_exception(exception_type: str):
         raise ValueError("Test value error")
     elif exception_type == "zero_division_exception":
         return 1 / 0
+    elif exception_type == "sdk_exception_with_display_message":
+        raise HTTPException("Test error", 503, display_message="I'm broken")
     else:
         raise HTTPException("Unexpected error")
 

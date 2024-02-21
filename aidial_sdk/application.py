@@ -229,5 +229,6 @@ class DIALApp(FastAPI):
                 type=exc.type,
                 param=exc.param,
                 code=exc.code,
+                display_message=exc.display_message,
             ),
         )
