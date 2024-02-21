@@ -1,20 +1,15 @@
 from enum import Enum
 from typing import Any, Dict, List, Literal, Mapping, Optional, Union
 
+from aidial_sdk.deployment.from_request_mixin import FromRequestDeploymentMixin
 from aidial_sdk.pydantic_v1 import (
-    BaseModel,
     ConstrainedFloat,
     ConstrainedInt,
     ConstrainedList,
-    Field,
     PositiveInt,
     StrictStr,
 )
-
-
-class ExtraForbidModel(BaseModel):
-    class Config:
-        extra = "forbid"
+from aidial_sdk.utils.pydantic import ExtraForbidModel
 
 
 class Attachment(ExtraForbidModel):
@@ -112,7 +107,7 @@ class ToolChoice(ExtraForbidModel):
     function: FunctionChoice
 
 
-class Request(ExtraForbidModel):
+class AzureChatCompletionRequest(ExtraForbidModel):
     model: Optional[StrictStr] = None
     messages: List[Message]
     functions: Optional[List[Function]] = None
@@ -128,19 +123,17 @@ class Request(ExtraForbidModel):
     n: Optional[N] = None
     stop: Optional[Union[StrictStr, Stop]] = None
     max_tokens: Optional[PositiveInt] = None
-    max_prompt_tokens: Optional[PositiveInt] = None
     presence_penalty: Optional[Penalty] = None
     frequency_penalty: Optional[Penalty] = None
     logit_bias: Optional[Mapping[int, float]] = None
     user: Optional[StrictStr] = None
 
-    api_key: StrictStr
-    jwt: Optional[StrictStr] = None
-    deployment_id: StrictStr
-    api_version: Optional[StrictStr] = None
-    headers: Mapping[StrictStr, StrictStr]
+
+class ChatCompletionRequest(AzureChatCompletionRequest):
+    model: Optional[StrictStr] = None
+    addons: Optional[List[Addon]] = None
+    max_prompt_tokens: Optional[PositiveInt] = None
 
 
-class RateRequest(ExtraForbidModel):
-    response_id: StrictStr = Field(None, alias="responseId")
-    rate: bool = False
+class Request(ChatCompletionRequest, FromRequestDeploymentMixin):
+    pass

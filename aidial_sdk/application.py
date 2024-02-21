@@ -1,16 +1,19 @@
 import logging.config
-from json import JSONDecodeError
-from typing import Dict, Optional, Union
+from typing import Dict, Optional, Type, TypeVar
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 
 from aidial_sdk.chat_completion.base import ChatCompletion
-from aidial_sdk.chat_completion.request import RateRequest
 from aidial_sdk.chat_completion.request import Request as ChatCompletionRequest
 from aidial_sdk.chat_completion.response import (
     Response as ChatCompletionResponse,
 )
+from aidial_sdk.deployment.from_request_mixin import FromRequestMixin
+from aidial_sdk.deployment.rate import RateRequest
+from aidial_sdk.deployment.tokenize import TokenizeRequest
+from aidial_sdk.deployment.truncate_prompt import TruncatePromptRequest
+from aidial_sdk.exceptions import HTTPException as DIALException
 from aidial_sdk.header_propagator import HeaderPropagator
 from aidial_sdk.pydantic_v1 import ValidationError
 from aidial_sdk.telemetry.types import TelemetryConfig
@@ -20,6 +23,8 @@ from aidial_sdk.utils.logging import log_debug, set_log_deployment
 from aidial_sdk.utils.streaming import merge_chunks
 
 logging.config.dictConfig(LogConfig().dict())
+
+RequestType = TypeVar("RequestType", bound=FromRequestMixin)
 
 
 class DIALApp(FastAPI):
@@ -61,7 +66,29 @@ class DIALApp(FastAPI):
             methods=["POST"],
         )
 
-        self.add_exception_handler(HTTPException, DIALApp._exception_handler)
+        self.add_api_route(
+            "/openai/deployments/{deployment_id}/tokenize",
+            self._endpoint_factory("tokenize", TokenizeRequest),
+            methods=["POST"],
+        )
+
+        self.add_api_route(
+            "/openai/deployments/{deployment_id}/truncate_prompt",
+            self._endpoint_factory("truncate_prompt", TruncatePromptRequest),
+            methods=["POST"],
+        )
+
+        self.add_exception_handler(
+            ValidationError, DIALApp._pydantic_validation_exception_handler
+        )
+
+        self.add_exception_handler(
+            HTTPException, DIALApp._fastapi_exception_handler
+        )
+
+        self.add_exception_handler(
+            DIALException, DIALApp._dial_exception_handler
+        )
 
     def configure_telemetry(self, config: TelemetryConfig):
         try:
@@ -79,58 +106,55 @@ class DIALApp(FastAPI):
     ) -> None:
         self.chat_completion_impls[deployment_name] = impl
 
+    def _endpoint_factory(
+        self, endpoint: str, request_type: Type["RequestType"]
+    ):
+        async def _handler(
+            deployment_id: str, original_request: Request
+        ) -> Response:
+            set_log_deployment(deployment_id)
+            deployment = self._get_deployment(deployment_id)
+
+            request = await request_type.from_request(original_request)
+
+            endpoint_impl = getattr(deployment, endpoint, None)
+            if not endpoint_impl:
+                raise self._get_missing_endpoint_error(endpoint)
+
+            try:
+                response = await endpoint_impl(request)
+            except NotImplementedError:
+                raise self._get_missing_endpoint_error(endpoint)
+
+            response_json = response.dict()
+            log_debug(f"response [{endpoint}]: {response_json}")
+            return JSONResponse(content=response_json)
+
+        return _handler
+
     async def _rate_response(
         self, deployment_id: str, original_request: Request
     ) -> Response:
         set_log_deployment(deployment_id)
-        impl = self._get_deployment(deployment_id)
+        deployment = self._get_deployment(deployment_id)
 
-        if isinstance(impl, JSONResponse):
-            return impl
+        request = await RateRequest.from_request(original_request)
 
-        body = await DIALApp._get_json_body(original_request)
-        if isinstance(body, JSONResponse):
-            return body
-        log_debug(f"request: {body}")
-
-        try:
-            request = RateRequest(**body)
-        except ValidationError as e:
-            return DIALApp._get_validation_error_response(e)
-
-        await impl.rate_response(request)
+        await deployment.rate_response(request)
         return Response(status_code=200)
 
     async def _chat_completion(
         self, deployment_id: str, original_request: Request
     ) -> Response:
         set_log_deployment(deployment_id)
-        impl = self._get_deployment(deployment_id)
+        deployment = self._get_deployment(deployment_id)
 
-        if isinstance(impl, JSONResponse):
-            return impl
-
-        body = await DIALApp._get_json_body(original_request)
-        if isinstance(body, JSONResponse):
-            return body
-
-        headers = original_request.headers
-        try:
-            request = ChatCompletionRequest(
-                **body,
-                api_key=headers["Api-Key"],
-                jwt=headers.get("Authorization"),
-                deployment_id=deployment_id,
-                api_version=original_request.query_params.get("api-version"),
-                headers=headers,
-            )
-        except ValidationError as e:
-            return DIALApp._get_validation_error_response(e)
-
-        log_debug(f"request: {body}")
+        request = await ChatCompletionRequest.from_request(original_request)
 
         response = ChatCompletionResponse(request)
-        first_chunk = await response._generator(impl.chat_completion, request)
+        first_chunk = await response._generator(
+            deployment.chat_completion, request
+        )
 
         if request.stream:
             return StreamingResponse(
@@ -138,65 +162,72 @@ class DIALApp(FastAPI):
                 media_type="text/event-stream",
             )
         else:
-            response_body = await merge_chunks(
+            response_json = await merge_chunks(
                 response._generate_stream(first_chunk)
             )
 
-            log_debug(f"response: {response_body}")
-            return JSONResponse(content=response_body)
-
-    def _get_deployment(
-        self, deployment_id: str
-    ) -> Union[ChatCompletion, JSONResponse]:
-        impl = self.chat_completion_impls.get(deployment_id, None)
-
-        if not impl:
-            return JSONResponse(
-                status_code=404,
-                content=json_error(
-                    message="The API deployment for this resource does not exist.",
-                    code="deployment_not_found",
-                ),
-            )
-        return impl
-
-    @staticmethod
-    async def _get_json_body(request: Request) -> Union[dict, JSONResponse]:
-        try:
-            return await request.json()
-        except JSONDecodeError as e:
-            return JSONResponse(
-                status_code=400,
-                content=json_error(
-                    message=f"Your request contained invalid JSON: {str(e.msg)}",
-                    type="invalid_request_error",
-                ),
-            )
-
-    @staticmethod
-    def _get_validation_error_response(
-        e: ValidationError,
-    ) -> JSONResponse:
-        error = e.errors()[0]
-        path = ".".join(map(str, e.errors()[0]["loc"]))
-        return JSONResponse(
-            status_code=400,
-            content=json_error(
-                message=f"Your request contained invalid structure on path {path}. {error['msg']}",
-                type="invalid_request_error",
-            ),
-        )
+            log_debug(f"response: {response_json}")
+            return JSONResponse(content=response_json)
 
     @staticmethod
     async def _healthcheck() -> JSONResponse:
         return JSONResponse(content={"status": "ok"})
 
-    @staticmethod
-    def _exception_handler(request: Request, exc: Exception):
-        if isinstance(exc, HTTPException):
-            return JSONResponse(
-                status_code=exc.status_code,
-                content=exc.detail,
+    def _get_deployment(self, deployment_id: str) -> ChatCompletion:
+        impl = self.chat_completion_impls.get(deployment_id, None)
+
+        if not impl:
+            raise DIALException(
+                status_code=404,
+                code="deployment_not_found",
+                message="The API deployment for this resource does not exist.",
             )
-        else:
-            raise exc
+
+        return impl
+
+    @staticmethod
+    def _get_missing_endpoint_error(endpoint: str) -> DIALException:
+        return DIALException(
+            status_code=404,
+            code="endpoint_not_found",
+            message=f"The deployment doesn't implement '{endpoint}' endpoint.",
+        )
+
+    @staticmethod
+    def _pydantic_validation_exception_handler(
+        request: Request, exc: Exception
+    ) -> JSONResponse:
+        assert isinstance(exc, ValidationError)
+
+        error = exc.errors()[0]
+        path = ".".join(map(str, error["loc"]))
+        message = f"Your request contained invalid structure on path {path}. {error['msg']}"
+        return JSONResponse(
+            status_code=400,
+            content=json_error(message=message, type="invalid_request_error"),
+        )
+
+    @staticmethod
+    def _fastapi_exception_handler(
+        request: Request, exc: Exception
+    ) -> JSONResponse:
+        assert isinstance(exc, HTTPException)
+        return JSONResponse(
+            status_code=exc.status_code,
+            content=exc.detail,
+        )
+
+    @staticmethod
+    def _dial_exception_handler(
+        request: Request, exc: Exception
+    ) -> JSONResponse:
+        assert isinstance(exc, DIALException)
+        return JSONResponse(
+            status_code=exc.status_code,
+            content=json_error(
+                message=exc.message,
+                type=exc.type,
+                param=exc.param,
+                code=exc.code,
+            ),
+        )

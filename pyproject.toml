@@ -74,7 +74,7 @@ reportUnusedVariable = "error"
 reportIncompatibleMethodOverride = "error"
 exclude = [
     ".git",
-    ".venv",
+    "**/.venv",
     ".nox",
     ".pytest_cache",
     "**/__pycache__",

@@ -1,6 +1,14 @@
 import asyncio
 from time import time
-from typing import Any, AsyncGenerator, Callable, Coroutine, Dict, Optional
+from typing import (
+    Any,
+    AsyncGenerator,
+    Callable,
+    Coroutine,
+    Dict,
+    List,
+    Optional,
+)
 from uuid import uuid4
 
 from fastapi import HTTPException
@@ -204,7 +212,7 @@ class Response:
 
     async def _generator(
         self,
-        producer: Callable[[Any, Any], Coroutine[Any, Any, Any]],
+        producer: Callable[[Request, "Response"], Coroutine[Any, Any, Any]],
         request: Request,
     ) -> BaseChunk:
         self.user_task = asyncio.create_task(producer(request, self))
@@ -285,7 +293,7 @@ class Response:
         )
         self._last_usage_per_model_index += 1
 
-    def set_discarded_messages(self, discarded_messages: int):
+    def set_discarded_messages(self, discarded_messages: List[int]):
         self._generation_started = True
 
         if self._discarded_messages_generated:
