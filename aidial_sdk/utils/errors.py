@@ -1,6 +1,7 @@
 from typing import Optional
 
 from aidial_sdk.exceptions import HTTPException
+from aidial_sdk.utils.json import remove_nones
 from aidial_sdk.utils.logging import log_error
 
 
@@ -21,16 +22,14 @@ def json_error(
     code: Optional[str] = None,
     display_message: Optional[str] = None,
 ):
-    error = {
-        "error": {
-            "message": message,
-            "type": type,
-            "param": param,
-            "code": code,
-        }
+    return {
+        "error": remove_nones(
+            {
+                "message": message,
+                "type": type,
+                "param": param,
+                "code": code,
+                "display_message": display_message,
+            }
+        )
     }
-
-    if display_message:
-        error["error"].update({"display_message": display_message})
-
-    return error

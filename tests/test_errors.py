@@ -14,16 +14,12 @@ DEFAULT_RUNTIME_ERROR = {
     "error": {
         "message": "Error during processing the request",
         "type": "runtime_error",
-        "code": None,
-        "param": None,
     }
 }
 
 API_KEY_IS_MISSING = {
     "error": {
-        "code": None,
         "message": "Api-Key header is required",
-        "param": None,
         "type": "invalid_request_error",
     }
 }
@@ -36,8 +32,6 @@ error_testdata = [
             "error": {
                 "message": "Test error",
                 "type": "runtime_error",
-                "code": None,
-                "param": None,
             }
         },
     ),
@@ -51,8 +45,6 @@ error_testdata = [
             "error": {
                 "message": "Test error",
                 "type": "runtime_error",
-                "code": None,
-                "param": None,
                 "display_message": "I'm broken",
             }
         },
