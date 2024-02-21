@@ -14,16 +14,12 @@ DEFAULT_RUNTIME_ERROR = {
     "error": {
         "message": "Error during processing the request",
         "type": "runtime_error",
-        "code": None,
-        "param": None,
     }
 }
 
 API_KEY_IS_MISSING = {
     "error": {
-        "code": None,
         "message": "Api-Key header is required",
-        "param": None,
         "type": "invalid_request_error",
     }
 }
@@ -36,14 +32,23 @@ error_testdata = [
             "error": {
                 "message": "Test error",
                 "type": "runtime_error",
-                "code": None,
-                "param": None,
             }
         },
     ),
     ("fastapi_exception", 500, DEFAULT_RUNTIME_ERROR),
     ("value_error_exception", 500, DEFAULT_RUNTIME_ERROR),
     ("zero_division_exception", 500, DEFAULT_RUNTIME_ERROR),
+    (
+        "sdk_exception_with_display_message",
+        503,
+        {
+            "error": {
+                "message": "Test error",
+                "type": "runtime_error",
+                "display_message": "I'm broken",
+            }
+        },
+    ),
 ]
 
 

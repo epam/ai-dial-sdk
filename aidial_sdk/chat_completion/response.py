@@ -112,6 +112,7 @@ class Response:
                                     type=e.type,
                                     param=e.param,
                                     code=e.code,
+                                    display_message=e.display_message,
                                 ),
                             )
                     except Exception as e:
@@ -173,6 +174,7 @@ class Response:
                                 type=item.exc.type,
                                 param=item.exc.param,
                                 code=item.exc.code,
+                                display_message=item.exc.display_message,
                             )
                         )
                     else:
@@ -234,6 +236,7 @@ class Response:
                         type=e.type,
                         param=e.param,
                         code=e.code,
+                        display_message=e.display_message,
                     ),
                 )
             except Exception as e:
