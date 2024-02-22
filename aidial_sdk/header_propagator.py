@@ -23,7 +23,7 @@ class FastAPIMiddleware:
     async def __call__(
         self, scope: Scope, receive: Receive, send: Send
     ) -> None:
-        for header in scope["headers"]:
+        for header in scope.get("headers") or []:
             if header[0] == b"api-key":
                 self.api_key.set(header[1].decode("utf-8"))
 
