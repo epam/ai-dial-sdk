@@ -1,0 +1,12 @@
+name: PR Workflow
+
+on:
+  pull_request:
+    branches: [development, release-*]
+
+jobs:
+  run_tests:
+    uses: epam/ai-dial-ci/.github/workflows/python_package_pr.yml@1.7.0
+    secrets: inherit
+    with:
+      python_version: 3.8
