@@ -2,13 +2,13 @@ import os
 from typing import Optional
 
 from aidial_sdk.pydantic_v1 import BaseModel
+from aidial_sdk.utils.env import env_var_list
 
-# Variables borrowed from OpenTelemetry:
 # https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/
 
-OTEL_LOGS_EXPORTER = os.getenv("OTEL_LOGS_EXPORTER", "").split(",")
-OTEL_TRACES_EXPORTER = os.getenv("OTEL_TRACES_EXPORTER", "").split(",")
-OTEL_METRICS_EXPORTER = os.getenv("OTEL_METRICS_EXPORTER", "").split(",")
+OTEL_LOGS_EXPORTER = env_var_list("OTEL_LOGS_EXPORTER")
+OTEL_TRACES_EXPORTER = env_var_list("OTEL_TRACES_EXPORTER")
+OTEL_METRICS_EXPORTER = env_var_list("OTEL_METRICS_EXPORTER")
 OTEL_EXPORTER_PROMETHEUS_PORT = int(
     os.getenv("OTEL_EXPORTER_PROMETHEUS_PORT", 9464)
 )
