@@ -31,9 +31,9 @@ def init_telemetry(
     config: TelemetryConfig,
 ):
     resource = Resource.create(
-        attributes={SERVICE_NAME: config.service_name}
-        if config.service_name
-        else None
+        attributes=(
+            {SERVICE_NAME: config.service_name} if config.service_name else None
+        )
     )
 
     if config.tracing is not None:

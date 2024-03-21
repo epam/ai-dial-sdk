@@ -111,9 +111,9 @@ class AzureChatCompletionRequest(ExtraForbidModel):
     model: Optional[StrictStr] = None
     messages: List[Message]
     functions: Optional[List[Function]] = None
-    function_call: Optional[
-        Union[Literal["auto", "none"], FunctionChoice]
-    ] = None
+    function_call: Optional[Union[Literal["auto", "none"], FunctionChoice]] = (
+        None
+    )
     tools: Optional[List[Tool]] = None
     tool_choice: Optional[Union[Literal["auto", "none"], ToolChoice]] = None
     addons: Optional[List[Addon]] = None
