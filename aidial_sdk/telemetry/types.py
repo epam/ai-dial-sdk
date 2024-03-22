@@ -4,6 +4,7 @@ from typing import Optional
 from aidial_sdk.pydantic_v1 import BaseModel
 from aidial_sdk.utils.env import env_var_list
 
+# Based on OpenTelemetry SDK env vars:
 # https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/
 
 OTEL_LOGS_EXPORTER = env_var_list("OTEL_LOGS_EXPORTER")
@@ -14,8 +15,9 @@ OTEL_EXPORTER_PROMETHEUS_PORT = int(
 )
 
 # DIAL-specific env vars
-DIAL_TELEMETRY_ADD_TRACES_TO_LOGS = (
-    os.getenv("DIAL_TELEMETRY_ADD_TRACES_TO_LOGS", "false").lower() == "true"
+OTEL_INSTRUMENT_CONSOLE_LOGS_WITH_TRACES = (
+    os.getenv("OTEL_INSTRUMENT_CONSOLE_LOGS_WITH_TRACES", "false").lower()
+    == "true"
 )
 
 
@@ -26,13 +28,16 @@ class LogsConfig(BaseModel):
 class TracingConfig(BaseModel):
     otlp_export: bool = "otlp" in OTEL_TRACES_EXPORTER
 
-    """Configure logging to include tracing information into a log message"""
-    logging: bool = DIAL_TELEMETRY_ADD_TRACES_TO_LOGS
+    """Configure logging to include tracing information
+    into console log messages"""
+    logging: bool = OTEL_INSTRUMENT_CONSOLE_LOGS_WITH_TRACES
 
 
 class MetricsConfig(BaseModel):
     otlp_export: bool = "otlp" in OTEL_METRICS_EXPORTER
-    prometheus_export: bool = True
+    prometheus_export: bool = (
+        not OTEL_METRICS_EXPORTER or "prometheus" in OTEL_METRICS_EXPORTER
+    )
     port: int = OTEL_EXPORTER_PROMETHEUS_PORT
 
 
