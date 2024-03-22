@@ -4,7 +4,7 @@ from typing import Optional
 from aidial_sdk.pydantic_v1 import BaseModel
 from aidial_sdk.utils.env import env_var_list
 
-# Based on OpenTelemetry SDK env vars:
+# OpenTelemetry SDK configuration env vars:
 # https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/
 
 OTEL_LOGS_EXPORTER = env_var_list("OTEL_LOGS_EXPORTER")
