@@ -1,3 +1,4 @@
+import logging
 import os
 from typing import Optional
 
@@ -23,6 +24,7 @@ OTEL_INSTRUMENT_CONSOLE_LOGS_WITH_TRACES = (
 
 class LogsConfig(BaseModel):
     otlp_export: bool = "otlp" in OTEL_LOGS_EXPORTER
+    level: int = logging.INFO
 
 
 class TracingConfig(BaseModel):

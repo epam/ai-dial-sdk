@@ -35,7 +35,6 @@ from opentelemetry.trace import set_tracer_provider
 from prometheus_client import start_http_server
 
 from aidial_sdk.telemetry.types import TelemetryConfig
-from aidial_sdk.utils.logging import logger
 
 
 def init_telemetry(
@@ -47,8 +46,6 @@ def init_telemetry(
             {SERVICE_NAME: config.service_name} if config.service_name else None
         )
     )
-
-    log_level = logger.getEffectiveLevel()
 
     if config.tracing is not None:
         tracer_provider = TracerProvider(resource=resource)
@@ -68,10 +65,7 @@ def init_telemetry(
         if config.tracing.logging:
             # Setting the root logger format in order to include
             # tracing information: span_id, trace_id
-            LoggingInstrumentor().instrument(
-                set_logging_format=True,
-                log_level=log_level,
-            )
+            LoggingInstrumentor().instrument(set_logging_format=True)
 
     if config.logs is not None:
         # Adding a handler to the root logger which exports the logs to OTLP
@@ -84,7 +78,7 @@ def init_telemetry(
 
         set_logger_provider(provider)
 
-        handler = LoggingHandler(level=log_level)
+        handler = LoggingHandler(level=config.logs.level)
         logging.getLogger().addHandler(handler)
 
     if config.metrics is not None:
