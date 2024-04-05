@@ -34,9 +34,7 @@ class TracingConfig(BaseModel):
 
 class MetricsConfig(BaseModel):
     otlp_export: bool = "otlp" in OTEL_METRICS_EXPORTER
-    prometheus_export: bool = (
-        not OTEL_METRICS_EXPORTER or "prometheus" in OTEL_METRICS_EXPORTER
-    )
+    prometheus_export: bool = "prometheus" in OTEL_METRICS_EXPORTER
     port: int = OTEL_EXPORTER_PROMETHEUS_PORT
 
 
