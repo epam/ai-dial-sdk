@@ -1,1 +1,1 @@
-aidial-sdk>=0.2
+aidial-sdk>=0.7.0, <0.8
