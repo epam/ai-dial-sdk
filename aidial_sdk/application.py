@@ -1,4 +1,6 @@
 import logging.config
+import re
+from logging import Filter, LogRecord
 from typing import Dict, Optional, Type, TypeVar
 
 from fastapi import FastAPI, HTTPException, Request
@@ -27,6 +29,17 @@ logging.config.dictConfig(LogConfig().dict())
 RequestType = TypeVar("RequestType", bound=FromRequestMixin)
 
 
+class PathFilter(Filter):
+    path: str
+
+    def __init__(self, path: str) -> None:
+        super().__init__(name="")
+        self.path = path
+
+    def filter(self, record: LogRecord):
+        return not re.search(f"(\\s+){self.path}(\\s+)", record.getMessage())
+
+
 class DIALApp(FastAPI):
     chat_completion_impls: Dict[str, ChatCompletion] = {}
 
@@ -52,7 +65,9 @@ class DIALApp(FastAPI):
             HeaderPropagator(self, dial_url).enable()
 
         if add_healthcheck:
-            self.add_api_route("/health", DIALApp._healthcheck, methods=["GET"])
+            path = "/health"
+            self.add_api_route(path, DIALApp._healthcheck, methods=["GET"])
+            logging.getLogger("uvicorn.access").addFilter(PathFilter(path))
 
         self.add_api_route(
             "/openai/deployments/{deployment_id}/chat/completions",
