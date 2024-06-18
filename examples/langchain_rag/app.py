@@ -7,20 +7,30 @@ from typing import Any, Dict, List, Optional, Union
 from uuid import UUID, uuid4
 
 import uvicorn
-from langchain.callbacks.base import AsyncCallbackHandler
-from langchain.chains import RetrievalQA
-from langchain.chat_models import AzureChatOpenAI
-from langchain.document_loaders import PyPDFLoader, WebBaseLoader
-from langchain.embeddings import CacheBackedEmbeddings, OpenAIEmbeddings
-from langchain.schema.output import ChatGenerationChunk, GenerationChunk
-from langchain.storage import LocalFileStore
-from langchain.text_splitter import RecursiveCharacterTextSplitter
-from langchain.vectorstores import Chroma
-
 from aidial_sdk import DIALApp
 from aidial_sdk.chat_completion import ChatCompletion, Choice, Request, Response
+from langchain.callbacks.base import AsyncCallbackHandler
+from langchain.chains.retrieval_qa.base import RetrievalQA
+from langchain.embeddings import CacheBackedEmbeddings
+from langchain.schema.output import ChatGenerationChunk, GenerationChunk
+from langchain.storage import LocalFileStore
+from langchain_community.document_loaders import PyPDFLoader, WebBaseLoader
+from langchain_community.vectorstores import Chroma
+from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-DIAL_URL = os.getenv("DIAL_URL")
+
+def get_env(name: str) -> str:
+    value = os.getenv(name)
+    if value is None:
+        raise ValueError(f"Please provide {name!r} environment variable")
+    return value
+
+
+DIAL_URL = get_env("DIAL_URL")
+EMBEDDINGS_MODEL = os.getenv("EMBEDDINGS_MODEL", "text-embedding-ada-002")
+CHAT_MODEL = os.getenv("CHAT_MODEL", "gpt-4")
+API_VERSION = os.getenv("API_VERSION", "2023-03-15-preview")
 
 text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
     chunk_size=256, chunk_overlap=0
@@ -72,12 +82,11 @@ class SimpleRAGApplication(ChatCompletion):
             else:
                 loader = WebBaseLoader(first_user_message)
 
-            openai_embedding = OpenAIEmbeddings(
-                openai_api_base=DIAL_URL,
-                openai_api_key=request.api_key,
-                openai_api_version="2023-03-15-preview",
-                openai_api_type="azure",
-                max_retries=15,
+            openai_embedding = AzureOpenAIEmbeddings(
+                azure_deployment=EMBEDDINGS_MODEL,
+                azure_endpoint=DIAL_URL,
+                openai_api_key=request.api_key,  # type: ignore
+                openai_api_version=API_VERSION,  # type: ignore
                 headers=(
                     {} if not request.jwt else {"Authorization": request.jwt}
                 ),
@@ -129,12 +138,10 @@ class SimpleRAGApplication(ChatCompletion):
                 # because propagation_auth_headers is enabled.
                 # CustomCallbackHandler allows to pass tokens to the users as they are generated, so as not to wait for a complete response.
                 llm = AzureChatOpenAI(
-                    deployment_name="gpt-4",
-                    model="gpt-4",
-                    openai_api_base=DIAL_URL,
-                    openai_api_key="-",
-                    openai_api_version="2023-03-15-preview",
-                    openai_api_type="azure",
+                    azure_deployment=CHAT_MODEL,
+                    azure_endpoint=DIAL_URL,
+                    openai_api_key="dummy",  # type: ignore
+                    openai_api_version=API_VERSION,  # type: ignore
                     temperature=0,
                     streaming=True,
                     callbacks=[CustomCallbackHandler(choice)],
