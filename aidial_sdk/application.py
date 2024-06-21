@@ -15,6 +15,8 @@ from aidial_sdk.deployment.from_request_mixin import FromRequestMixin
 from aidial_sdk.deployment.rate import RateRequest
 from aidial_sdk.deployment.tokenize import TokenizeRequest
 from aidial_sdk.deployment.truncate_prompt import TruncatePromptRequest
+from aidial_sdk.embeddings.base import Embeddings
+from aidial_sdk.embeddings.request import EmbeddingsRequest
 from aidial_sdk.exceptions import HTTPException as DIALException
 from aidial_sdk.header_propagator import HeaderPropagator
 from aidial_sdk.pydantic_v1 import ValidationError
@@ -42,6 +44,7 @@ class PathFilter(Filter):
 
 class DIALApp(FastAPI):
     chat_completion_impls: Dict[str, ChatCompletion] = {}
+    embeddings_impls: Dict[str, Embeddings] = {}
 
     def __init__(
         self,
@@ -70,6 +73,12 @@ class DIALApp(FastAPI):
             logging.getLogger("uvicorn.access").addFilter(PathFilter(path))
 
         self.add_api_route(
+            "/openai/deployments/{deployment_id}/embeddings",
+            self._embeddings,
+            methods=["POST"],
+        )
+
+        self.add_api_route(
             "/openai/deployments/{deployment_id}/chat/completions",
             self._chat_completion,
             methods=["POST"],
@@ -83,13 +92,15 @@ class DIALApp(FastAPI):
 
         self.add_api_route(
             "/openai/deployments/{deployment_id}/tokenize",
-            self._endpoint_factory("tokenize", TokenizeRequest),
+            self._chat_completion_endpoint_factory("tokenize", TokenizeRequest),
             methods=["POST"],
         )
 
         self.add_api_route(
             "/openai/deployments/{deployment_id}/truncate_prompt",
-            self._endpoint_factory("truncate_prompt", TruncatePromptRequest),
+            self._chat_completion_endpoint_factory(
+                "truncate_prompt", TruncatePromptRequest
+            ),
             methods=["POST"],
         )
 
@@ -116,19 +127,22 @@ class DIALApp(FastAPI):
 
         init_telemetry(app=self, config=config)
 
+    def add_embeddings(self, deployment_name: str, impl: Embeddings) -> None:
+        self.embeddings_impls[deployment_name] = impl
+
     def add_chat_completion(
         self, deployment_name: str, impl: ChatCompletion
     ) -> None:
         self.chat_completion_impls[deployment_name] = impl
 
-    def _endpoint_factory(
+    def _chat_completion_endpoint_factory(
         self, endpoint: str, request_type: Type["RequestType"]
     ):
         async def _handler(
             deployment_id: str, original_request: Request
         ) -> Response:
             set_log_deployment(deployment_id)
-            deployment = self._get_deployment(deployment_id)
+            deployment = self._get_chat_completion(deployment_id)
 
             request = await request_type.from_request(original_request)
 
@@ -151,18 +165,28 @@ class DIALApp(FastAPI):
         self, deployment_id: str, original_request: Request
     ) -> Response:
         set_log_deployment(deployment_id)
-        deployment = self._get_deployment(deployment_id)
+        deployment = self._get_chat_completion(deployment_id)
 
         request = await RateRequest.from_request(original_request)
 
         await deployment.rate_response(request)
         return Response(status_code=200)
 
+    async def _embeddings(
+        self, deployment_id: str, original_request: Request
+    ) -> Response:
+        set_log_deployment(deployment_id)
+        deployment = self._get_embeddings(deployment_id)
+        request = await EmbeddingsRequest.from_request(original_request)
+        response = await deployment.embeddings(request)
+        response_json = response.dict()
+        return JSONResponse(content=response_json)
+
     async def _chat_completion(
         self, deployment_id: str, original_request: Request
     ) -> Response:
         set_log_deployment(deployment_id)
-        deployment = self._get_deployment(deployment_id)
+        deployment = self._get_chat_completion(deployment_id)
 
         request = await ChatCompletionRequest.from_request(original_request)
 
@@ -188,17 +212,25 @@ class DIALApp(FastAPI):
     async def _healthcheck() -> JSONResponse:
         return JSONResponse(content={"status": "ok"})
 
-    def _get_deployment(self, deployment_id: str) -> ChatCompletion:
+    def _get_chat_completion(self, deployment_id: str) -> ChatCompletion:
         impl = self.chat_completion_impls.get(deployment_id, None)
-
         if not impl:
-            raise DIALException(
-                status_code=404,
-                code="deployment_not_found",
-                message="The API deployment for this resource does not exist.",
-            )
-
+            raise self._get_missing_deployment_error()
         return impl
+
+    def _get_embeddings(self, deployment_id: str) -> Embeddings:
+        impl = self.embeddings_impls.get(deployment_id, None)
+        if not impl:
+            raise self._get_missing_deployment_error()
+        return impl
+
+    @staticmethod
+    def _get_missing_deployment_error() -> DIALException:
+        return DIALException(
+            status_code=404,
+            code="deployment_not_found",
+            message="The API deployment for this resource does not exist.",
+        )
 
     @staticmethod
     def _get_missing_endpoint_error(endpoint: str) -> DIALException:

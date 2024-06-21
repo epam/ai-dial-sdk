@@ -22,46 +22,54 @@ class FromRequestMixin(ABC, ExtraForbidModel):
 class FromRequestBasicMixin(FromRequestMixin):
     @classmethod
     async def from_request(cls, request: Request):
-        return cls(**(await _get_request_body(request)))
+        return cls(**(await get_request_body(request)))
 
 
-class FromRequestDeploymentMixin(FromRequestMixin):
+def get_deployment_id(request: Request) -> str:
+    deployment_id = request.path_params.get("deployment_id")
+    if deployment_id is None or not isinstance(deployment_id, str):
+        raise DIALException(
+            status_code=404,
+            type="invalid_path",
+            message="Invalid path",
+        )
+    return deployment_id
+
+
+def get_api_key(request: Request) -> str:
+    headers = request.headers
+    api_key = headers.get("Api-Key")
+    if api_key is None:
+        raise DIALException(
+            status_code=400,
+            type="invalid_request_error",
+            message="Api-Key header is required",
+        )
+    return api_key
+
+
+class DeploymentRequest(ExtraForbidModel):
     api_key: StrictStr
     jwt: Optional[StrictStr] = None
     deployment_id: StrictStr
     api_version: Optional[StrictStr] = None
     headers: Mapping[StrictStr, StrictStr]
 
+
+class FromRequestDeploymentMixin(DeploymentRequest, FromRequestMixin):
     @classmethod
     async def from_request(cls, request: Request):
-        deployment_id = request.path_params.get("deployment_id")
-        if deployment_id is None or not isinstance(deployment_id, str):
-            raise DIALException(
-                status_code=404,
-                type="invalid_path",
-                message="Invalid path",
-            )
-
-        headers = request.headers
-        api_key = headers.get("Api-Key")
-        if api_key is None:
-            raise DIALException(
-                status_code=400,
-                type="invalid_request_error",
-                message="Api-Key header is required",
-            )
-
         return cls(
-            **(await _get_request_body(request)),
-            api_key=api_key,
-            jwt=headers.get("Authorization"),
-            deployment_id=deployment_id,
+            **(await get_request_body(request)),
+            api_key=get_api_key(request),
+            jwt=request.headers.get("Authorization"),
+            deployment_id=get_deployment_id(request),
             api_version=request.query_params.get("api-version"),
-            headers=headers,
+            headers=request.headers,
         )
 
 
-async def _get_request_body(request: Request) -> Any:
+async def get_request_body(request: Request) -> Any:
     try:
         body = await request.json()
         log_debug(f"request: {body}")
@@ -70,5 +78,5 @@ async def _get_request_body(request: Request) -> Any:
         raise DIALException(
             status_code=400,
             type="invalid_request_error",
-            message=f"Your request contained invalid JSON: {e.msg}",
+            message=f"The request body isn't valid JSON: {e.msg}",
         )

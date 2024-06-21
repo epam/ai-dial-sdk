@@ -116,7 +116,6 @@ class AzureChatCompletionRequest(ExtraForbidModel):
     )
     tools: Optional[List[Tool]] = None
     tool_choice: Optional[Union[Literal["auto", "none"], ToolChoice]] = None
-    addons: Optional[List[Addon]] = None
     stream: bool = False
     temperature: Optional[Temperature] = None
     top_p: Optional[TopP] = None
@@ -130,7 +129,6 @@ class AzureChatCompletionRequest(ExtraForbidModel):
 
 
 class ChatCompletionRequest(AzureChatCompletionRequest):
-    model: Optional[StrictStr] = None
     addons: Optional[List[Addon]] = None
     max_prompt_tokens: Optional[PositiveInt] = None
 
