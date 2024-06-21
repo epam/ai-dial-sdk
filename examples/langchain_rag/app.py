@@ -1,5 +1,5 @@
 """
-A simple RAG application.
+A simple RAG application based on LangChain.
 """
 
 import os
@@ -8,14 +8,14 @@ from urllib.parse import urljoin
 from uuid import uuid4
 
 import uvicorn
-from embeddings import AzureOpenAIEmbeddings
 from langchain.callbacks.base import AsyncCallbackHandler
 from langchain.chains.retrieval_qa.base import RetrievalQA
 from langchain.embeddings import CacheBackedEmbeddings
+from langchain.globals import set_debug
 from langchain.storage import LocalFileStore
 from langchain_community.document_loaders import PyPDFLoader, WebBaseLoader
 from langchain_community.vectorstores import Chroma
-from langchain_openai import AzureChatOpenAI  # , AzureOpenAIEmbeddings
+from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 from aidial_sdk import DIALApp
@@ -40,6 +40,9 @@ DIAL_URL = get_env("DIAL_URL")
 EMBEDDINGS_MODEL = os.getenv("EMBEDDINGS_MODEL", "text-embedding-ada-002")
 CHAT_MODEL = os.getenv("CHAT_MODEL", "gpt-4")
 API_VERSION = os.getenv("API_VERSION", "2023-03-15-preview")
+LANGCHAIN_DEBUG = os.getenv("LANGCHAIN_DEBUG", "false").lower() == "true"
+
+set_debug(LANGCHAIN_DEBUG)
 
 text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
     chunk_size=256, chunk_overlap=0
@@ -144,6 +147,10 @@ class SimpleRAGApplication(ChatCompletion):
                     azure_endpoint=DIAL_URL,
                     openai_api_key=request.api_key,
                     openai_api_version=API_VERSION,
+                    # The check leads to tokenization of the input strings.
+                    # Tokenized input is only supported by OpenAI embedding models.
+                    # For other models, the check should be disabled.
+                    check_embedding_ctx_length=False,
                 )
 
                 embeddings = CacheBackedEmbeddings.from_bytes_store(
@@ -175,7 +182,7 @@ class SimpleRAGApplication(ChatCompletion):
                 retriever=docsearch.as_retriever(search_kwargs={"k": 15}),
             )
 
-            await qa.arun(user_query)
+            await qa.ainvoke({"query": user_query})
 
             docsearch.delete_collection()
 
