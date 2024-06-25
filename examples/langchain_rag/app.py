@@ -93,6 +93,7 @@ class SimpleRAGApplication(ChatCompletion):
             with choice.create_stage("Calculating embeddings"):
 
                 openai_embedding = AzureOpenAIEmbeddings(
+                    model=EMBEDDINGS_MODEL,
                     azure_deployment=EMBEDDINGS_MODEL,
                     azure_endpoint=DIAL_URL,
                     openai_api_key=request.api_key,
