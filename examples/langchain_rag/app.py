@@ -3,11 +3,13 @@ A simple RAG application based on LangChain.
 """
 
 import os
-from typing import List
 from urllib.parse import urljoin
 from uuid import uuid4
 
 import uvicorn
+from aidial_sdk import DIALApp
+from aidial_sdk import HTTPException as DIALException
+from aidial_sdk.chat_completion import ChatCompletion, Choice, Request, Response
 from langchain.callbacks.base import AsyncCallbackHandler
 from langchain.chains.retrieval_qa.base import RetrievalQA
 from langchain.embeddings import CacheBackedEmbeddings
@@ -18,15 +20,7 @@ from langchain_community.vectorstores import Chroma
 from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
-from aidial_sdk import DIALApp
-from aidial_sdk import HTTPException as DIALException
-from aidial_sdk.chat_completion import (
-    ChatCompletion,
-    Choice,
-    Message,
-    Request,
-    Response,
-)
+from utils import get_last_attachment_url, sanitize_namespace
 
 
 def get_env(name: str) -> str:
@@ -39,7 +33,7 @@ def get_env(name: str) -> str:
 DIAL_URL = get_env("DIAL_URL")
 EMBEDDINGS_MODEL = os.getenv("EMBEDDINGS_MODEL", "text-embedding-ada-002")
 CHAT_MODEL = os.getenv("CHAT_MODEL", "gpt-4")
-API_VERSION = os.getenv("API_VERSION", "2023-03-15-preview")
+API_VERSION = os.getenv("API_VERSION", "2024-02-01")
 LANGCHAIN_DEBUG = os.getenv("LANGCHAIN_DEBUG", "false").lower() == "true"
 
 set_debug(LANGCHAIN_DEBUG)
@@ -57,50 +51,6 @@ class CustomCallbackHandler(AsyncCallbackHandler):
 
     async def on_llm_new_token(self, token: str, *args, **kwargs) -> None:
         self._choice.append_content(token)
-
-
-def sanitize_namespace(namespace: str) -> str:
-    return "".join(c if c.isalnum() or c in "._-/" else "-" for c in namespace)
-
-
-def get_last_attachment_url(messages: List[Message]) -> str:
-    for message in reversed(messages):
-        if (
-            message.custom_content is not None
-            and message.custom_content.attachments is not None
-        ):
-            attachments = message.custom_content.attachments
-
-            if attachments == []:
-                continue
-
-            if len(attachments) != 1:
-                msg = "Only one attachment per message is supported"
-                raise DIALException(
-                    status_code=422,
-                    message=msg,
-                    display_message=msg,
-                )
-
-            attachment = attachments[0]
-
-            url = attachment.url
-            if url is None:
-                msg = "Attachment is expected to be provided via a URL"
-                raise DIALException(
-                    status_code=422,
-                    message=msg,
-                    display_message=msg,
-                )
-
-            return url
-
-    msg = "No attachment was found"
-    raise DIALException(
-        status_code=422,
-        message=msg,
-        display_message=msg,
-    )
 
 
 class SimpleRAGApplication(ChatCompletion):
