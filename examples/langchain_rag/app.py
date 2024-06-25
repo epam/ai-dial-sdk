@@ -7,9 +7,6 @@ from urllib.parse import urljoin
 from uuid import uuid4
 
 import uvicorn
-from aidial_sdk import DIALApp
-from aidial_sdk import HTTPException as DIALException
-from aidial_sdk.chat_completion import ChatCompletion, Choice, Request, Response
 from langchain.callbacks.base import AsyncCallbackHandler
 from langchain.chains.retrieval_qa.base import RetrievalQA
 from langchain.embeddings import CacheBackedEmbeddings
@@ -19,8 +16,11 @@ from langchain_community.document_loaders import PyPDFLoader, WebBaseLoader
 from langchain_community.vectorstores import Chroma
 from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-
 from utils import get_last_attachment_url, sanitize_namespace
+
+from aidial_sdk import DIALApp
+from aidial_sdk import HTTPException as DIALException
+from aidial_sdk.chat_completion import ChatCompletion, Choice, Request, Response
 
 
 def get_env(name: str) -> str:
