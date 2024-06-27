@@ -34,5 +34,4 @@ def test_app():
     assert response_content == content
 
     response_attachment = response_message["custom_content"]["attachments"][0]
-    del response_attachment["index"]
     assert response_attachment == attachment
