@@ -2,7 +2,7 @@ import json
 from typing import Any, AsyncGenerator, Dict
 
 from aidial_sdk.utils.logging import log_debug
-from aidial_sdk.utils.merge_chunks import merge
+from aidial_sdk.utils.merge_chunks import cleanup_indices, merge
 
 DONE_MARKER = "[DONE]"
 
@@ -15,7 +15,7 @@ async def merge_chunks(
         response = merge(response, chunk)
 
     for choice in response["choices"]:
-        choice["message"] = choice["delta"]
+        choice["message"] = cleanup_indices(choice["delta"])
         del choice["delta"]
 
     return response
