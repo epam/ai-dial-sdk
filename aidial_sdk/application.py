@@ -6,6 +6,13 @@ from typing import Dict, Optional, Type, TypeVar
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 
+from aidial_sdk._errors import (
+    dial_exception_handler,
+    fastapi_exception_handler,
+    missing_deployment_error,
+    missing_endpoint_error,
+    pydantic_validation_exception_handler,
+)
 from aidial_sdk.chat_completion.base import ChatCompletion
 from aidial_sdk.chat_completion.request import Request as ChatCompletionRequest
 from aidial_sdk.chat_completion.response import (
@@ -21,7 +28,6 @@ from aidial_sdk.exceptions import HTTPException as DIALException
 from aidial_sdk.header_propagator import HeaderPropagator
 from aidial_sdk.pydantic_v1 import ValidationError
 from aidial_sdk.telemetry.types import TelemetryConfig
-from aidial_sdk.utils.errors import json_error
 from aidial_sdk.utils.log_config import LogConfig
 from aidial_sdk.utils.logging import log_debug, set_log_deployment
 from aidial_sdk.utils.streaming import merge_chunks
@@ -105,16 +111,12 @@ class DIALApp(FastAPI):
         )
 
         self.add_exception_handler(
-            ValidationError, DIALApp._pydantic_validation_exception_handler
+            ValidationError, pydantic_validation_exception_handler
         )
 
-        self.add_exception_handler(
-            HTTPException, DIALApp._fastapi_exception_handler
-        )
+        self.add_exception_handler(HTTPException, fastapi_exception_handler)
 
-        self.add_exception_handler(
-            DIALException, DIALApp._dial_exception_handler
-        )
+        self.add_exception_handler(DIALException, dial_exception_handler)
 
     def configure_telemetry(self, config: TelemetryConfig):
         try:
@@ -148,12 +150,12 @@ class DIALApp(FastAPI):
 
             endpoint_impl = getattr(deployment, endpoint, None)
             if not endpoint_impl:
-                raise self._get_missing_endpoint_error(endpoint)
+                raise missing_endpoint_error(endpoint)
 
             try:
                 response = await endpoint_impl(request)
             except NotImplementedError:
-                raise self._get_missing_endpoint_error(endpoint)
+                raise missing_endpoint_error(endpoint)
 
             response_json = response.dict()
             log_debug(f"response [{endpoint}]: {response_json}")
@@ -215,67 +217,11 @@ class DIALApp(FastAPI):
     def _get_chat_completion(self, deployment_id: str) -> ChatCompletion:
         impl = self.chat_completion_impls.get(deployment_id, None)
         if not impl:
-            raise self._get_missing_deployment_error()
+            raise missing_deployment_error()
         return impl
 
     def _get_embeddings(self, deployment_id: str) -> Embeddings:
         impl = self.embeddings_impls.get(deployment_id, None)
         if not impl:
-            raise self._get_missing_deployment_error()
+            raise missing_deployment_error()
         return impl
-
-    @staticmethod
-    def _get_missing_deployment_error() -> DIALException:
-        return DIALException(
-            status_code=404,
-            code="deployment_not_found",
-            message="The API deployment for this resource does not exist.",
-        )
-
-    @staticmethod
-    def _get_missing_endpoint_error(endpoint: str) -> DIALException:
-        return DIALException(
-            status_code=404,
-            code="endpoint_not_found",
-            message=f"The deployment doesn't implement '{endpoint}' endpoint.",
-        )
-
-    @staticmethod
-    def _pydantic_validation_exception_handler(
-        request: Request, exc: Exception
-    ) -> JSONResponse:
-        assert isinstance(exc, ValidationError)
-
-        error = exc.errors()[0]
-        path = ".".join(map(str, error["loc"]))
-        message = f"Your request contained invalid structure on path {path}. {error['msg']}"
-        return JSONResponse(
-            status_code=400,
-            content=json_error(message=message, type="invalid_request_error"),
-        )
-
-    @staticmethod
-    def _fastapi_exception_handler(
-        request: Request, exc: Exception
-    ) -> JSONResponse:
-        assert isinstance(exc, HTTPException)
-        return JSONResponse(
-            status_code=exc.status_code,
-            content=exc.detail,
-        )
-
-    @staticmethod
-    def _dial_exception_handler(
-        request: Request, exc: Exception
-    ) -> JSONResponse:
-        assert isinstance(exc, DIALException)
-        return JSONResponse(
-            status_code=exc.status_code,
-            content=json_error(
-                message=exc.message,
-                type=exc.type,
-                param=exc.param,
-                code=exc.code,
-                display_message=exc.display_message,
-            ),
-        )
