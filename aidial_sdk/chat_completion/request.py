@@ -127,6 +127,7 @@ class AzureChatCompletionRequest(ExtraForbidModel):
     frequency_penalty: Optional[Penalty] = None
     logit_bias: Optional[Mapping[int, float]] = None
     user: Optional[StrictStr] = None
+    configuration: Optional[Any] = None
 
 
 class ChatCompletionRequest(AzureChatCompletionRequest):
