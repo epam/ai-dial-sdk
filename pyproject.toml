@@ -16,6 +16,9 @@ pydantic = ">=1.10,<3"
 requests = "^2.19"
 wrapt = "^1.14"
 aiohttp = "^3.8.3"
+# Hotfix for not conflicting twine and poetry
+# https://github.com/pypa/twine/issues/1116
+pkginfo = "<1.11"
 opentelemetry-sdk = {version = "1.20.0", optional = true}
 opentelemetry-api = {version = "1.20.0", optional = true}
 opentelemetry-exporter-otlp-proto-grpc = {version = "1.20.0", optional = true}
