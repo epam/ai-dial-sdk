@@ -54,6 +54,9 @@ telemetry = [
 pytest = "^7.4.2"
 nox = "^2023.4.22"
 pillow = "^10.2.0"
+respx = "^0.21.1"
+aioresponses = "^0.7.6"
+responses = "^0.25.3"
 
 [tool.poetry.group.lint.dependencies]
 flake8 = "^6.0.0"
