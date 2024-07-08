@@ -1,6 +1,6 @@
 from asyncio import Queue
 from types import TracebackType
-from typing import Optional, Type
+from typing import Optional, Type, overload
 
 from aidial_sdk.chat_completion.chunks import (
     AttachmentStageChunk,
@@ -10,7 +10,9 @@ from aidial_sdk.chat_completion.chunks import (
     StartStageChunk,
 )
 from aidial_sdk.chat_completion.enums import Status
+from aidial_sdk.chat_completion.request import Attachment
 from aidial_sdk.pydantic_v1 import ValidationError
+from aidial_sdk.utils._attachment import create_attachment
 from aidial_sdk.utils.errors import runtime_error
 
 
@@ -49,7 +51,8 @@ class Stage:
         traceback: Optional[TracebackType],
     ) -> Optional[bool]:
         if not exc:
-            self.close(Status.COMPLETED)
+            if not self._closed:
+                self.close(Status.COMPLETED)
         else:
             self.close(Status.FAILED)
 
@@ -75,6 +78,10 @@ class Stage:
             NameStageChunk(self._choice_index, self._stage_index, name)
         )
 
+    @overload
+    def add_attachment(self, attachment: Attachment) -> None: ...
+
+    @overload
     def add_attachment(
         self,
         type: Optional[str] = None,
@@ -83,7 +90,9 @@ class Stage:
         url: Optional[str] = None,
         reference_url: Optional[str] = None,
         reference_type: Optional[str] = None,
-    ) -> None:
+    ) -> None: ...
+
+    def add_attachment(self, *args, **kwargs) -> None:
         if not self._opened:
             raise runtime_error("Trying to add attachment to an unopened stage")
         if self._closed:
@@ -95,12 +104,7 @@ class Stage:
                 choice_index=self._choice_index,
                 stage_index=self._stage_index,
                 attachment_index=self._last_attachment_index,
-                type=type,
-                title=title,
-                data=data,
-                url=url,
-                reference_url=reference_url,
-                reference_type=reference_type,
+                **create_attachment(*args, **kwargs).dict(),
             )
         except ValidationError as e:
             raise runtime_error(e.errors()[0]["msg"])
