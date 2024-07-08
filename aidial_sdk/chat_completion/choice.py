@@ -19,6 +19,7 @@ from aidial_sdk.chat_completion.request import Attachment
 from aidial_sdk.chat_completion.stage import Stage
 from aidial_sdk.pydantic_v1 import ValidationError
 from aidial_sdk.utils._attachment import create_attachment
+from aidial_sdk.utils._content_stream import ContentStream
 from aidial_sdk.utils.errors import runtime_error
 from aidial_sdk.utils.logging import log_debug
 
@@ -90,6 +91,10 @@ class Choice(ChoiceBase):
 
         self.send_chunk(ContentChunk(content, self._index))
         self._last_finish_reason = FinishReason.STOP
+
+    @property
+    def content_stream(self) -> ContentStream:
+        return ContentStream(self)
 
     def create_function_tool_call(
         self, id: str, name: str, arguments: Optional[str] = None

@@ -13,6 +13,7 @@ from aidial_sdk.chat_completion.enums import Status
 from aidial_sdk.chat_completion.request import Attachment
 from aidial_sdk.pydantic_v1 import ValidationError
 from aidial_sdk.utils._attachment import create_attachment
+from aidial_sdk.utils._content_stream import ContentStream
 from aidial_sdk.utils.errors import runtime_error
 
 
@@ -66,6 +67,10 @@ class Stage:
         self._queue.put_nowait(
             ContentStageChunk(self._choice_index, self._stage_index, content)
         )
+
+    @property
+    def content_stream(self) -> ContentStream:
+        return ContentStream(self)
 
     def append_name(self, name: str):
         if not self._opened:
