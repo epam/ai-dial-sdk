@@ -52,7 +52,8 @@ class Stage:
         traceback: Optional[TracebackType],
     ) -> Optional[bool]:
         if not exc:
-            self.close(Status.COMPLETED)
+            if not self._closed:
+                self.close(Status.COMPLETED)
         else:
             self.close(Status.FAILED)
 
