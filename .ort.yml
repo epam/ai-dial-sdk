@@ -1,12 +1,20 @@
 ---
 excludes:
   paths:
-  - pattern: "examples/**"
-    reason: "EXAMPLE_OF"
+    - pattern: "examples/**"
+      reason: "EXAMPLE_OF"
   scopes:
-  - pattern: "lint"
-    reason: "DEV_DEPENDENCY_OF"
-    comment: "Packages for static code analysis only."
-  - pattern: "test"
-    reason: "TEST_DEPENDENCY_OF"
-    comment: "Packages for testing only."
+    - pattern: "lint"
+      reason: "DEV_DEPENDENCY_OF"
+      comment: "Packages for static code analysis only."
+    - pattern: "test"
+      reason: "TEST_DEPENDENCY_OF"
+      comment: "Packages for testing only."
+resolutions:
+  rule_violations:
+    - message: ".*PyPI::httpcore:0\\.18\\.0.*"
+      reason: "CANT_FIX_EXCEPTION"
+      comment: "BSD 3-Clause New or Revised License: https://github.com/encode/httpcore/blob/0.18.0/LICENSE.md"
+    - message: ".*PyPI::httpx:0\\.25\\.0.*"
+      reason: "CANT_FIX_EXCEPTION"
+      comment: "BSD 3-Clause New or Revised License: https://github.com/encode/httpx/blob/0.25.0/LICENSE.md"
