@@ -432,7 +432,7 @@ development = ["black", "flake8", "mypy", "pytest", "types-colorama"]
 name = "deprecated"
 version = "1.2.14"
 description = "Python @deprecated decorator to deprecate old python classes, functions or methods."
-optional = true
+optional = false
 python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*"
 files = [
     {file = "Deprecated-1.2.14-py2.py3-none-any.whl", hash = "sha256:6fac8b097794a90302bdbb17b9b815e732d3c4720583ff1b198499d78470466c"},
@@ -2075,4 +2075,4 @@ telemetry = ["opentelemetry-api", "opentelemetry-distro", "opentelemetry-exporte
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8.1,<4.0"
-content-hash = "c81c1fc3fceb338a086747d86c65f2a87d108492b8519341f998597bd97ffcdb"
+content-hash = "55ef8abf3b5ac8d1e3ed98e67ee36f579ec5ceab62c53277800bf33165321e90"
