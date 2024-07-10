@@ -38,10 +38,16 @@ class FromRequestDeploymentMixin(FromRequestMixin):
         if "api_key" in values:
             if "api_key_secret" not in values:
                 values["api_key_secret"] = SecretStr(values.pop("api_key"))
+            else:
+                raise ValueError(
+                    "api_key and api_key_secret cannot be both provided"
+                )
 
         if "jwt" in values:
             if "jwt_secret" not in values:
                 values["jwt_secret"] = SecretStr(values.pop("jwt"))
+            else:
+                raise ValueError("jwt and jwt_secret cannot be both provided")
 
         return values
 
