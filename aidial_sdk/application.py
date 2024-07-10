@@ -1,5 +1,6 @@
 import logging.config
 import re
+import warnings
 from logging import Filter, LogRecord
 from typing import Dict, Optional, Type, TypeVar
 
@@ -46,17 +47,26 @@ class DIALApp(FastAPI):
     def __init__(
         self,
         dial_url: Optional[str] = None,
-        propagation_auth_headers: bool = False,
+        propagate_auth_headers: bool = False,
         telemetry_config: Optional[TelemetryConfig] = None,
         add_healthcheck: bool = False,
-        **fast_api_kwargs,
+        **kwargs,
     ):
-        super().__init__(**fast_api_kwargs)
+        if "propagation_auth_headers" in kwargs:
+            warnings.warn(
+                "The 'propagation_auth_headers' parameter is deprecated. "
+                "Use 'propagate_auth_headers' instead.",
+                DeprecationWarning,
+                stacklevel=2,
+            )
+            propagate_auth_headers = kwargs.pop("propagation_auth_headers")
+
+        super().__init__(**kwargs)
 
         if telemetry_config is not None:
             self.configure_telemetry(telemetry_config)
 
-        if propagation_auth_headers:
+        if propagate_auth_headers:
             if not dial_url:
                 raise ValueError(
                     "dial_url is required if propagation auth headers is enabled"

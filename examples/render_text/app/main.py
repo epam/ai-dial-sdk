@@ -75,7 +75,7 @@ class RenderTextApplication(ChatCompletion):
 # DIALApp extends FastAPI to provide a user-friendly interface for routing requests to your applications
 app = DIALApp(
     dial_url=DIAL_URL,
-    propagation_auth_headers=DIAL_URL is not None,
+    propagate_auth_headers=DIAL_URL is not None,
     add_healthcheck=True,
 )
 
