@@ -6,6 +6,7 @@ from starlette.testclient import TestClient
 
 from aidial_sdk import DIALApp, HTTPException
 from aidial_sdk.chat_completion import ChatCompletion, Request, Response
+from aidial_sdk.pydantic_v1 import SecretStr
 
 DISCARDED_MESSAGES = list(range(0, 12))
 
@@ -112,7 +113,13 @@ def test_discarded_messages_returned_as_last_chunk_in_stream():
 
 
 def test_discarded_messages_is_set_twice():
-    request = Request(headers={}, api_key="", deployment_id="", messages=[])
+    request = Request(
+        headers={},
+        api_key_secret=SecretStr("dummy_key"),
+        deployment_id="",
+        messages=[],
+    )
+
     response = Response(request)
 
     with response.create_single_choice():
@@ -125,7 +132,12 @@ def test_discarded_messages_is_set_twice():
 
 
 def test_discarded_messages_is_set_before_choice():
-    request = Request(headers={}, api_key="", deployment_id="", messages=[])
+    request = Request(
+        headers={},
+        api_key_secret=SecretStr("dummy_key"),
+        deployment_id="",
+        messages=[],
+    )
     response = Response(request)
 
     with pytest.raises(HTTPException):

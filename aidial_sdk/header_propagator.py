@@ -1,13 +1,12 @@
-import functools
 import types
 from contextvars import ContextVar
 from typing import Optional
 
 import aiohttp
+import httpx
+import requests
 import wrapt
 from fastapi import FastAPI
-from requests import PreparedRequest
-from requests.sessions import Session
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 
@@ -52,6 +51,7 @@ class HeaderPropagator:
 
         self._instrument_fast_api(self._app)
         self._instrument_aiohttp()
+        self._instrument_httpx()
         self._instrument_requests()
         self._enabled = True
 
@@ -75,7 +75,7 @@ class HeaderPropagator:
 
     async def _on_aiohttp_request_start(
         self,
-        unused_session: aiohttp.ClientSession,
+        session: aiohttp.ClientSession,
         trace_config_ctx: types.SimpleNamespace,
         params: aiohttp.TraceRequestStartParams,
     ):
@@ -83,23 +83,35 @@ class HeaderPropagator:
             return
 
         api_key_val = self._api_key.get()
-
         if api_key_val:
             params.headers["api-key"] = api_key_val
 
     def _instrument_requests(self):
-        wrapped_send = Session.send
-
-        @functools.wraps(wrapped_send)
-        def instrumented_send(self, request: PreparedRequest, **kwargs):
+        def instrumented_send(wrapped, instance, args, kwargs):
+            request: requests.PreparedRequest = args[0]
             if request.url and request.url.startswith(self._dial_url):
-                api_key_val = self._dial_api_key.get()
-
+                api_key_val = self._api_key.get()
                 if api_key_val:
                     request.headers["api-key"] = api_key_val
 
-            return wrapped_send(self, request, **kwargs)
+            return wrapped(*args, **kwargs)
 
-        Session._dial_url = self._dial_url  # type: ignore
-        Session._dial_api_key = self._api_key  # type: ignore
-        Session.send = instrumented_send
+        wrapt.wrap_function_wrapper(requests.Session, "send", instrumented_send)
+
+    def _instrument_httpx(self):
+
+        def instrumented_build_request(wrapped, instance, args, kwargs):
+            request: httpx.Request = wrapped(*args, **kwargs)
+            if request.url and str(request.url).startswith(self._dial_url):
+                api_key_val = self._api_key.get()
+                if api_key_val:
+                    request.headers["api-key"] = api_key_val
+            return request
+
+        wrapt.wrap_function_wrapper(
+            httpx.Client, "build_request", instrumented_build_request
+        )
+
+        wrapt.wrap_function_wrapper(
+            httpx.AsyncClient, "build_request", instrumented_build_request
+        )

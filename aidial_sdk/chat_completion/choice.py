@@ -1,7 +1,7 @@
 import json
 from asyncio import Queue
 from types import TracebackType
-from typing import Any, Optional, Type
+from typing import Any, Optional, Type, overload
 
 from aidial_sdk.chat_completion.choice_base import ChoiceBase
 from aidial_sdk.chat_completion.chunks import (
@@ -15,8 +15,11 @@ from aidial_sdk.chat_completion.chunks import (
 from aidial_sdk.chat_completion.enums import FinishReason
 from aidial_sdk.chat_completion.function_call import FunctionCall
 from aidial_sdk.chat_completion.function_tool_call import FunctionToolCall
+from aidial_sdk.chat_completion.request import Attachment
 from aidial_sdk.chat_completion.stage import Stage
 from aidial_sdk.pydantic_v1 import ValidationError
+from aidial_sdk.utils._attachment import create_attachment
+from aidial_sdk.utils._content_stream import ContentStream
 from aidial_sdk.utils.errors import runtime_error
 from aidial_sdk.utils.logging import log_debug
 
@@ -89,6 +92,10 @@ class Choice(ChoiceBase):
         self.send_chunk(ContentChunk(content, self._index))
         self._last_finish_reason = FinishReason.STOP
 
+    @property
+    def content_stream(self) -> ContentStream:
+        return ContentStream(self)
+
     def create_function_tool_call(
         self, id: str, name: str, arguments: Optional[str] = None
     ) -> FunctionToolCall:
@@ -107,6 +114,10 @@ class Choice(ChoiceBase):
         self._last_finish_reason = FinishReason.FUNCTION_CALL
         return function_call
 
+    @overload
+    def add_attachment(self, attachment: Attachment) -> None: ...
+
+    @overload
     def add_attachment(
         self,
         type: Optional[str] = None,
@@ -115,7 +126,9 @@ class Choice(ChoiceBase):
         url: Optional[str] = None,
         reference_url: Optional[str] = None,
         reference_type: Optional[str] = None,
-    ) -> None:
+    ) -> None: ...
+
+    def add_attachment(self, *args, **kwargs) -> None:
         if not self._opened:
             raise runtime_error(
                 "Trying to add attachment to an unopened choice"
@@ -128,12 +141,7 @@ class Choice(ChoiceBase):
             attachment_chunk = AttachmentChunk(
                 choice_index=self._index,
                 attachment_index=self._last_attachment_index,
-                type=type,
-                title=title,
-                data=data,
-                url=url,
-                reference_url=reference_url,
-                reference_type=reference_type,
+                **create_attachment(*args, **kwargs).dict(),
             )
         except ValidationError as e:
             raise runtime_error(e.errors()[0]["msg"])

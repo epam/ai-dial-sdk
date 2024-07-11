@@ -34,7 +34,9 @@ def format(session: nox.Session):
 
 
 @nox.session(python=["3.8", "3.9", "3.10", "3.11"])
-def test(session: nox.Session) -> None:
+@nox.parametrize("pydantic", ["1.10.17", "2.8.2"])
+def test(session: nox.Session, pydantic: str) -> None:
     """Runs tests"""
     session.run("poetry", "install", external=True)
+    session.install(f"pydantic=={pydantic}")
     session.run("pytest")

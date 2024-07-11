@@ -31,25 +31,23 @@ testcases: List[TestCase] = [
     TestCase(
         simple,
         "embeddings",
-        {"input": "a"},
+        {"input": "a", "custom_fields": {"type": "query"}},
         expected_response_1,
-        {"X-DIAL-Type": "query"},
     ),
     TestCase(
         simple,
         "embeddings",
-        {"input": "a"},
+        {"input": "a", "custom_fields": {"type": "hello"}},
         Error(
             code=400,
             error={
                 "error": {
-                    "message": "Invalid value 'hello' for 'X-DIAL-Type' header. Valid "
-                    "values are: ['symmetric', 'document', 'query']",
+                    "message": "Your request contained invalid structure on path custom_fields.type. "
+                    "value is not a valid enumeration member; permitted: 'symmetric', 'document', 'query'",
                     "type": "invalid_request_error",
                 }
             },
         ),
-        {"X-DIAL-Type": "hello"},
     ),
     TestCase(
         simple,
