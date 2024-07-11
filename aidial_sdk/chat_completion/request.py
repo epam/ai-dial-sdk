@@ -116,7 +116,6 @@ class AzureChatCompletionRequest(ExtraForbidModel):
     )
     tools: Optional[List[Tool]] = None
     tool_choice: Optional[Union[Literal["auto", "none"], ToolChoice]] = None
-    addons: Optional[List[Addon]] = None
     stream: bool = False
     temperature: Optional[Temperature] = None
     top_p: Optional[TopP] = None
@@ -127,13 +126,16 @@ class AzureChatCompletionRequest(ExtraForbidModel):
     frequency_penalty: Optional[Penalty] = None
     logit_bias: Optional[Mapping[int, float]] = None
     user: Optional[StrictStr] = None
+
+
+class ChatCompletionRequestCustomFields(ExtraForbidModel):
     configuration: Optional[Any] = None
 
 
 class ChatCompletionRequest(AzureChatCompletionRequest):
-    model: Optional[StrictStr] = None
     addons: Optional[List[Addon]] = None
     max_prompt_tokens: Optional[PositiveInt] = None
+    custom_fields: Optional[ChatCompletionRequestCustomFields] = None
 
 
 class Request(ChatCompletionRequest, FromRequestDeploymentMixin):
