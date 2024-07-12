@@ -25,5 +25,5 @@ def log_error(message: str, *args, **kwargs):
     logger.error(f"[{deployment_id.get()}] {message}", *args, **kwargs)
 
 
-def log_exception(message: Exception, *args, **kwargs):
+def log_exception(message: str, *args, **kwargs):
     logger.exception(message, *args, **kwargs)

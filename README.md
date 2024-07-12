@@ -10,7 +10,7 @@ Applications and model adapters implemented using this framework will be compati
 
 Install the library using [pip](https://pip.pypa.io/en/stable/getting-started):
 
-```
+```sh
 pip install aidial-sdk
 ```
 
@@ -50,7 +50,8 @@ if __name__ == "__main__":
 ```
 
 #### Run
-```
+
+```sh
 python3 app.py
 ```
 
@@ -68,6 +69,7 @@ curl http://127.0.0.1:5000/openai/deployments/echo/chat/completions \
 ```
 
 You will see the JSON response as:
+
 ```json
 {
     "choices":[
@@ -95,7 +97,7 @@ Check out Poetry's [documentation on how to install it](https://python-poetry.or
 
 To install requirements:
 
-```
+```sh
 poetry install
 ```
 
@@ -112,6 +114,12 @@ Alternatively you can use [PyCharm](https://www.jetbrains.com/pycharm/).
 
 Set-up the Black formatter for PyCharm [manually](https://black.readthedocs.io/en/stable/integrations/editors.html#pycharm-intellij-idea) or
 install PyCharm>=2023.2 with [built-in Black support](https://blog.jetbrains.com/pycharm/2023/07/2023-2/#black).
+
+## Environment Variables
+
+|Variable|Default|Description|
+|---|---|---|
+|DIAL_SDK_LOG|WARNING|DIAL SDK log level|
 
 ## Lint
 

@@ -126,12 +126,16 @@ class AzureChatCompletionRequest(ExtraForbidModel):
     frequency_penalty: Optional[Penalty] = None
     logit_bias: Optional[Mapping[int, float]] = None
     user: Optional[StrictStr] = None
-    configuration: Optional[Any] = None
+
+
+class ChatCompletionRequestCustomFields(ExtraForbidModel):
+    configuration: Optional[Dict[str, Any]] = None
 
 
 class ChatCompletionRequest(AzureChatCompletionRequest):
     addons: Optional[List[Addon]] = None
     max_prompt_tokens: Optional[PositiveInt] = None
+    custom_fields: Optional[ChatCompletionRequestCustomFields] = None
 
 
 class Request(ChatCompletionRequest, FromRequestDeploymentMixin):
