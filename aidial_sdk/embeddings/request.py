@@ -2,7 +2,6 @@ from enum import Enum
 from typing import List, Literal, Optional, Union
 
 from aidial_sdk.deployment.from_request_mixin import FromRequestDeploymentMixin
-from aidial_sdk.exceptions import HTTPException as DIALException
 from aidial_sdk.pydantic_v1 import StrictFloat, StrictInt, StrictStr
 from aidial_sdk.utils.pydantic import ExtraForbidModel
 
