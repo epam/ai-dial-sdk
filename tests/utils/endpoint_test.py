@@ -1,4 +1,4 @@
-from typing import Union
+from typing import Dict, Union
 
 from fastapi import FastAPI
 from starlette.testclient import TestClient
@@ -14,7 +14,8 @@ class TestCase:
     deployment: str
     endpoint: str
 
-    request: dict
+    request_body: dict
+    request_headers: Dict[str, str]
     response: Union[Error, dict, None]
 
     def __init__(
@@ -22,14 +23,16 @@ class TestCase:
         app: FastAPI,
         deployment: str,
         endpoint: str,
-        request: dict,
+        request_body: dict,
         response: Union[Error, dict, None],
+        request_headers: Dict[str, str] = {},
     ):
         self.app = app
         self.deployment = deployment
         self.endpoint = endpoint
-        self.request = request
+        self.request_body = request_body
         self.response = response
+        self.request_headers = request_headers
 
 
 def run_endpoint_test(testcase: TestCase):
@@ -38,8 +41,8 @@ def run_endpoint_test(testcase: TestCase):
 
     actual_response = test_app.post(
         f"/openai/deployments/{testcase.deployment}/{testcase.endpoint}",
-        json=testcase.request,
-        headers={"Api-Key": "TEST_API_KEY"},
+        json=testcase.request_body,
+        headers={"Api-Key": "TEST_API_KEY", **testcase.request_headers},
     )
 
     if actual_response.text == "":

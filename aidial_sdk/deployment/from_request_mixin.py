@@ -96,5 +96,5 @@ async def _get_request_body(request: fastapi.Request) -> Any:
         raise DIALException(
             status_code=400,
             type="invalid_request_error",
-            message=f"Your request contained invalid JSON: {e.msg}",
+            message=f"The request body isn't valid JSON: {e.msg}",
         )
