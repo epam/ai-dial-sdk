@@ -21,7 +21,20 @@ class Attachment(ExtraForbidModel):
     reference_url: Optional[StrictStr] = None
 
 
+class StageStatus(str, Enum):
+    COMPLETED = "completed"
+    FAILED = "failed"
+
+
+class Stage(ExtraForbidModel):
+    name: StrictStr
+    status: StageStatus
+    content: Optional[StrictStr] = None
+    attachments: Optional[List[Attachment]] = None
+
+
 class CustomContent(ExtraForbidModel):
+    stages: Optional[List[Stage]] = None
     attachments: Optional[List[Attachment]] = None
     state: Optional[Any] = None
 
