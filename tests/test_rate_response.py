@@ -2,7 +2,7 @@ from typing import List
 
 import pytest
 
-from tests.applications.noop_application import NoopApplication
+from tests.applications.noop import NoopApplication
 from tests.utils.endpoint_test import TestCase, run_endpoint_test
 from tests.utils.errors import extra_fields_error
 

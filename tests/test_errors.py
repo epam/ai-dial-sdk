@@ -4,11 +4,9 @@ import pytest
 from starlette.testclient import TestClient
 
 from aidial_sdk import DIALApp
-from tests.applications.broken_application import BrokenApplication
-from tests.applications.noop_application import NoopApplication
-from tests.applications.runtime_broken_application import (
-    RuntimeBrokenApplication,
-)
+from tests.applications.broken_immediately import BrokenApplication
+from tests.applications.broken_in_runtime import RuntimeBrokenApplication
+from tests.applications.noop import NoopApplication
 
 DEFAULT_RUNTIME_ERROR = {
     "error": {

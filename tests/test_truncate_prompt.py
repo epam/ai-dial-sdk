@@ -2,8 +2,8 @@ from typing import List, Optional
 
 import pytest
 
-from tests.applications.echo_application import EchoApplication
-from tests.applications.noop_application import NoopApplication
+from tests.applications.echo import EchoApplication
+from tests.applications.noop import NoopApplication
 from tests.utils.endpoint_test import TestCase, run_endpoint_test
 from tests.utils.errors import route_not_found_error
 
