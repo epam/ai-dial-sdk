@@ -1,7 +1,7 @@
 from enum import Enum
 
 
-class FinishReason(Enum):
+class FinishReason(str, Enum):
     STOP = "stop"
     LENGTH = "length"
     FUNCTION_CALL = "function_call"
@@ -9,6 +9,6 @@ class FinishReason(Enum):
     CONTENT_FILTER = "content_filter"
 
 
-class Status(Enum):
+class Status(str, Enum):
     COMPLETED = "completed"
     FAILED = "failed"
