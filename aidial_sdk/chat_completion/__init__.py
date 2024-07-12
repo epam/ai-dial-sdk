@@ -11,12 +11,9 @@ from aidial_sdk.chat_completion.request import (
     Message,
     Request,
     Role,
-    StageStatus,
-    Tool,
-    ToolCall,
-    ToolChoice,
 )
 from aidial_sdk.chat_completion.request import Stage as RequestStage
+from aidial_sdk.chat_completion.request import Tool, ToolCall, ToolChoice
 from aidial_sdk.chat_completion.response import Response
 from aidial_sdk.chat_completion.stage import Stage
 from aidial_sdk.deployment.tokenize import (
