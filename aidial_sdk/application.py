@@ -104,7 +104,7 @@ class DIALApp(FastAPI):
 
     def add_chat_completion(
         self, deployment_name: str, impl: ChatCompletion
-    ) -> None:
+    ) -> "DIALApp":
 
         self.add_api_route(
             f"/openai/deployments/{deployment_name}/chat/completions",
@@ -138,6 +138,8 @@ class DIALApp(FastAPI):
                 ),
                 methods=["POST"],
             )
+
+        return self
 
     def _endpoint_factory(
         self,

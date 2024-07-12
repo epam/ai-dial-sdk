@@ -2,6 +2,7 @@ from typing import List, Optional
 
 import pytest
 
+from aidial_sdk import DIALApp
 from tests.applications.echo import EchoApplication
 from tests.applications.noop import NoopApplication
 from tests.utils.endpoint_test import TestCase, run_endpoint_test
@@ -66,15 +67,28 @@ def create_response(
     return {"outputs": [{"status": "success", "discarded_messages": []}]}
 
 
-noop = NoopApplication()
-echo = EchoApplication
+deployment = "test-app"
+
+noop = DIALApp().add_chat_completion(deployment, NoopApplication())
+
+
+def echo(model_max_prompt_tokens: int):
+    return DIALApp().add_chat_completion(
+        deployment, EchoApplication(model_max_prompt_tokens)
+    )
+
 
 testcases: List[TestCase] = [
     TestCase(
-        noop, "truncate_prompt", create_request(None), route_not_found_error
+        noop,
+        deployment,
+        "truncate_prompt",
+        create_request(None),
+        route_not_found_error,
     ),
     TestCase(
         noop,
+        deployment,
         "truncate_prompts",
         create_request(None),
         route_not_found_error,
@@ -82,6 +96,7 @@ testcases: List[TestCase] = [
     *[
         TestCase(
             echo(4),
+            deployment,
             "truncate_prompt",
             create_request(max_prompt_tokens),
             create_response(4, max_prompt_tokens),
@@ -91,6 +106,7 @@ testcases: List[TestCase] = [
     *[
         TestCase(
             echo(model_limit),
+            deployment,
             "truncate_prompt",
             create_request(None),
             create_response(model_limit, None),

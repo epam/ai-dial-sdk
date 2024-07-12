@@ -2,6 +2,7 @@ from typing import List
 
 import pytest
 
+from aidial_sdk import DIALApp
 from tests.applications.echo import EchoApplication
 from tests.applications.noop import NoopApplication
 from tests.utils.endpoint_test import TestCase, run_endpoint_test
@@ -34,16 +35,46 @@ TOKENIZE_RESPONSE_OK2 = {"outputs": []}
 
 TOKENIZE_REQUEST_FAIL = {"inputs": [{}]}
 
-noop = NoopApplication()
-echo = EchoApplication
+
+deployment = "test-app"
+
+noop = DIALApp().add_chat_completion(deployment, NoopApplication())
+
+echo = DIALApp().add_chat_completion(deployment, EchoApplication(0))
+
 
 testcases: List[TestCase] = [
-    TestCase(noop, "tokenize", TOKENIZE_REQUEST_OK1, route_not_found_error),
-    TestCase(noop, "tokenizer", TOKENIZE_REQUEST_OK1, route_not_found_error),
-    TestCase(echo(0), "tokenize", TOKENIZE_REQUEST_OK1, TOKENIZE_RESPONSE_OK1),
-    TestCase(echo(0), "tokenize", TOKENIZE_REQUEST_OK2, TOKENIZE_RESPONSE_OK2),
     TestCase(
-        echo(0),
+        noop,
+        deployment,
+        "tokenize",
+        TOKENIZE_REQUEST_OK1,
+        route_not_found_error,
+    ),
+    TestCase(
+        noop,
+        deployment,
+        "tokenizer",
+        TOKENIZE_REQUEST_OK1,
+        route_not_found_error,
+    ),
+    TestCase(
+        echo,
+        deployment,
+        "tokenize",
+        TOKENIZE_REQUEST_OK1,
+        TOKENIZE_RESPONSE_OK1,
+    ),
+    TestCase(
+        echo,
+        deployment,
+        "tokenize",
+        TOKENIZE_REQUEST_OK2,
+        TOKENIZE_RESPONSE_OK2,
+    ),
+    TestCase(
+        echo,
+        deployment,
         "tokenize",
         TOKENIZE_REQUEST_FAIL,
         missing_fields_error("inputs.0.value"),

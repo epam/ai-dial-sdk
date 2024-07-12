@@ -1,41 +1,43 @@
 from typing import Union
 
+from fastapi import FastAPI
 from starlette.testclient import TestClient
 
-from aidial_sdk import DIALApp
-from aidial_sdk.chat_completion.base import ChatCompletion
 from tests.utils.errors import Error
 
 
 class TestCase:
     __test__ = False
 
-    app: ChatCompletion
+    app: FastAPI
+
+    deployment: str
     endpoint: str
+
     request: dict
     response: Union[Error, dict, None]
 
     def __init__(
         self,
-        app: ChatCompletion,
+        app: FastAPI,
+        deployment: str,
         endpoint: str,
         request: dict,
         response: Union[Error, dict, None],
     ):
         self.app = app
+        self.deployment = deployment
         self.endpoint = endpoint
         self.request = request
         self.response = response
 
 
 def run_endpoint_test(testcase: TestCase):
-    dial_app = DIALApp()
-    dial_app.add_chat_completion("test_app", testcase.app)
 
-    test_app = TestClient(dial_app)
+    test_app = TestClient(testcase.app)
 
     actual_response = test_app.post(
-        f"/openai/deployments/test_app/{testcase.endpoint}",
+        f"/openai/deployments/{testcase.deployment}/{testcase.endpoint}",
         json=testcase.request,
         headers={"Api-Key": "TEST_API_KEY"},
     )
