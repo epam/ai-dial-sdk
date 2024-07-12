@@ -116,7 +116,7 @@ class Response:
                                 ),
                             )
                     except Exception as e:
-                        log_exception(e)
+                        log_exception("Error during processing the request")
 
                         if self.request.stream:
                             self._queue.put_nowait(EndChunk(e))
@@ -239,8 +239,8 @@ class Response:
                         display_message=e.display_message,
                     ),
                 )
-            except Exception as e:
-                log_exception(e)
+            except Exception:
+                log_exception("Error during processing the request")
                 raise HTTPException(
                     status_code=500,
                     detail=json_error(

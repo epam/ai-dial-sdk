@@ -1,4 +1,8 @@
+import os
+
 from aidial_sdk.pydantic_v1 import BaseModel
+
+DIAL_SDK_LOG = os.environ.get("DIAL_SDK_LOG", "WARNING").upper()
 
 
 class LogConfig(BaseModel):
@@ -22,7 +26,7 @@ class LogConfig(BaseModel):
         },
     }
     loggers = {
-        "aidial_sdk": {"handlers": ["default"], "level": "WARNING"},
+        "aidial_sdk": {"handlers": ["default"], "level": DIAL_SDK_LOG},
         "uvicorn": {
             "handlers": ["default"],
             "propagate": False,
