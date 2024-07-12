@@ -15,13 +15,15 @@ T = TypeVar("T", bound="FromRequestMixin")
 class FromRequestMixin(ABC, ExtraForbidModel):
     @classmethod
     @abstractmethod
-    async def from_request(cls: Type[T], request: fastapi.Request) -> T:
+    async def from_request(
+        cls: Type[T], request: fastapi.Request, deployment_id: str
+    ) -> T:
         pass
 
 
 class FromRequestBasicMixin(FromRequestMixin):
     @classmethod
-    async def from_request(cls, request: fastapi.Request):
+    async def from_request(cls, request: fastapi.Request, deployment_id: str):
         return cls(**(await _get_request_body(request)))
 
 
@@ -60,15 +62,7 @@ class FromRequestDeploymentMixin(FromRequestMixin):
         return self.jwt_secret.get_secret_value() if self.jwt_secret else None
 
     @classmethod
-    async def from_request(cls, request: fastapi.Request):
-        deployment_id = request.path_params.get("deployment_id")
-        if deployment_id is None or not isinstance(deployment_id, str):
-            raise DIALException(
-                status_code=404,
-                type="invalid_path",
-                message="Invalid path",
-            )
-
+    async def from_request(cls, request: fastapi.Request, deployment_id: str):
         headers = request.headers.mutablecopy()
 
         api_key = headers.get("Api-Key")

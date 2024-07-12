@@ -1,11 +1,15 @@
 import logging
 from contextvars import ContextVar
+from typing import Optional
 
 logger = logging.getLogger("aidial_sdk")
-deployment_id = ContextVar("deployment_id", default=None)
+
+deployment_id: ContextVar[Optional[str]] = ContextVar(
+    "deployment_id", default=None
+)
 
 
-def set_log_deployment(new_deployment_id):
+def set_log_deployment(new_deployment_id: str):
     deployment_id.set(new_deployment_id)
 
 

@@ -5,11 +5,7 @@ import pytest
 from tests.applications.echo_application import EchoApplication
 from tests.applications.noop_application import NoopApplication
 from tests.utils.endpoint_test import TestCase, run_endpoint_test
-from tests.utils.errors import (
-    bad_request_error,
-    not_implemented_error,
-    route_not_found_error,
-)
+from tests.utils.errors import missing_fields_error, route_not_found_error
 
 CHAT_COMPLETION_REQUEST = {
     "messages": [
@@ -42,12 +38,7 @@ noop = NoopApplication()
 echo = EchoApplication
 
 testcases: List[TestCase] = [
-    TestCase(
-        noop,
-        "tokenize",
-        TOKENIZE_REQUEST_OK1,
-        not_implemented_error("tokenize"),
-    ),
+    TestCase(noop, "tokenize", TOKENIZE_REQUEST_OK1, route_not_found_error),
     TestCase(noop, "tokenizer", TOKENIZE_REQUEST_OK1, route_not_found_error),
     TestCase(echo(0), "tokenize", TOKENIZE_REQUEST_OK1, TOKENIZE_RESPONSE_OK1),
     TestCase(echo(0), "tokenize", TOKENIZE_REQUEST_OK2, TOKENIZE_RESPONSE_OK2),
@@ -55,7 +46,7 @@ testcases: List[TestCase] = [
         echo(0),
         "tokenize",
         TOKENIZE_REQUEST_FAIL,
-        bad_request_error("inputs.0.value"),
+        missing_fields_error("inputs.0.value"),
     ),
 ]
 

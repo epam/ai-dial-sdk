@@ -6,26 +6,13 @@ class Error(BaseModel):
     error: dict
 
 
-def bad_request_error(path: str) -> Error:
+def missing_fields_error(path: str) -> Error:
     return Error(
         code=400,
         error={
             "error": {
                 "message": f"Your request contained invalid structure on path {path}. field required",
                 "type": "invalid_request_error",
-            }
-        },
-    )
-
-
-def not_implemented_error(endpoint: str) -> Error:
-    return Error(
-        code=404,
-        error={
-            "error": {
-                "message": f"The deployment doesn't implement '{endpoint}' endpoint.",
-                "type": "runtime_error",
-                "code": "endpoint_not_found",
             }
         },
     )

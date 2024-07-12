@@ -5,7 +5,7 @@ import pytest
 from tests.applications.echo_application import EchoApplication
 from tests.applications.noop_application import NoopApplication
 from tests.utils.endpoint_test import TestCase, run_endpoint_test
-from tests.utils.errors import not_implemented_error, route_not_found_error
+from tests.utils.errors import route_not_found_error
 
 CHAT_COMPLETION_REQUEST = {
     "messages": [
@@ -71,10 +71,7 @@ echo = EchoApplication
 
 testcases: List[TestCase] = [
     TestCase(
-        noop,
-        "truncate_prompt",
-        create_request(None),
-        not_implemented_error("truncate_prompt"),
+        noop, "truncate_prompt", create_request(None), route_not_found_error
     ),
     TestCase(
         noop,
