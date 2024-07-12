@@ -1,26 +1,34 @@
-from fastapi import Request
-from fastapi.responses import JSONResponse
+import fastapi
 
 from aidial_sdk import DIALApp
-from tests.applications.noop import NoopApplication
-
-app = DIALApp().add_chat_completion("test_app1", NoopApplication())
-
-
-@app.post("/openai/deployments/test_app1/tokenize")
-async def tokenize(request: Request):
-    return JSONResponse({"outputs": []})
+from aidial_sdk.chat_completion import ChatCompletion, Request, Response
+from aidial_sdk.deployment.tokenize import TokenizeRequest, TokenizeResponse
 
 
-@app.post("/openai/deployments/test_app2/chat/completions")
-async def chat_completion(request: Request):
-    return JSONResponse(
-        {
-            "choices": [
-                {
-                    "index": 0,
-                    "message": {"role": "assistant", "content": "Test content"},
-                }
-            ]
-        }
-    )
+class NoopApplication(ChatCompletion):
+    async def chat_completion(
+        self, request: Request, response: Response
+    ) -> None:
+        with response.create_single_choice():
+            pass
+
+    async def tokenize(self, request: TokenizeRequest) -> TokenizeResponse:
+        return TokenizeResponse(outputs=[])
+
+
+app = DIALApp().add_chat_completion("test-app1", NoopApplication())
+
+
+@app.post("/openai/deployments/test-app1/tokenize")
+async def tokenize(request: fastapi.Request):
+    return {"result": "custom_tokenize_result"}
+
+
+@app.post("/openai/deployments/test-app1/truncate_prompt")
+async def truncate_prompt(request: fastapi.Request):
+    return {"result": "custom_truncate_prompt_result"}
+
+
+@app.post("/openai/deployments/test-app2/chat/completions")
+async def chat_completion(request: fastapi.Request):
+    return {"result": "custom_chat_completion_result"}

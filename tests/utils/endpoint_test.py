@@ -55,5 +55,5 @@ def run_endpoint_test(testcase: TestCase):
         expected_response_code = 200
         expected_response_body = expected_response
 
-    assert actual_response.status_code == expected_response_code
     assert actual_response_body == expected_response_body
+    assert actual_response.status_code == expected_response_code
