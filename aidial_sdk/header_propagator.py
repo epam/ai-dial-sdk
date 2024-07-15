@@ -1,6 +1,6 @@
 import types
 from contextvars import ContextVar
-from typing import Optional
+from typing import Any, MutableMapping, Optional
 
 import aiohttp
 import httpx
@@ -79,21 +79,12 @@ class HeaderPropagator:
         trace_config_ctx: types.SimpleNamespace,
         params: aiohttp.TraceRequestStartParams,
     ):
-        if not str(params.url).startswith(self._dial_url):
-            return
-
-        api_key_val = self._api_key.get()
-        if api_key_val:
-            params.headers["api-key"] = api_key_val
+        self._modify_headers(params.url, params.headers)
 
     def _instrument_requests(self):
         def instrumented_send(wrapped, instance, args, kwargs):
             request: requests.PreparedRequest = args[0]
-            if request.url and request.url.startswith(self._dial_url):
-                api_key_val = self._api_key.get()
-                if api_key_val:
-                    request.headers["api-key"] = api_key_val
-
+            self._modify_headers(request.url, request.headers)
             return wrapped(*args, **kwargs)
 
         wrapt.wrap_function_wrapper(requests.Session, "send", instrumented_send)
@@ -102,10 +93,7 @@ class HeaderPropagator:
 
         def instrumented_build_request(wrapped, instance, args, kwargs):
             request: httpx.Request = wrapped(*args, **kwargs)
-            if request.url and str(request.url).startswith(self._dial_url):
-                api_key_val = self._api_key.get()
-                if api_key_val:
-                    request.headers["api-key"] = api_key_val
+            self._modify_headers(request.url, request.headers)
             return request
 
         wrapt.wrap_function_wrapper(
@@ -115,3 +103,21 @@ class HeaderPropagator:
         wrapt.wrap_function_wrapper(
             httpx.AsyncClient, "build_request", instrumented_build_request
         )
+
+    def _modify_headers(
+        self, url: Any, headers: MutableMapping[str, str]
+    ) -> None:
+        if url and str(url).startswith(self._dial_url):
+            api_key = self._api_key.get()
+            if api_key:
+                old_api_key = headers.get("api-key")
+                old_authz = headers.get("Authorization")
+
+                if (
+                    old_api_key
+                    and old_authz
+                    and old_authz == f"Bearer {old_api_key}"
+                ):
+                    headers["Authorization"] = f"Bearer {api_key}"
+
+                headers["api-key"] = api_key
