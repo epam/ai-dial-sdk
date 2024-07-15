@@ -1,4 +1,4 @@
-aidial-sdk>=0.8
+aidial-sdk>=0.9
 langchain==0.2.5
 langchain-community==0.2.5
 langchain-openai==0.1.8
