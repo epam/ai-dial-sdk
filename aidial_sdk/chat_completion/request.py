@@ -1,6 +1,7 @@
 from enum import Enum
 from typing import Any, Dict, List, Literal, Mapping, Optional, Union
 
+from aidial_sdk.chat_completion.enums import Status
 from aidial_sdk.deployment.from_request_mixin import FromRequestDeploymentMixin
 from aidial_sdk.pydantic_v1 import (
     ConstrainedFloat,
@@ -21,7 +22,15 @@ class Attachment(ExtraForbidModel):
     reference_url: Optional[StrictStr] = None
 
 
+class Stage(ExtraForbidModel):
+    name: StrictStr
+    status: Status
+    content: Optional[StrictStr] = None
+    attachments: Optional[List[Attachment]] = None
+
+
 class CustomContent(ExtraForbidModel):
+    stages: Optional[List[Stage]] = None
     attachments: Optional[List[Attachment]] = None
     state: Optional[Any] = None
 
