@@ -48,7 +48,7 @@ class ToolCall(ExtraForbidModel):
     function: FunctionCall
 
 
-class Role(Enum):
+class Role(str, Enum):
     SYSTEM = "system"
     USER = "user"
     ASSISTANT = "assistant"
