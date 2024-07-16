@@ -1,4 +1,3 @@
-from enum import Enum
 from typing import List, Literal, Optional, Union
 
 from aidial_sdk.chat_completion.request import Attachment
@@ -17,14 +16,8 @@ class AzureEmbeddingsRequest(ExtraForbidModel):
     user: Optional[StrictStr] = None
 
 
-class EmbeddingsType(str, Enum):
-    SYMMETRIC = "symmetric"
-    DOCUMENT = "document"
-    QUERY = "query"
-
-
 class EmbeddingsRequestCustomFields(ExtraForbidModel):
-    type: Optional[EmbeddingsType] = None
+    type: Optional[StrictStr] = None
     instruction: Optional[StrictStr] = None
 
 
