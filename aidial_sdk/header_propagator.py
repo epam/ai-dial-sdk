@@ -1,6 +1,6 @@
 import types
 from contextvars import ContextVar
-from typing import Any, MutableMapping, Optional
+from typing import MutableMapping, Optional
 
 import aiohttp
 import httpx
@@ -79,12 +79,12 @@ class HeaderPropagator:
         trace_config_ctx: types.SimpleNamespace,
         params: aiohttp.TraceRequestStartParams,
     ):
-        self._modify_headers(params.url, params.headers)
+        self._modify_headers(str(params.url), params.headers)
 
     def _instrument_requests(self):
         def instrumented_send(wrapped, instance, args, kwargs):
             request: requests.PreparedRequest = args[0]
-            self._modify_headers(request.url, request.headers)
+            self._modify_headers(request.url or "", request.headers)
             return wrapped(*args, **kwargs)
 
         wrapt.wrap_function_wrapper(requests.Session, "send", instrumented_send)
@@ -93,7 +93,7 @@ class HeaderPropagator:
 
         def instrumented_build_request(wrapped, instance, args, kwargs):
             request: httpx.Request = wrapped(*args, **kwargs)
-            self._modify_headers(request.url, request.headers)
+            self._modify_headers(str(request.url), request.headers)
             return request
 
         wrapt.wrap_function_wrapper(
@@ -105,9 +105,9 @@ class HeaderPropagator:
         )
 
     def _modify_headers(
-        self, url: Any, headers: MutableMapping[str, str]
+        self, url: str, headers: MutableMapping[str, str]
     ) -> None:
-        if url and str(url).startswith(self._dial_url):
+        if url.startswith(self._dial_url):
             api_key = self._api_key.get()
             if api_key:
                 old_api_key = headers.get("api-key")
