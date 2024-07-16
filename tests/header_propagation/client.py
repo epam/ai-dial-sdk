@@ -21,33 +21,35 @@ class Library(str, Enum):
 class Request(BaseModel):
     url: str
     lib: Library
+    headers: dict
 
 
 @app.post("/")
 async def handle(request: Request):
     url = request.url
     lib = request.lib
+    headers = request.headers
 
     if lib == Library.requests:
-        response = requests.get(url)
+        response = requests.get(url, headers=headers)
         status_code = response.status_code
         content = response.json()
 
     elif lib == Library.httpx_async:
         async with httpx.AsyncClient() as client:
-            response = await client.get(url)
+            response = await client.get(url, headers=headers)
             status_code = response.status_code
             content = response.json()
 
     elif lib == Library.httpx_sync:
         with httpx.Client() as client:
-            response = client.get(url)
+            response = client.get(url, headers=headers)
             status_code = response.status_code
             content = response.json()
 
     elif lib == Library.aiohttp:
         async with aiohttp.ClientSession() as session:
-            async with session.get(url) as response:
+            async with session.get(url, headers=headers) as response:
                 status_code = response.status
                 content = await response.json()
 
