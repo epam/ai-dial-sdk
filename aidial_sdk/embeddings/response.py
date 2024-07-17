@@ -1,10 +1,10 @@
-from typing import List, Literal
+from typing import List, Literal, Union
 
 from aidial_sdk.utils.pydantic import ExtraForbidModel
 
 
 class Embedding(ExtraForbidModel):
-    embedding: List[float]
+    embedding: Union[str, List[float]]
     index: int
     object: Literal["embedding"] = "embedding"
 
