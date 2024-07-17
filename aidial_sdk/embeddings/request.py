@@ -1,6 +1,6 @@
-from enum import Enum
 from typing import List, Literal, Optional, Union
 
+from aidial_sdk.chat_completion.request import Attachment
 from aidial_sdk.deployment.from_request_mixin import FromRequestDeploymentMixin
 from aidial_sdk.pydantic_v1 import StrictFloat, StrictInt, StrictStr
 from aidial_sdk.utils.pydantic import ExtraForbidModel
@@ -16,18 +16,18 @@ class AzureEmbeddingsRequest(ExtraForbidModel):
     user: Optional[StrictStr] = None
 
 
-class DialEmbeddingsType(str, Enum):
-    SYMMETRIC = "symmetric"
-    DOCUMENT = "document"
-    QUERY = "query"
-
-
 class EmbeddingsRequestCustomFields(ExtraForbidModel):
-    type: Optional[DialEmbeddingsType] = None
+    type: Optional[StrictStr] = None
     instruction: Optional[StrictStr] = None
 
 
+EmbeddingsMultiModalInput = Union[
+    StrictStr, Attachment, List[Union[StrictStr, Attachment]]
+]
+
+
 class EmbeddingsRequest(AzureEmbeddingsRequest):
+    custom_input: Optional[List[EmbeddingsMultiModalInput]] = None
     custom_fields: Optional[EmbeddingsRequestCustomFields] = None
 
 

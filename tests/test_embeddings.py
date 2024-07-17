@@ -5,7 +5,6 @@ import pytest
 from aidial_sdk import DIALApp
 from tests.applications.simple_embeddings import SimpleEmbeddings
 from tests.utils.endpoint_test import TestCase, run_endpoint_test
-from tests.utils.errors import invalid_request_error
 
 deployment = "test-app"
 app = DIALApp().add_embeddings(deployment, SimpleEmbeddings())
@@ -36,16 +35,6 @@ testcases: List[TestCase] = [
         "embeddings",
         {"input": "a", "custom_fields": {"type": "query"}},
         expected_response_1,
-    ),
-    TestCase(
-        app,
-        deployment,
-        "embeddings",
-        {"input": "a", "custom_fields": {"type": "hello"}},
-        invalid_request_error(
-            "custom_fields.type",
-            "value is not a valid enumeration member; permitted: 'symmetric', 'document', 'query'",
-        ),
     ),
     TestCase(
         app,
