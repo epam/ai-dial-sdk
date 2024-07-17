@@ -14,11 +14,11 @@ class Usage(ExtraForbidModel):
     total_tokens: int
 
 
-class CreateEmbeddingResponse(ExtraForbidModel):
+class EmbeddingResponse(ExtraForbidModel):
     data: List[Embedding]
     model: str
     object: Literal["list"] = "list"
     usage: Usage
 
 
-Response = CreateEmbeddingResponse
+Response = EmbeddingResponse
