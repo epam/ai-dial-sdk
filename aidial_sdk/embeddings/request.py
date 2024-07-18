@@ -2,14 +2,14 @@ from typing import List, Literal, Optional, Union
 
 from aidial_sdk.chat_completion.request import Attachment
 from aidial_sdk.deployment.from_request_mixin import FromRequestDeploymentMixin
-from aidial_sdk.pydantic_v1 import StrictFloat, StrictInt, StrictStr
+from aidial_sdk.pydantic_v1 import StrictInt, StrictStr
 from aidial_sdk.utils.pydantic import ExtraForbidModel
 
 
 class AzureEmbeddingsRequest(ExtraForbidModel):
     model: Optional[StrictStr] = None
     input: Union[
-        StrictStr, List[StrictStr], List[StrictFloat], List[List[StrictFloat]]
+        StrictStr, List[StrictStr], List[StrictInt], List[List[StrictInt]]
     ]
     encoding_format: Literal["float", "base64"] = "float"
     dimensions: Optional[StrictInt] = None
