@@ -33,7 +33,20 @@ testcases: List[TestCase] = [
         app,
         deployment,
         "embeddings",
-        {"input": "a", "custom_fields": {"type": "query"}},
+        {
+            "input": "a",
+            "custom_fields": {
+                "type": "query",
+                "instruction": "instruction",
+            },
+        },
+        expected_response_1,
+    ),
+    TestCase(
+        app,
+        deployment,
+        "embeddings",
+        {"input": [15339]},
         expected_response_1,
     ),
     TestCase(
