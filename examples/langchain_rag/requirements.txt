@@ -1,4 +1,5 @@
-aidial-sdk>=0.9
+# aidial-sdk>=0.9
+git+https://github.com/epam/ai-dial-sdk.git@development
 langchain==0.2.5
 langchain-community==0.2.5
 langchain-openai==0.1.8

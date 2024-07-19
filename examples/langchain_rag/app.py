@@ -96,7 +96,8 @@ class SimpleRAGApplication(ChatCompletion):
                     model=EMBEDDINGS_MODEL,
                     azure_deployment=EMBEDDINGS_MODEL,
                     azure_endpoint=DIAL_URL,
-                    openai_api_key=request.api_key_secret,
+                    # Header propagation automatically propagates the API key from the request headers.
+                    openai_api_key="-",
                     openai_api_version=API_VERSION,
                     # The check leads to tokenization of the input strings.
                     # Tokenized input is only supported by OpenAI embedding models.
@@ -120,7 +121,8 @@ class SimpleRAGApplication(ChatCompletion):
             llm = AzureChatOpenAI(
                 azure_deployment=CHAT_MODEL,
                 azure_endpoint=DIAL_URL,
-                openai_api_key=request.api_key_secret,
+                # Header propagation automatically propagates the API key from the request headers.
+                openai_api_key="-",
                 openai_api_version=API_VERSION,
                 temperature=0,
                 streaming=True,
