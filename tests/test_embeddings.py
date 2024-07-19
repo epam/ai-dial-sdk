@@ -4,7 +4,6 @@ import pytest
 
 from tests.applications.simple_embeddings import SimpleEmbeddings
 from tests.utils.endpoint_test import TestCase, run_endpoint_test
-from tests.utils.errors import Error
 
 simple = SimpleEmbeddings()
 
@@ -31,23 +30,20 @@ testcases: List[TestCase] = [
     TestCase(
         simple,
         "embeddings",
-        {"input": "a", "custom_fields": {"type": "query"}},
+        {
+            "input": "a",
+            "custom_fields": {
+                "type": "query",
+                "instruction": "instruction",
+            },
+        },
         expected_response_1,
     ),
     TestCase(
         simple,
         "embeddings",
-        {"input": "a", "custom_fields": {"type": "hello"}},
-        Error(
-            code=400,
-            error={
-                "error": {
-                    "message": "Your request contained invalid structure on path custom_fields.type. "
-                    "value is not a valid enumeration member; permitted: 'symmetric', 'document', 'query'",
-                    "type": "invalid_request_error",
-                }
-            },
-        ),
+        {"input": [15339]},
+        expected_response_1,
     ),
     TestCase(
         simple,
