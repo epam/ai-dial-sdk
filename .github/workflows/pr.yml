@@ -6,7 +6,7 @@ on:
 
 jobs:
   run_tests:
-    uses: epam/ai-dial-ci/.github/workflows/python_package_pr.yml@feat/added-test-python-versions-input
+    uses: epam/ai-dial-ci/.github/workflows/python_package_pr.yml@1.9.0
     secrets: inherit
     with:
       python_version: 3.8
