@@ -1,6 +1,7 @@
 from enum import Enum
 from typing import Any, Dict, List, Literal, Mapping, Optional, Union
 
+from aidial_sdk.chat_completion.enums import Status
 from aidial_sdk.deployment.from_request_mixin import FromRequestDeploymentMixin
 from aidial_sdk.pydantic_v1 import (
     ConstrainedFloat,
@@ -21,7 +22,15 @@ class Attachment(ExtraForbidModel):
     reference_url: Optional[StrictStr] = None
 
 
+class Stage(ExtraForbidModel):
+    name: StrictStr
+    status: Status
+    content: Optional[StrictStr] = None
+    attachments: Optional[List[Attachment]] = None
+
+
 class CustomContent(ExtraForbidModel):
+    stages: Optional[List[Stage]] = None
     attachments: Optional[List[Attachment]] = None
     state: Optional[Any] = None
 
@@ -39,7 +48,7 @@ class ToolCall(ExtraForbidModel):
     function: FunctionCall
 
 
-class Role(Enum):
+class Role(str, Enum):
     SYSTEM = "system"
     USER = "user"
     ASSISTANT = "assistant"
@@ -116,7 +125,6 @@ class AzureChatCompletionRequest(ExtraForbidModel):
     )
     tools: Optional[List[Tool]] = None
     tool_choice: Optional[Union[Literal["auto", "none"], ToolChoice]] = None
-    addons: Optional[List[Addon]] = None
     stream: bool = False
     temperature: Optional[Temperature] = None
     top_p: Optional[TopP] = None
@@ -127,13 +135,16 @@ class AzureChatCompletionRequest(ExtraForbidModel):
     frequency_penalty: Optional[Penalty] = None
     logit_bias: Optional[Mapping[int, float]] = None
     user: Optional[StrictStr] = None
-    configuration: Optional[Any] = None
+
+
+class ChatCompletionRequestCustomFields(ExtraForbidModel):
+    configuration: Optional[Dict[str, Any]] = None
 
 
 class ChatCompletionRequest(AzureChatCompletionRequest):
-    model: Optional[StrictStr] = None
     addons: Optional[List[Addon]] = None
     max_prompt_tokens: Optional[PositiveInt] = None
+    custom_fields: Optional[ChatCompletionRequestCustomFields] = None
 
 
 class Request(ChatCompletionRequest, FromRequestDeploymentMixin):

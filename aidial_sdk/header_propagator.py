@@ -1,13 +1,12 @@
-import functools
 import types
 from contextvars import ContextVar
-from typing import Optional
+from typing import MutableMapping, Optional
 
 import aiohttp
+import httpx
+import requests
 import wrapt
 from fastapi import FastAPI
-from requests import PreparedRequest
-from requests.sessions import Session
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 
@@ -52,6 +51,7 @@ class HeaderPropagator:
 
         self._instrument_fast_api(self._app)
         self._instrument_aiohttp()
+        self._instrument_httpx()
         self._instrument_requests()
         self._enabled = True
 
@@ -75,31 +75,49 @@ class HeaderPropagator:
 
     async def _on_aiohttp_request_start(
         self,
-        unused_session: aiohttp.ClientSession,
+        session: aiohttp.ClientSession,
         trace_config_ctx: types.SimpleNamespace,
         params: aiohttp.TraceRequestStartParams,
     ):
-        if not str(params.url).startswith(self._dial_url):
-            return
-
-        api_key_val = self._api_key.get()
-
-        if api_key_val:
-            params.headers["api-key"] = api_key_val
+        self._modify_headers(str(params.url), params.headers)
 
     def _instrument_requests(self):
-        wrapped_send = Session.send
+        def instrumented_send(wrapped, instance, args, kwargs):
+            request: requests.PreparedRequest = args[0]
+            self._modify_headers(request.url or "", request.headers)
+            return wrapped(*args, **kwargs)
 
-        @functools.wraps(wrapped_send)
-        def instrumented_send(self, request: PreparedRequest, **kwargs):
-            if request.url and request.url.startswith(self._dial_url):
-                api_key_val = self._dial_api_key.get()
+        wrapt.wrap_function_wrapper(requests.Session, "send", instrumented_send)
 
-                if api_key_val:
-                    request.headers["api-key"] = api_key_val
+    def _instrument_httpx(self):
 
-            return wrapped_send(self, request, **kwargs)
+        def instrumented_build_request(wrapped, instance, args, kwargs):
+            request: httpx.Request = wrapped(*args, **kwargs)
+            self._modify_headers(str(request.url), request.headers)
+            return request
 
-        Session._dial_url = self._dial_url  # type: ignore
-        Session._dial_api_key = self._api_key  # type: ignore
-        Session.send = instrumented_send
+        wrapt.wrap_function_wrapper(
+            httpx.Client, "build_request", instrumented_build_request
+        )
+
+        wrapt.wrap_function_wrapper(
+            httpx.AsyncClient, "build_request", instrumented_build_request
+        )
+
+    def _modify_headers(
+        self, url: str, headers: MutableMapping[str, str]
+    ) -> None:
+        if url.startswith(self._dial_url):
+            api_key = self._api_key.get()
+            if api_key:
+                old_api_key = headers.get("api-key")
+                old_authz = headers.get("Authorization")
+
+                if (
+                    old_api_key
+                    and old_authz
+                    and old_authz == f"Bearer {old_api_key}"
+                ):
+                    headers["Authorization"] = f"Bearer {api_key}"
+
+                headers["api-key"] = api_key

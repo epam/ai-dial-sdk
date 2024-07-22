@@ -2,7 +2,8 @@
 # E501 string literal is too long
 # W503 line break before binary operator
 # E203 whitespace before ':' (triggered on list slices like xs[i : i + 5])
-ignore = E501, W503, E203
+# E704 multiple statements on one line (def)
+ignore = E501, W503, E203, E704
 exclude =
     .git,
     .tmp,
