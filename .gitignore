@@ -8,3 +8,4 @@ dist/
 .nox
 .idea/
 .env
+~*
