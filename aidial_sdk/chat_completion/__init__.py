@@ -10,6 +10,7 @@ from aidial_sdk.chat_completion.request import (
     FunctionChoice,
     Message,
     Request,
+    ResponseFormat,
     Role,
 )
 from aidial_sdk.chat_completion.request import Stage as RequestStage
