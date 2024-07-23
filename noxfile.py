@@ -33,7 +33,7 @@ def format(session: nox.Session):
     format_with_args(session, SRC)
 
 
-@nox.session(python=["3.8", "3.9", "3.10", "3.11"])
+@nox.session(python=["3.8", "3.9", "3.10", "3.11", "3.12"])
 @nox.parametrize("pydantic", ["1.10.17", "2.8.2"])
 def test(session: nox.Session, pydantic: str) -> None:
     """Runs tests"""
