@@ -1,6 +1,6 @@
 aidial-sdk>=0.8
 langchain==0.2.5
-langchain-community==0.2.5
+langchain-community==0.2.9
 langchain-openai==0.1.8
 langchain-text-splitters==0.2.1
 tiktoken==0.7.0
