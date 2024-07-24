@@ -6,6 +6,7 @@ import fastapi
 
 from aidial_sdk.exceptions import HTTPException as DIALException
 from aidial_sdk.pydantic_v1 import SecretStr, StrictStr, root_validator
+from aidial_sdk.utils._headers import hide_headers
 from aidial_sdk.utils.logging import log_debug
 from aidial_sdk.utils.pydantic import ExtraForbidModel
 
@@ -78,10 +79,8 @@ class FromRequestDeploymentMixin(FromRequestMixin):
                 type="invalid_request_error",
                 message="Api-Key header is required",
             )
-        del headers["Api-Key"]
 
         jwt = headers.get("Authorization")
-        del headers["Authorization"]
 
         return cls(
             **(await _get_request_body(request)),
@@ -89,7 +88,7 @@ class FromRequestDeploymentMixin(FromRequestMixin):
             jwt_secret=SecretStr(jwt) if jwt else None,
             deployment_id=deployment_id,
             api_version=request.query_params.get("api-version"),
-            headers=headers,
+            headers=hide_headers(headers, hidden=["Api-Key", "Authorization"]),
         )
 
 
