@@ -1,12 +1,11 @@
-# aidial-sdk>=0.9
-git+https://github.com/epam/ai-dial-sdk.git@development
-langchain~=0.2.9
-langchain-community~=0.2.7
-langchain-openai~=0.1.17
-langchain-text-splitters~=0.2.2
-tiktoken~=0.7.0
-openai~=1.35.15
-beautifulsoup4~=4.12.3
-chromadb~=0.5.4
-uvicorn~=0.30.1
-pypdf~=4.3.0
+aidial-sdk>=0.10
+langchain==0.2.9
+langchain-community==0.2.7
+langchain-openai==0.1.17
+langchain-text-splitters==0.2.2
+tiktoken==0.7.0
+openai==1.35.15
+beautifulsoup4==4.12.3
+chromadb==0.5.4
+uvicorn==0.30.1
+pypdf==4.3.0
