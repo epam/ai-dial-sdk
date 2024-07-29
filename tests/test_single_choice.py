@@ -3,7 +3,7 @@ import json
 from starlette.testclient import TestClient
 
 from aidial_sdk import DIALApp
-from tests.applications.single_choice_application import SingleChoiceApplication
+from tests.applications.single_choice import SingleChoiceApplication
 
 
 def test_single_choice():

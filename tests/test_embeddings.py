@@ -2,10 +2,12 @@ from typing import List
 
 import pytest
 
+from aidial_sdk import DIALApp
 from tests.applications.simple_embeddings import SimpleEmbeddings
 from tests.utils.endpoint_test import TestCase, run_endpoint_test
 
-simple = SimpleEmbeddings()
+deployment = "test-app"
+app = DIALApp().add_embeddings(deployment, SimpleEmbeddings())
 
 expected_response_1 = {
     "data": [
@@ -28,7 +30,8 @@ expected_response_2 = {
 
 testcases: List[TestCase] = [
     TestCase(
-        simple,
+        app,
+        deployment,
         "embeddings",
         {
             "input": "a",
@@ -40,13 +43,15 @@ testcases: List[TestCase] = [
         expected_response_1,
     ),
     TestCase(
-        simple,
+        app,
+        deployment,
         "embeddings",
         {"input": [15339]},
         expected_response_1,
     ),
     TestCase(
-        simple,
+        app,
+        deployment,
         "embeddings",
         {"input": ["a", "b"]},
         expected_response_2,

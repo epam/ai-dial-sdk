@@ -1,51 +1,46 @@
 from typing import Dict, Union
 
+from fastapi import FastAPI
 from starlette.testclient import TestClient
 
-from aidial_sdk import DIALApp
-from aidial_sdk.chat_completion.base import ChatCompletion
-from aidial_sdk.embeddings.base import Embeddings
 from tests.utils.errors import Error
 
 
 class TestCase:
     __test__ = False
 
-    app: Union[ChatCompletion, Embeddings]
+    app: FastAPI
+
+    deployment: str
     endpoint: str
 
     request_body: dict
     request_headers: Dict[str, str]
-
     response: Union[Error, dict, None]
 
     def __init__(
         self,
-        app: Union[ChatCompletion, Embeddings],
+        app: FastAPI,
+        deployment: str,
         endpoint: str,
         request_body: dict,
         response: Union[Error, dict, None],
         request_headers: Dict[str, str] = {},
     ):
         self.app = app
+        self.deployment = deployment
         self.endpoint = endpoint
         self.request_body = request_body
-        self.request_headers = request_headers
         self.response = response
+        self.request_headers = request_headers
 
 
 def run_endpoint_test(testcase: TestCase):
-    dial_app = DIALApp()
 
-    if isinstance(testcase.app, Embeddings):
-        dial_app.add_embeddings("test_app", testcase.app)
-    else:
-        dial_app.add_chat_completion("test_app", testcase.app)
-
-    test_app = TestClient(dial_app)
+    test_app = TestClient(testcase.app)
 
     actual_response = test_app.post(
-        f"/openai/deployments/test_app/{testcase.endpoint}",
+        f"/openai/deployments/{testcase.deployment}/{testcase.endpoint}",
         json=testcase.request_body,
         headers={"Api-Key": "TEST_API_KEY", **testcase.request_headers},
     )
@@ -63,5 +58,5 @@ def run_endpoint_test(testcase: TestCase):
         expected_response_code = 200
         expected_response_body = expected_response
 
-    assert actual_response.status_code == expected_response_code
     assert actual_response_body == expected_response_body
+    assert actual_response.status_code == expected_response_code

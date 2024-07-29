@@ -6,22 +6,6 @@ from aidial_sdk.pydantic_v1 import ValidationError
 from aidial_sdk.utils.errors import json_error
 
 
-def missing_deployment_error() -> DIALException:
-    return DIALException(
-        status_code=404,
-        code="deployment_not_found",
-        message="The API deployment for this resource does not exist.",
-    )
-
-
-def missing_endpoint_error(endpoint: str) -> DIALException:
-    return DIALException(
-        status_code=404,
-        code="endpoint_not_found",
-        message=f"The deployment doesn't implement '{endpoint}' endpoint.",
-    )
-
-
 def pydantic_validation_exception_handler(
     request: Request, exc: Exception
 ) -> JSONResponse:
