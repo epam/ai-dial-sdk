@@ -20,6 +20,10 @@ def raise_exception(exception_type: str):
 
 
 class BrokenApplication(ChatCompletion):
+    """
+    Application which breaks immediately after receiving a request.
+    """
+
     async def chat_completion(
         self, request: Request, response: Response
     ) -> None:
