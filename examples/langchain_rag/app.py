@@ -103,8 +103,6 @@ class SimpleRAGApplication(ChatCompletion):
                     # Tokenized input is only supported by OpenAI embedding models.
                     # For other models, the check should be disabled.
                     check_embedding_ctx_length=False,
-                    # For models that do not support base64 encoding.
-                    model_kwargs={"encoding_format": "float"},
                 )
 
                 embeddings = CacheBackedEmbeddings.from_bytes_store(
