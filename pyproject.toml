@@ -16,7 +16,7 @@ pydantic = ">=1.10,<3"
 requests = "^2.19"
 wrapt = "^1.14"
 aiohttp = "^3.8.3"
-httpx = "^0.25.0"
+httpx = ">=0.25.0,<0.28"
 opentelemetry-sdk = {version = "1.20.0", optional = true}
 opentelemetry-api = {version = "1.20.0", optional = true}
 opentelemetry-exporter-otlp-proto-grpc = {version = "1.20.0", optional = true}
