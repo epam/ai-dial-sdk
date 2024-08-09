@@ -75,10 +75,26 @@ def invalid_request_error(message: str, **kwargs) -> HTTPException:
     )
 
 
+def context_length_exceeded_error(
+    max_context_length: int, prompt_tokens: int
+) -> HTTPException:
+    """
+    The error message that Azure OpenAI returns when the context length is exceeded.
+    """
+    message = (
+        f"This model's maximum context length is {max_context_length} tokens. "
+        f"However, your messages resulted in {prompt_tokens} tokens. "
+        "Please reduce the length of the messages."
+    )
+    return invalid_request_error(
+        message=message,
+        param="messages",
+        code="context_length_exceeded",
+    )
+
+
 def _truncate_prompt_error(message: str, **kwargs) -> HTTPException:
-    return HTTPException(
-        status_code=HTTPStatus.BAD_REQUEST,
-        type="invalid_request_error",
+    return invalid_request_error(
         code="cannot_truncate_prompt",
         param="max_prompt_tokens",
         message=message,
@@ -90,13 +106,7 @@ def truncate_prompt_error_system(
     max_prompt_tokens: int, prompt_tokens: int
 ) -> HTTPException:
     """
-    The error message mimics the one from OpenAI when context limit is exceeded:
-    {
-        "message": "This model's maximum context length is 128000 tokens. However, your messages resulted in 458759 tokens. Please reduce the length of the messages.",
-        "type": "invalid_request_error",
-        "param": "messages",
-        "code": "context_length_exceeded"
-    }
+    The error message mimics the one of `context_length_exceeded_error`.
     """
     message = (
         f"The requested maximum prompt tokens is {max_prompt_tokens}. "
