@@ -75,11 +75,11 @@ def invalid_request_error(message: str, **kwargs) -> HTTPException:
     )
 
 
-def cannot_truncate_prompt_error(message: str, **kwargs) -> HTTPException:
+def truncate_prompt_error(message: str, **kwargs) -> HTTPException:
     return HTTPException(
         status_code=HTTPStatus.BAD_REQUEST,
         type="invalid_request_error",
-        code="cannot_fit_into_max_prompt_tokens",
+        code="cannot_truncate_prompt",
         param="max_prompt_tokens",
         message=message,
         **kwargs,
