@@ -76,7 +76,7 @@ class Addon(ExtraForbidModel):
 class Function(ExtraForbidModel):
     name: StrictStr
     description: Optional[StrictStr] = None
-    parameters: Dict
+    parameters: Optional[Dict] = None
 
 
 class Temperature(ConstrainedFloat):
