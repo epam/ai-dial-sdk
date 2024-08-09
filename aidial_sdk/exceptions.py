@@ -88,14 +88,14 @@ def context_length_exceeded_error(
     )
     return invalid_request_error(
         message=message,
-        param="messages",
         code="context_length_exceeded",
+        param="messages",
     )
 
 
 def _truncate_prompt_error(message: str, **kwargs) -> HTTPException:
     return invalid_request_error(
-        code="cannot_truncate_prompt",
+        code="truncate_prompt_error",
         param="max_prompt_tokens",
         message=message,
         **kwargs,
