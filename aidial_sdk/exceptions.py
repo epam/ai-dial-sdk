@@ -1,3 +1,4 @@
+from http import HTTPStatus
 from typing import Optional
 
 
@@ -33,36 +34,71 @@ class HTTPException(Exception):
         )
 
 
+def resource_not_found(message: str, **kwargs) -> HTTPException:
+    """
+    Thrown by OpenAI when either endpoint is invalid or api-version is unknown
+    """
+    return HTTPException(
+        status_code=HTTPStatus.NOT_FOUND,
+        message=message,
+        **kwargs,
+    )
+
+
+def deployment_not_found(message: str, **kwargs) -> HTTPException:
+    """
+    Thrown by OpenAI when the deployment isn't found
+    """
+    return HTTPException(
+        status_code=HTTPStatus.NOT_FOUND,
+        code="DeploymentNotFound",
+        message=message,
+        **kwargs,
+    )
+
+
 def request_validation_error(message: str, **kwargs) -> HTTPException:
     return HTTPException(
-        status_code=422, type="invalid_request_error", message=message, **kwargs
+        status_code=HTTPStatus.UNPROCESSABLE_ENTITY,
+        type="invalid_request_error",
+        message=message,
+        **kwargs,
     )
 
 
 def invalid_request_error(message: str, **kwargs) -> HTTPException:
     return HTTPException(
-        status_code=400, type="invalid_request_error", message=message, **kwargs
+        status_code=HTTPStatus.BAD_REQUEST,
+        type="invalid_request_error",
+        message=message,
+        **kwargs,
     )
 
 
-def max_prompt_tokens_error(message: str, **kwargs) -> HTTPException:
+def cannot_truncate_prompt_error(message: str, **kwargs) -> HTTPException:
     return HTTPException(
-        status_code=400,
+        status_code=HTTPStatus.BAD_REQUEST,
         type="invalid_request_error",
         code="cannot_fit_into_max_prompt_tokens",
         param="max_prompt_tokens",
         message=message,
-        **kwargs
+        **kwargs,
     )
 
 
 def runtime_server_error(message: str, **kwargs) -> HTTPException:
     return HTTPException(
-        status_code=500, type="runtime_error", message=message, **kwargs
+        status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+        type="runtime_error",
+        message=message,
+        **kwargs,
     )
 
 
 def internal_server_error(message: str, **kwargs) -> HTTPException:
     return HTTPException(
-        status_code=500, type="internal_server_error", message=message, **kwargs
+        status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+        type="internal_server_error",
+        message=message,
+        **kwargs,
     )
