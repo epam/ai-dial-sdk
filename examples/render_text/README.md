@@ -11,6 +11,7 @@ Upon start the Docker image exposes `openai/deployments/render-text/chat/complet
 ## Configuration
 
 The application returns the image in one of the following formats:
+
 1. Base64 encoded image
 2. URL to the image stored in the DIAL file storage. `DIAL_URL` environment variable should be set to support image uploading to the storage.
 
