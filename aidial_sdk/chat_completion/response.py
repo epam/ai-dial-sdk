@@ -24,6 +24,7 @@ from aidial_sdk.chat_completion.chunks import (
 )
 from aidial_sdk.chat_completion.request import Request
 from aidial_sdk.exceptions import HTTPException as DialHttpException
+from aidial_sdk.exceptions import request_validation_error
 from aidial_sdk.utils.errors import json_error, runtime_error
 from aidial_sdk.utils.logging import log_error, log_exception
 from aidial_sdk.utils.merge_chunks import merge
@@ -268,10 +269,8 @@ class Response:
                 "Trying to generate a single choice after choice"
             )
         if (self.request.n or 1) > 1:
-            raise DialHttpException(
-                status_code=422,
-                message=f"{self.request.deployment_id} deployment doesn't support n > 1",
-                type="invalid_request_error",
+            raise request_validation_error(
+                message=f"{self.request.deployment_id} deployment doesn't support n > 1"
             )
 
         return self.create_choice()

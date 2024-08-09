@@ -6,7 +6,7 @@ class HTTPException(Exception):
         self,
         message: str,
         status_code: int = 500,
-        type: str = "runtime_error",
+        type: Optional[str] = "runtime_error",
         param: Optional[str] = None,
         code: Optional[str] = None,
         display_message: Optional[str] = None,
@@ -31,3 +31,38 @@ class HTTPException(Exception):
                 self.display_message,
             )
         )
+
+
+def request_validation_error(message: str, **kwargs) -> HTTPException:
+    return HTTPException(
+        status_code=422, type="invalid_request_error", message=message, **kwargs
+    )
+
+
+def invalid_request_error(message: str, **kwargs) -> HTTPException:
+    return HTTPException(
+        status_code=400, type="invalid_request_error", message=message, **kwargs
+    )
+
+
+def max_prompt_tokens_error(message: str, **kwargs) -> HTTPException:
+    return HTTPException(
+        status_code=400,
+        type="invalid_request_error",
+        code="cannot_fit_into_max_prompt_tokens",
+        param="max_prompt_tokens",
+        message=message,
+        **kwargs
+    )
+
+
+def runtime_server_error(message: str, **kwargs) -> HTTPException:
+    return HTTPException(
+        status_code=500, type="runtime_error", message=message, **kwargs
+    )
+
+
+def internal_server_error(message: str, **kwargs) -> HTTPException:
+    return HTTPException(
+        status_code=500, type="internal_server_error", message=message, **kwargs
+    )
