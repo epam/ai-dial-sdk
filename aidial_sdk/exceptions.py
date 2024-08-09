@@ -34,7 +34,7 @@ class HTTPException(Exception):
         )
 
 
-def resource_not_found(message: str, **kwargs) -> HTTPException:
+def resource_not_found_error(message: str, **kwargs) -> HTTPException:
     """
     Thrown by OpenAI when either endpoint is invalid or api-version is unknown
     """
@@ -45,7 +45,7 @@ def resource_not_found(message: str, **kwargs) -> HTTPException:
     )
 
 
-def deployment_not_found(message: str, **kwargs) -> HTTPException:
+def deployment_not_found_error(message: str, **kwargs) -> HTTPException:
     """
     Thrown by OpenAI when the deployment isn't found
     """
