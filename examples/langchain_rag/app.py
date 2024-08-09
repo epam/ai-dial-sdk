@@ -42,7 +42,7 @@ text_splitter = RecursiveCharacterTextSplitter.from_tiktoken_encoder(
     chunk_size=256, chunk_overlap=0
 )
 
-embedding_store = LocalFileStore("./cache/")
+embedding_store = LocalFileStore("./~cache/")
 
 
 class CustomCallbackHandler(AsyncCallbackHandler):
