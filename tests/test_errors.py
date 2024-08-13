@@ -12,6 +12,7 @@ DEFAULT_RUNTIME_ERROR = {
     "error": {
         "message": "Error during processing the request",
         "type": "runtime_error",
+        "code": "500",
     }
 }
 

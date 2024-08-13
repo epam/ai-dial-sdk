@@ -1,6 +1,11 @@
 from http import HTTPStatus
 from typing import Optional
 
+from fastapi import HTTPException as FastAPIException
+from fastapi.responses import JSONResponse
+
+from aidial_sdk.utils.json import remove_nones
+
 
 class HTTPException(Exception):
     def __init__(
@@ -12,6 +17,8 @@ class HTTPException(Exception):
         code: Optional[str] = None,
         display_message: Optional[str] = None,
     ) -> None:
+        status_code = int(status_code)
+
         self.message = message
         self.status_code = status_code
         self.type = type
@@ -31,6 +38,31 @@ class HTTPException(Exception):
                 self.code,
                 self.display_message,
             )
+        )
+
+    def json_error(self) -> dict:
+        return {
+            "error": remove_nones(
+                {
+                    "message": self.message,
+                    "type": self.type,
+                    "param": self.param,
+                    "code": self.code,
+                    "display_message": self.display_message,
+                }
+            )
+        }
+
+    def to_fastapi_response(self) -> JSONResponse:
+        return JSONResponse(
+            status_code=self.status_code,
+            content=self.json_error(),
+        )
+
+    def to_fastapi_exception(self) -> FastAPIException:
+        return FastAPIException(
+            status_code=self.status_code,
+            detail=self.json_error(),
         )
 
 
