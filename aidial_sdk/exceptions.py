@@ -16,7 +16,7 @@ class HTTPException(Exception):
         self.status_code = status_code
         self.type = type
         self.param = param
-        self.code = code
+        self.code = code or str(status_code)
         self.display_message = display_message
 
     def __repr__(self):

@@ -19,10 +19,14 @@ API_KEY_IS_MISSING = {
     "error": {
         "message": "Api-Key header is required",
         "type": "invalid_request_error",
+        "code": "400",
     }
 }
 
 error_testdata = [
+    ("fastapi_exception", 500, DEFAULT_RUNTIME_ERROR),
+    ("value_error_exception", 500, DEFAULT_RUNTIME_ERROR),
+    ("zero_division_exception", 500, DEFAULT_RUNTIME_ERROR),
     (
         "sdk_exception",
         503,
@@ -30,12 +34,10 @@ error_testdata = [
             "error": {
                 "message": "Test error",
                 "type": "runtime_error",
+                "code": "503",
             }
         },
     ),
-    ("fastapi_exception", 500, DEFAULT_RUNTIME_ERROR),
-    ("value_error_exception", 500, DEFAULT_RUNTIME_ERROR),
-    ("zero_division_exception", 500, DEFAULT_RUNTIME_ERROR),
     (
         "sdk_exception_with_display_message",
         503,
@@ -44,6 +46,7 @@ error_testdata = [
                 "message": "Test error",
                 "type": "runtime_error",
                 "display_message": "I'm broken",
+                "code": "503",
             }
         },
     ),
