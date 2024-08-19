@@ -7,13 +7,13 @@ import os
 from uuid import uuid4
 
 import uvicorn
+from attachment import get_image_attachments
+from embeddings import ImageDialEmbeddings
+from vector_store import DialImageVectorStore
 
 from aidial_sdk import DIALApp
 from aidial_sdk import HTTPException as DIALException
 from aidial_sdk.chat_completion import ChatCompletion, Request, Response
-from examples.image_search.attachment import get_image_attachments
-from examples.image_search.embeddings import ImageDialEmbeddings
-from examples.image_search.vector_store import DialImageVectorStore
 
 
 def get_env(name: str) -> str:
