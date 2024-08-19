@@ -7,11 +7,10 @@ import os
 from uuid import uuid4
 
 import uvicorn
-from langchain.callbacks.base import AsyncCallbackHandler
 
 from aidial_sdk import DIALApp
 from aidial_sdk import HTTPException as DIALException
-from aidial_sdk.chat_completion import ChatCompletion, Choice, Request, Response
+from aidial_sdk.chat_completion import ChatCompletion, Request, Response
 from examples.image_search.attachment import get_image_attachments
 from examples.image_search.embeddings import ImageDialEmbeddings
 from examples.image_search.vector_store import DialImageVectorStore
@@ -27,14 +26,6 @@ def get_env(name: str) -> str:
 DIAL_URL = get_env("DIAL_URL")
 EMBEDDINGS_MODEL = os.getenv("EMBEDDINGS_MODEL", "multimodalembedding@001")
 EMBEDDINGS_DIMENSIONS = int(os.getenv("EMBEDDINGS_DIMENSIONS") or "1408")
-
-
-class CustomCallbackHandler(AsyncCallbackHandler):
-    def __init__(self, choice: Choice):
-        self._choice = choice
-
-    async def on_llm_new_token(self, token: str, *args, **kwargs) -> None:
-        self._choice.append_content(token)
 
 
 class ImageSearchApplication(ChatCompletion):

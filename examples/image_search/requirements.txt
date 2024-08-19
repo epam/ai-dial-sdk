@@ -1,0 +1,5 @@
+aidial-sdk>=0.10
+langchain-core==0.2.9
+langchain-community==0.2.9
+chromadb==0.5.4
+uvicorn==0.30.1
