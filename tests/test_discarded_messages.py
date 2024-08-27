@@ -115,6 +115,7 @@ def test_discarded_messages_returned_as_last_chunk_in_stream():
 def test_discarded_messages_is_set_twice():
     request = Request(
         headers={},
+        path_params={},
         api_key_secret=SecretStr("dummy_key"),
         deployment_id="",
         messages=[],
@@ -134,6 +135,7 @@ def test_discarded_messages_is_set_twice():
 def test_discarded_messages_is_set_before_choice():
     request = Request(
         headers={},
+        path_params={},
         api_key_secret=SecretStr("dummy_key"),
         deployment_id="",
         messages=[],

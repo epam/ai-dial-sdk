@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from json import JSONDecodeError
-from typing import Any, Mapping, Optional, Type, TypeVar
+from typing import Any, Dict, Mapping, Optional, Type, TypeVar
 
 import fastapi
 
@@ -34,6 +34,7 @@ class FromRequestDeploymentMixin(FromRequestMixin):
     deployment_id: StrictStr
     api_version: Optional[StrictStr] = None
     headers: Mapping[StrictStr, StrictStr]
+    path_params: Dict[str, Any]
 
     @root_validator(pre=True)
     def create_secrets(cls, values: dict):
@@ -84,6 +85,7 @@ class FromRequestDeploymentMixin(FromRequestMixin):
             deployment_id=deployment_id,
             api_version=request.query_params.get("api-version"),
             headers=headers,
+            path_params=request.path_params,
         )
 
 
