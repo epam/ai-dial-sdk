@@ -19,6 +19,7 @@ from aidial_sdk.chat_completion.chunks import (
     DiscardedMessagesChunk,
     EndChoiceChunk,
     EndChunk,
+    UnstructuredChunk,
     UsageChunk,
     UsagePerModelChunk,
 )
@@ -322,6 +323,14 @@ class Response:
         self._queue.put_nowait(UsageChunk(prompt_tokens, completion_tokens))
 
     def send_chunk(self, chunk: BaseChunk):
+        # FIXME: ugly hack
+        if isinstance(chunk, UnstructuredChunk):
+            for choice in chunk.data.get("choices") or []:
+                if index := choice.get("index") is not None:
+                    self._last_choice_index = max(
+                        self._last_choice_index, index + 1
+                    )
+
         self._queue.put_nowait(chunk)
 
     async def aflush(self):
