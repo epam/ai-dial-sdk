@@ -12,6 +12,16 @@ class BaseChunk(ABC):
         pass
 
 
+class UnstructuredChunk(BaseChunk):
+    data: Dict[str, Any]
+
+    def __init__(self, data: Dict[str, Any]):
+        self.data = data
+
+    def to_dict(self):
+        return self.data
+
+
 class StartChoiceChunk(BaseChunk):
     choice_index: int
 

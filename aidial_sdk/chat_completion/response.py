@@ -321,6 +321,9 @@ class Response:
         self._usage_generated = True
         self._queue.put_nowait(UsageChunk(prompt_tokens, completion_tokens))
 
+    def send_chunk(self, chunk: BaseChunk):
+        self._queue.put_nowait(chunk)
+
     async def aflush(self):
         await self._queue.join()
 
