@@ -1,22 +1,22 @@
-from fastapi import HTTPException as FastapiHTTPException
+from fastapi import HTTPException as FastAPIException
 
-from aidial_sdk import HTTPException
+from aidial_sdk import HTTPException as DIALException
 from aidial_sdk.chat_completion import ChatCompletion, Request, Response
 
 
 def raise_exception(exception_type: str):
     if exception_type == "sdk_exception":
-        raise HTTPException("Test error", 503)
+        raise DIALException("Test error", 503)
     elif exception_type == "fastapi_exception":
-        raise FastapiHTTPException(504, detail="Test detail")
+        raise FastAPIException(504, detail="Test detail")
     elif exception_type == "value_error_exception":
         raise ValueError("Test value error")
     elif exception_type == "zero_division_exception":
         return 1 / 0
     elif exception_type == "sdk_exception_with_display_message":
-        raise HTTPException("Test error", 503, display_message="I'm broken")
+        raise DIALException("Test error", 503, display_message="I'm broken")
     else:
-        raise HTTPException("Unexpected error")
+        raise DIALException("Unexpected error")
 
 
 class BrokenApplication(ChatCompletion):

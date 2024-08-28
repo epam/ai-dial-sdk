@@ -13,6 +13,7 @@ def invalid_request_error(path: str, message: str) -> Error:
             "error": {
                 "message": f"Your request contained invalid structure on path {path}. {message}",
                 "type": "invalid_request_error",
+                "code": "400",
             }
         },
     )
