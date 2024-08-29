@@ -11,8 +11,6 @@ from typing import (
 )
 from uuid import uuid4
 
-from fastapi import HTTPException
-
 from aidial_sdk.chat_completion.choice import Choice
 from aidial_sdk.chat_completion.chunks import (
     BaseChunk,
@@ -24,9 +22,9 @@ from aidial_sdk.chat_completion.chunks import (
     UsagePerModelChunk,
 )
 from aidial_sdk.chat_completion.request import Request
-from aidial_sdk.exceptions import HTTPException as DialHttpException
-from aidial_sdk.exceptions import request_validation_error
-from aidial_sdk.utils.errors import json_error, runtime_error
+from aidial_sdk.exceptions import HTTPException as DIALException
+from aidial_sdk.exceptions import request_validation_error, runtime_server_error
+from aidial_sdk.utils.errors import RUNTIME_ERROR_MESSAGE, runtime_error
 from aidial_sdk.utils.logging import log_error, log_exception
 from aidial_sdk.utils.merge_chunks import merge
 from aidial_sdk.utils.streaming import DONE_MARKER, format_chunk
@@ -102,35 +100,22 @@ class Response:
                     end_chunk_generated = False
                     try:
                         self.user_task.result()
-                    except DialHttpException as e:
+                    except DIALException as e:
                         if self.request.stream:
                             self._queue.put_nowait(EndChunk(e))
                             end_chunk_generated = True
                         else:
-                            raise HTTPException(
-                                status_code=e.status_code,
-                                detail=json_error(
-                                    message=e.message,
-                                    type=e.type,
-                                    param=e.param,
-                                    code=e.code,
-                                    display_message=e.display_message,
-                                ),
-                            )
+                            raise e.to_fastapi_exception()
                     except Exception as e:
-                        log_exception("Error during processing the request")
+                        log_exception(RUNTIME_ERROR_MESSAGE)
 
                         if self.request.stream:
                             self._queue.put_nowait(EndChunk(e))
                             end_chunk_generated = True
                         else:
-                            raise HTTPException(
-                                status_code=500,
-                                detail=json_error(
-                                    message="Error during processing the request",
-                                    type="runtime_error",
-                                ),
-                            )
+                            raise runtime_server_error(
+                                RUNTIME_ERROR_MESSAGE
+                            ).to_fastapi_exception()
 
                     if not end_chunk_generated:
                         self._queue.put_nowait(EndChunk())
@@ -169,41 +154,26 @@ class Response:
                         yield chunk
 
                 if item.exc:
-                    if isinstance(item.exc, DialHttpException):
-                        formatted_chunk = format_chunk(
-                            json_error(
-                                message=item.exc.message,
-                                type=item.exc.type,
-                                param=item.exc.param,
-                                code=item.exc.code,
-                                display_message=item.exc.display_message,
-                            )
-                        )
+                    if isinstance(item.exc, DIALException):
+                        formatted_chunk = format_chunk(item.exc.json_error())
                     else:
                         formatted_chunk = format_chunk(
-                            json_error(
-                                message="Error during processing the request",
-                                type="runtime_error",
-                            )
+                            runtime_server_error(
+                                RUNTIME_ERROR_MESSAGE
+                            ).json_error()
                         )
                     yield formatted_chunk
                 else:
                     if self._last_choice_index != (self.request.n or 1):
                         log_error("Not all choices were generated")
 
-                        error = json_error(
-                            message="Error during processing the request",
-                            type="runtime_error",
-                        )
+                        error = runtime_server_error(RUNTIME_ERROR_MESSAGE)
 
                         if self.request.stream:
-                            formatted_chunk = format_chunk(error)
+                            formatted_chunk = format_chunk(error.json_error())
                             yield formatted_chunk
                         else:
-                            raise HTTPException(
-                                status_code=500,
-                                detail=error,
-                            )
+                            raise error.to_fastapi_exception()
 
                 if self.request.stream:
                     yield format_chunk(DONE_MARKER)
@@ -230,26 +200,13 @@ class Response:
         if self.user_task in done:
             try:
                 self.user_task.result()
-            except DialHttpException as e:
-                raise HTTPException(
-                    status_code=e.status_code,
-                    detail=json_error(
-                        message=e.message,
-                        type=e.type,
-                        param=e.param,
-                        code=e.code,
-                        display_message=e.display_message,
-                    ),
-                )
+            except DIALException as e:
+                raise e.to_fastapi_exception()
             except Exception:
-                log_exception("Error during processing the request")
-                raise HTTPException(
-                    status_code=500,
-                    detail=json_error(
-                        message="Error during processing the request",
-                        type="runtime_error",
-                    ),
-                )
+                log_exception(RUNTIME_ERROR_MESSAGE)
+                raise runtime_server_error(
+                    RUNTIME_ERROR_MESSAGE
+                ).to_fastapi_exception()
 
         return get_task.result() if get_task in done else await get_task
 
