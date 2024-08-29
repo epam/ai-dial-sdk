@@ -283,7 +283,7 @@ class Response:
         # FIXME: ugly hack
         if isinstance(chunk, UnstructuredChunk):
             for choice in chunk.data.get("choices") or []:
-                if index := choice.get("index") is not None:
+                if (index := choice.get("index")) is not None:
                     self._last_choice_index = max(
                         self._last_choice_index, index + 1
                     )
