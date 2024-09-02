@@ -3,6 +3,7 @@ from json import JSONDecodeError
 from typing import Any, Mapping, Optional, Type, TypeVar
 
 import fastapi
+from pydantic import Field
 
 from aidial_sdk.exceptions import HTTPException as DIALException
 from aidial_sdk.pydantic_v1 import SecretStr, StrictStr, root_validator
@@ -34,6 +35,11 @@ class FromRequestDeploymentMixin(FromRequestMixin):
     deployment_id: StrictStr
     api_version: Optional[StrictStr] = None
     headers: Mapping[StrictStr, StrictStr]
+
+    original_request: fastapi.Request = Field(..., exclude=True)
+
+    class Config:
+        arbitrary_types_allowed = True
 
     @root_validator(pre=True)
     def create_secrets(cls, values: dict):
@@ -84,6 +90,7 @@ class FromRequestDeploymentMixin(FromRequestMixin):
             deployment_id=deployment_id,
             api_version=request.query_params.get("api-version"),
             headers=headers,
+            original_request=request,
         )
 
 
