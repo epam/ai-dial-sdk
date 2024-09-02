@@ -1,18 +1,22 @@
 import copy
+import json
 
 from pydantic import BaseModel
 
+from aidial_sdk.utils.logging import logger
 from aidial_sdk.utils.merge_chunks import cleanup_indices, merge
 
 
-class ChunkAccumulator(BaseModel):
+class StreamingResponseSnapshot(BaseModel):
     merged_chunks: dict = {}
 
-    def add_chunk(self, chunk: dict) -> None:
+    def add_delta(self, chunk: dict) -> None:
         # Avoid merging top-level atomic fields
         # like "id", "created", "model", "object", "system_fingerprint".
         # Non-atomic field like "choice" will be merged following
         # the standard merging procedure.
+
+        logger.debug("chunk: " + json.dumps(chunk))
 
         chunk = chunk.copy()
 
@@ -25,8 +29,9 @@ class ChunkAccumulator(BaseModel):
 
     def to_block_response(self) -> dict:
         response = copy.deepcopy(self.merged_chunks)
-        for choice in response["choices"]:
-            choice["message"] = cleanup_indices(choice["delta"])
-            del choice["delta"]
+        for choice in response.get("choices") or []:
+            if "delta" in choice:
+                choice["message"] = cleanup_indices(choice["delta"])
+                del choice["delta"]
         response["object"] = "chat.completion"
         return response

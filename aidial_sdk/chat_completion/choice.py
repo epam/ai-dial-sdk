@@ -25,7 +25,7 @@ from aidial_sdk.utils.logging import log_debug
 
 
 class Choice(ChoiceBase):
-    _queue: Queue
+    _response: Queue
     _index: int
     _last_attachment_index: int
     _last_stage_index: int
@@ -62,8 +62,7 @@ class Choice(ChoiceBase):
         return False
 
     def send_chunk(self, chunk: BaseChunk) -> None:
-        log_debug("chunk: " + json.dumps(chunk.to_dict()))
-        self._queue.put_nowait(chunk)
+        self._response.send_chunk(chunk)
 
     @property
     def index(self) -> int:

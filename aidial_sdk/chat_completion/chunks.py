@@ -482,7 +482,7 @@ class DiscardedMessagesChunk(BaseChunk):
         }
 
 
-class EndChunk:
+class EndMarker:
     exc: Optional[Exception]
 
     def __init__(self, exc: Optional[Exception] = None):
