@@ -11,6 +11,8 @@ from aidial_sdk.pydantic_v1 import SecretStr
 
 DISCARDED_MESSAGES = list(range(0, 12))
 
+dummy_request = fastapi.Request({"type": "http"})
+
 
 def test_discarded_messages_returned():
     dial_app = DIALApp()
