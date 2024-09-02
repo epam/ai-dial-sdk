@@ -1,6 +1,8 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 
+from openai.types.chat.chat_completion_chunk import ChatCompletionChunk
+
 from aidial_sdk.chat_completion.enums import FinishReason, Status
 from aidial_sdk.pydantic_v1 import BaseModel, root_validator
 from aidial_sdk.utils.json import remove_nones
@@ -12,14 +14,14 @@ class BaseChunk(ABC):
         pass
 
 
-class UnstructuredChunk(BaseChunk):
-    data: Dict[str, Any]
+class ArbitraryChunk(BaseChunk):
+    data: ChatCompletionChunk
 
-    def __init__(self, data: Dict[str, Any]):
+    def __init__(self, data: ChatCompletionChunk):
         self.data = data
 
     def to_dict(self):
-        return self.data
+        return self.data.dict()
 
 
 class StartChoiceChunk(BaseChunk):

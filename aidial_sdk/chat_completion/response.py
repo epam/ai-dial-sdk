@@ -13,11 +13,11 @@ from uuid import uuid4
 
 from aidial_sdk.chat_completion.choice import Choice
 from aidial_sdk.chat_completion.chunks import (
+    ArbitraryChunk,
     BaseChunk,
     DiscardedMessagesChunk,
     EndChoiceChunk,
     EndChunk,
-    UnstructuredChunk,
     UsageChunk,
     UsagePerModelChunk,
 )
@@ -281,12 +281,11 @@ class Response:
 
     def send_chunk(self, chunk: BaseChunk):
         # FIXME: ugly hack
-        if isinstance(chunk, UnstructuredChunk):
-            for choice in chunk.data.get("choices") or []:
-                if (index := choice.get("index")) is not None:
-                    self._last_choice_index = max(
-                        self._last_choice_index, index + 1
-                    )
+        if isinstance(chunk, ArbitraryChunk):
+            for choice in chunk.data.choices:
+                self._last_choice_index = max(
+                    self._last_choice_index, choice.index + 1
+                )
 
         self._queue.put_nowait(chunk)
 
