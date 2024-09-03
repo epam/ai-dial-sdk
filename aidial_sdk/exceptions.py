@@ -1,3 +1,5 @@
+import functools
+import warnings
 from http import HTTPStatus
 from typing import Optional
 
@@ -66,112 +68,147 @@ class HTTPException(Exception):
         )
 
 
-def resource_not_found_error(message: str, **kwargs) -> HTTPException:
+class ResourceNotFoundError(HTTPException):
     """
     Thrown by OpenAI when either endpoint is invalid or api-version is unknown
     """
-    return HTTPException(
-        status_code=HTTPStatus.NOT_FOUND,
-        message=message,
-        **kwargs,
-    )
+
+    def __init__(self, message: str, **kwargs) -> None:
+        super().__init__(
+            status_code=HTTPStatus.NOT_FOUND,
+            message=message,
+            **kwargs,
+        )
 
 
-def deployment_not_found_error(message: str, **kwargs) -> HTTPException:
+class DeploymentNotFoundError(HTTPException):
     """
     Thrown by OpenAI when the deployment isn't found
     """
-    return HTTPException(
-        status_code=HTTPStatus.NOT_FOUND,
-        code="DeploymentNotFound",
-        message=message,
-        **kwargs,
-    )
+
+    def __init__(self, message: str, **kwargs) -> None:
+        super().__init__(
+            status_code=HTTPStatus.NOT_FOUND,
+            code="DeploymentNotFound",
+            message=message,
+            **kwargs,
+        )
 
 
-def request_validation_error(message: str, **kwargs) -> HTTPException:
-    return HTTPException(
-        status_code=HTTPStatus.UNPROCESSABLE_ENTITY,
-        type="invalid_request_error",
-        message=message,
-        **kwargs,
-    )
+class RequestValidationError(HTTPException):
+    def __init__(self, message: str, **kwargs) -> None:
+        return super().__init__(
+            status_code=HTTPStatus.UNPROCESSABLE_ENTITY,
+            type="invalid_request_error",
+            message=message,
+            **kwargs,
+        )
 
 
-def invalid_request_error(message: str, **kwargs) -> HTTPException:
-    return HTTPException(
-        status_code=HTTPStatus.BAD_REQUEST,
-        type="invalid_request_error",
-        message=message,
-        **kwargs,
-    )
+class InvalidRequestError(HTTPException):
+    def __init__(self, message: str, **kwargs) -> None:
+        return super().__init__(
+            status_code=HTTPStatus.BAD_REQUEST,
+            type="invalid_request_error",
+            message=message,
+            **kwargs,
+        )
 
 
-def context_length_exceeded_error(
-    max_context_length: int, prompt_tokens: int
-) -> HTTPException:
+class ContextLengthExceededError(InvalidRequestError):
     """
     The error message that Azure OpenAI returns when the context length is exceeded.
     """
-    message = (
-        f"This model's maximum context length is {max_context_length} tokens. "
-        f"However, your messages resulted in {prompt_tokens} tokens. "
-        "Please reduce the length of the messages."
-    )
-    return invalid_request_error(
-        message=message,
-        code="context_length_exceeded",
-        param="messages",
-    )
+
+    def __init__(self, max_context_length: int, prompt_tokens: int) -> None:
+        message = (
+            f"This model's maximum context length is {max_context_length} tokens. "
+            f"However, your messages resulted in {prompt_tokens} tokens. "
+            "Please reduce the length of the messages."
+        )
+        return super().__init__(
+            message=message,
+            code="context_length_exceeded",
+            param="messages",
+        )
 
 
-def _truncate_prompt_error(message: str, **kwargs) -> HTTPException:
-    return invalid_request_error(
-        code="truncate_prompt_error",
-        param="max_prompt_tokens",
-        message=message,
-        **kwargs,
-    )
+class _TruncatePromptError(InvalidRequestError):
+    def __init__(self, message: str, **kwargs) -> None:
+        return super().__init__(
+            message=message,
+            code="truncate_prompt_error",
+            param="max_prompt_tokens",
+            **kwargs,
+        )
 
 
-def truncate_prompt_error_system(
-    max_prompt_tokens: int, prompt_tokens: int
-) -> HTTPException:
+class TruncatePromptErrorSystem(_TruncatePromptError):
     """
-    The error message mimics the one of `context_length_exceeded_error`.
+    The error message mimics the one of `ContextLengthExceededError`.
     """
-    message = (
-        f"The requested maximum prompt tokens is {max_prompt_tokens}. "
-        f"However, the system messages resulted in {prompt_tokens} tokens. "
-        "Please reduce the length of the system messages or increase the maximum prompt tokens."
-    )
-    return _truncate_prompt_error(message=message, display_message=message)
+
+    def __init__(self, max_prompt_tokens: int, prompt_tokens: int) -> None:
+        message = (
+            f"The requested maximum prompt tokens is {max_prompt_tokens}. "
+            f"However, the system messages resulted in {prompt_tokens} tokens. "
+            "Please reduce the length of the system messages or increase the maximum prompt tokens."
+        )
+        return super().__init__(message=message, display_message=message)
 
 
-def truncate_prompt_error_system_and_last_user(
-    max_prompt_tokens: int, prompt_tokens: int
-) -> HTTPException:
-    message = (
-        f"The requested maximum prompt tokens is {max_prompt_tokens}. "
-        f"However, the system messages and the last user message resulted in {prompt_tokens} tokens. "
-        "Please reduce the length of the messages or increase the maximum prompt tokens."
-    )
-    return _truncate_prompt_error(message=message, display_message=message)
+class TruncatePromptErrorSystemAndLastUser(_TruncatePromptError):
+    def __init__(self, max_prompt_tokens: int, prompt_tokens: int) -> None:
+        message = (
+            f"The requested maximum prompt tokens is {max_prompt_tokens}. "
+            f"However, the system messages and the last user message resulted in {prompt_tokens} tokens. "
+            "Please reduce the length of the messages or increase the maximum prompt tokens."
+        )
+        return super().__init__(message=message, display_message=message)
 
 
-def runtime_server_error(message: str, **kwargs) -> HTTPException:
-    return HTTPException(
-        status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
-        type="runtime_error",
-        message=message,
-        **kwargs,
-    )
+class RuntimeServerError(HTTPException):
+    def __init__(self, message: str, **kwargs) -> None:
+        return super().__init__(
+            status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+            type="runtime_error",
+            message=message,
+            **kwargs,
+        )
 
 
-def internal_server_error(message: str, **kwargs) -> HTTPException:
-    return HTTPException(
-        status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
-        type="internal_server_error",
-        message=message,
-        **kwargs,
-    )
+class InternalServerError(HTTPException):
+    def __init__(self, message: str, **kwargs) -> None:
+        return super().__init__(
+            status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+            type="internal_server_error",
+            message=message,
+            **kwargs,
+        )
+
+
+def _deprecated(ctor):
+    @functools.wraps(ctor)
+    def wrapped(*args, **kwargs):
+        warnings.warn(
+            "The helper method is deprecated. "
+            f"Use {ctor.__name__} class constructor directly.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return ctor(*args, **kwargs)
+
+    return wrapped
+
+
+resource_not_found_error = _deprecated(ResourceNotFoundError)
+deployment_not_found_error = _deprecated(DeploymentNotFoundError)
+request_validation_error = _deprecated(RequestValidationError)
+invalid_request_error = _deprecated(InvalidRequestError)
+context_length_exceeded_error = _deprecated(ContextLengthExceededError)
+truncate_prompt_error_system = _deprecated(TruncatePromptErrorSystem)
+truncate_prompt_error_system_and_last_user = _deprecated(
+    TruncatePromptErrorSystemAndLastUser
+)
+runtime_server_error = _deprecated(RuntimeServerError)
+internal_server_error = _deprecated(InternalServerError)
