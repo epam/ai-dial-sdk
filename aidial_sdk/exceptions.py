@@ -143,7 +143,7 @@ class _TruncatePromptError(InvalidRequestError):
         )
 
 
-class TruncatePromptErrorSystem(_TruncatePromptError):
+class TruncatePromptSystemError(_TruncatePromptError):
     """
     The error message mimics the one of `ContextLengthExceededError`.
     """
@@ -157,7 +157,7 @@ class TruncatePromptErrorSystem(_TruncatePromptError):
         return super().__init__(message=message, display_message=message)
 
 
-class TruncatePromptErrorSystemAndLastUser(_TruncatePromptError):
+class TruncatePromptSystemAndLastUserError(_TruncatePromptError):
     def __init__(self, max_prompt_tokens: int, prompt_tokens: int) -> None:
         message = (
             f"The requested maximum prompt tokens is {max_prompt_tokens}. "
@@ -206,9 +206,9 @@ deployment_not_found_error = _deprecated(DeploymentNotFoundError)
 request_validation_error = _deprecated(RequestValidationError)
 invalid_request_error = _deprecated(InvalidRequestError)
 context_length_exceeded_error = _deprecated(ContextLengthExceededError)
-truncate_prompt_error_system = _deprecated(TruncatePromptErrorSystem)
+truncate_prompt_error_system = _deprecated(TruncatePromptSystemError)
 truncate_prompt_error_system_and_last_user = _deprecated(
-    TruncatePromptErrorSystemAndLastUser
+    TruncatePromptSystemAndLastUserError
 )
 runtime_server_error = _deprecated(RuntimeServerError)
 internal_server_error = _deprecated(InternalServerError)
