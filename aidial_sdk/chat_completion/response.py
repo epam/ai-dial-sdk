@@ -16,6 +16,7 @@ from aidial_sdk.chat_completion.choice import Choice
 from aidial_sdk.chat_completion.chunks import (
     ArbitraryChunk,
     BaseChunk,
+    DefaultChunk,
     DiscardedMessagesChunk,
     EndChoiceChunk,
     EndMarker,
@@ -45,10 +46,7 @@ class Response:
     _discarded_messages_generated: bool
     _usage_generated: bool
 
-    _response_id: str
-    _model: Optional[str]
-    _created: int
-    _object: str
+    _default_chunk: DefaultChunk
 
     def __init__(self, request: Request):
         self._queue = asyncio.Queue()
@@ -60,38 +58,26 @@ class Response:
         self._usage_generated = False
 
         self.request = request
-        self._response_id = str(uuid4())
-        self._model = None
-        self._created = int(time())
-        self._object = (
-            "chat.completion.chunk" if request.stream else "chat.completion"
+
+        self._default_chunk = DefaultChunk(
+            response_id=str(uuid4()),
+            model=None,
+            created=int(time()),
+            object=(
+                "chat.completion.chunk" if request.stream else "chat.completion"
+            ),
         )
 
     def get_block_response(self) -> dict:
         return self._snapshot.to_block_response()
 
-    def _add_default_fields(self, target: Dict[str, Any]) -> dict:
-        target.update(
-            remove_nones(
-                {
-                    "id": self._response_id,
-                    "model": self._model,
-                    "created": self._created,
-                    "object": self._object,
-                }
-            )
-        )
-        return target
-
     async def _generate_stream(
         self, first_chunk: BaseChunk
     ) -> AsyncGenerator[Any, None]:
         chunk = first_chunk.to_dict()
-        chunk = self._add_default_fields(chunk)
 
         if self.request.stream:
-            formatted_chunk = format_chunk(chunk)
-            yield formatted_chunk
+            yield format_chunk(chunk)
         else:
             yield chunk
 
@@ -152,22 +138,18 @@ class Response:
 
             elif isinstance(item, BaseChunk):
                 chunk = item.to_dict()
-                chunk = self._add_default_fields(chunk)
 
                 if self.request.stream:
-                    formatted_chunk = format_chunk(chunk)
-                    yield formatted_chunk
+                    yield format_chunk(chunk)
                 else:
                     yield chunk
 
             elif isinstance(item, EndMarker):
                 if last_end_choice_chunk:
                     chunk = merge(last_end_choice_chunk, usage_chunk)
-                    chunk = self._add_default_fields(chunk)
 
                     if self.request.stream:
-                        formatted_chunk = format_chunk(chunk)
-                        yield formatted_chunk
+                        yield format_chunk(chunk)
                     else:
                         yield chunk
 
@@ -187,8 +169,7 @@ class Response:
                         error = runtime_server_error(RUNTIME_ERROR_MESSAGE)
 
                         if self.request.stream:
-                            formatted_chunk = format_chunk(error.json_error())
-                            yield formatted_chunk
+                            yield format_chunk(error.json_error())
                         else:
                             raise error.to_fastapi_exception()
 
@@ -232,7 +213,7 @@ class Response:
         if self._last_choice_index >= (self.request.n or 1):
             raise runtime_error("Trying to generate more chunks than requested")
 
-        choice = Choice(self._queue, self._last_choice_index)
+        choice = Choice(self, self._last_choice_index)
         self._last_choice_index += 1
 
         return choice
@@ -304,7 +285,7 @@ class Response:
                 )
 
         if isinstance(chunk, BaseChunk):
-            self._snapshot.add_delta(chunk.to_dict())
+            self._snapshot.add_delta(chunk.to_dict(self._default_chunk.dict()))
 
         self._queue.put_nowait(chunk)
 

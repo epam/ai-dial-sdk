@@ -1,7 +1,7 @@
-from asyncio import Queue
 from types import TracebackType
 from typing import Optional, Type, overload
 
+from aidial_sdk.chat_completion._chunk_consumer import ChunkConsumer
 from aidial_sdk.chat_completion.chunks import (
     AttachmentStageChunk,
     ContentStageChunk,
@@ -18,7 +18,7 @@ from aidial_sdk.utils.errors import runtime_error
 
 
 class Stage:
-    _queue: Queue
+    _sink: ChunkConsumer
     _choice_index: int
     _stage_index: int
     _name: Optional[str]
@@ -28,12 +28,12 @@ class Stage:
 
     def __init__(
         self,
-        queue: Queue,
+        sink: ChunkConsumer,
         choice_index: int,
         stage_index: int,
         name: Optional[str] = None,
     ):
-        self._queue = queue
+        self._sink = sink
         self._choice_index = choice_index
         self._stage_index = stage_index
         self._last_attachment_index = 0
@@ -65,7 +65,7 @@ class Stage:
         if self._closed:
             raise runtime_error("Trying to append content to a closed stage")
 
-        self._queue.put_nowait(
+        self._sink.send_chunk(
             ContentStageChunk(self._choice_index, self._stage_index, content)
         )
 
@@ -79,7 +79,7 @@ class Stage:
         if self._closed:
             raise runtime_error("Trying to append name to a closed stage")
 
-        self._queue.put_nowait(
+        self._sink.send_chunk(
             NameStageChunk(self._choice_index, self._stage_index, name)
         )
 
@@ -114,7 +114,7 @@ class Stage:
         except ValidationError as e:
             raise runtime_error(e.errors()[0]["msg"])
 
-        self._queue.put_nowait(attachment_stage_chunk)
+        self._sink.send_chunk(attachment_stage_chunk)
         self._last_attachment_index += 1
 
     def open(self):
@@ -122,7 +122,7 @@ class Stage:
             raise runtime_error("The stage is already open")
 
         self._opened = True
-        self._queue.put_nowait(
+        self._sink.send_chunk(
             StartStageChunk(self._choice_index, self._stage_index, self._name)
         )
 
@@ -133,6 +133,6 @@ class Stage:
             raise runtime_error("The stage is already closed")
 
         self._closed = True
-        self._queue.put_nowait(
+        self._sink.send_chunk(
             FinishStageChunk(self._choice_index, self._stage_index, status)
         )

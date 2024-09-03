@@ -8,9 +8,16 @@ from aidial_sdk.pydantic_v1 import BaseModel, root_validator
 from aidial_sdk.utils.json import remove_nones
 
 
+class DefaultChunk(BaseModel):
+    response_id: Optional[str] = None
+    model: Optional[str] = None
+    created: Optional[int] = None
+    object: Optional[str] = None
+
+
 class BaseChunk(ABC):
     @abstractmethod
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self, overrides: dict) -> Dict[str, Any]:
         pass
 
 
@@ -20,8 +27,8 @@ class ArbitraryChunk(BaseChunk):
     def __init__(self, data: ChatCompletionChunk):
         self.data = data
 
-    def to_dict(self):
-        return self.data.dict()
+    def to_dict(self, overrides):
+        return self.data.dict() | overrides
 
 
 class StartChoiceChunk(BaseChunk):
@@ -30,7 +37,7 @@ class StartChoiceChunk(BaseChunk):
     def __init__(self, choice_index: int):
         self.choice_index = choice_index
 
-    def to_dict(self):
+    def to_dict(self, overrides):
         return {
             "choices": [
                 {
@@ -40,7 +47,7 @@ class StartChoiceChunk(BaseChunk):
                 }
             ],
             "usage": None,
-        }
+        } | overrides
 
 
 class EndChoiceChunk(BaseChunk):
@@ -51,7 +58,7 @@ class EndChoiceChunk(BaseChunk):
         self.finish_reason = finish_reason
         self.choice_index = choice_index
 
-    def to_dict(self):
+    def to_dict(self, overrides):
         return {
             "choices": [
                 {
@@ -61,7 +68,7 @@ class EndChoiceChunk(BaseChunk):
                 }
             ],
             "usage": None,
-        }
+        } | overrides
 
 
 class ContentChunk(BaseChunk):
@@ -72,7 +79,7 @@ class ContentChunk(BaseChunk):
         self.content = content
         self.choice_index = choice_index
 
-    def to_dict(self):
+    def to_dict(self, overrides):
         return {
             "choices": [
                 {
@@ -82,7 +89,7 @@ class ContentChunk(BaseChunk):
                 }
             ],
             "usage": None,
-        }
+        } | overrides
 
 
 class FunctionToolCallChunk(BaseChunk):
@@ -106,7 +113,7 @@ class FunctionToolCallChunk(BaseChunk):
         self.name = name
         self.arguments = arguments
 
-    def to_dict(self):
+    def to_dict(self, overrides):
         return {
             "choices": [
                 {
@@ -132,7 +139,7 @@ class FunctionToolCallChunk(BaseChunk):
                 }
             ],
             "usage": None,
-        }
+        } | overrides
 
 
 class FunctionCallChunk(BaseChunk):
@@ -150,7 +157,7 @@ class FunctionCallChunk(BaseChunk):
         self.name = name
         self.arguments = arguments
 
-    def to_dict(self):
+    def to_dict(self, overrides):
         return {
             "choices": [
                 {
@@ -167,7 +174,7 @@ class FunctionCallChunk(BaseChunk):
                 }
             ],
             "usage": None,
-        }
+        } | overrides
 
 
 class StartStageChunk(BaseChunk):
@@ -182,7 +189,7 @@ class StartStageChunk(BaseChunk):
         self.stage_index = stage_index
         self.name = name
 
-    def to_dict(self):
+    def to_dict(self, overrides):
         return {
             "choices": [
                 {
@@ -202,7 +209,7 @@ class StartStageChunk(BaseChunk):
                 }
             ],
             "usage": None,
-        }
+        } | overrides
 
 
 class FinishStageChunk(BaseChunk):
@@ -215,7 +222,7 @@ class FinishStageChunk(BaseChunk):
         self.stage_index = stage_index
         self.status = status
 
-    def to_dict(self):
+    def to_dict(self, overrides):
         return {
             "choices": [
                 {
@@ -234,7 +241,7 @@ class FinishStageChunk(BaseChunk):
                 }
             ],
             "usage": None,
-        }
+        } | overrides
 
 
 class ContentStageChunk(BaseChunk):
@@ -247,7 +254,7 @@ class ContentStageChunk(BaseChunk):
         self.stage_index = stage_index
         self.content = content
 
-    def to_dict(self):
+    def to_dict(self, overrides):
         return {
             "choices": [
                 {
@@ -267,7 +274,7 @@ class ContentStageChunk(BaseChunk):
                 }
             ],
             "usage": None,
-        }
+        } | overrides
 
 
 class NameStageChunk(BaseChunk):
@@ -280,7 +287,7 @@ class NameStageChunk(BaseChunk):
         self.stage_index = stage_index
         self.name = name
 
-    def to_dict(self):
+    def to_dict(self, overrides):
         return {
             "choices": [
                 {
@@ -300,7 +307,7 @@ class NameStageChunk(BaseChunk):
                 }
             ],
             "usage": None,
-        }
+        } | overrides
 
 
 class Attachment(BaseModel):
@@ -345,7 +352,7 @@ class Attachment(BaseModel):
 
 
 class AttachmentChunk(Attachment, BaseChunk):
-    def to_dict(self):
+    def to_dict(self, overrides):
         return {
             "choices": [
                 {
@@ -361,13 +368,13 @@ class AttachmentChunk(Attachment, BaseChunk):
                 }
             ],
             "usage": None,
-        }
+        } | overrides
 
 
 class AttachmentStageChunk(Attachment, BaseChunk):
     stage_index: int
 
-    def to_dict(self):
+    def to_dict(self, overrides):
         return {
             "choices": [
                 {
@@ -391,7 +398,7 @@ class AttachmentStageChunk(Attachment, BaseChunk):
                 }
             ],
             "usage": None,
-        }
+        } | overrides
 
 
 class StateChunk(BaseChunk):
@@ -402,7 +409,7 @@ class StateChunk(BaseChunk):
         self.state = state
         self.choice_index = choice_index
 
-    def to_dict(self):
+    def to_dict(self, overrides):
         return {
             "choices": [
                 {
@@ -412,7 +419,7 @@ class StateChunk(BaseChunk):
                 }
             ],
             "usage": None,
-        }
+        } | overrides
 
 
 class UsageChunk(BaseChunk):
@@ -423,14 +430,14 @@ class UsageChunk(BaseChunk):
         self.prompt_tokens = prompt_tokens
         self.completion_tokens = completion_tokens
 
-    def to_dict(self):
+    def to_dict(self, overrides):
         return {
             "usage": {
                 "prompt_tokens": self.prompt_tokens,
                 "completion_tokens": self.completion_tokens,
                 "total_tokens": self.prompt_tokens + self.completion_tokens,
-            }
-        }
+            },
+        } | overrides
 
 
 class UsagePerModelChunk(BaseChunk):
@@ -451,7 +458,7 @@ class UsagePerModelChunk(BaseChunk):
         self.prompt_tokens = prompt_tokens
         self.completion_tokens = completion_tokens
 
-    def to_dict(self):
+    def to_dict(self, overrides):
         return {
             "statistics": {
                 "usage_per_model": [
@@ -464,8 +471,8 @@ class UsagePerModelChunk(BaseChunk):
                         + self.completion_tokens,
                     }
                 ]
-            }
-        }
+            },
+        } | overrides
 
 
 class DiscardedMessagesChunk(BaseChunk):
@@ -474,12 +481,12 @@ class DiscardedMessagesChunk(BaseChunk):
     def __init__(self, discarded_messages: List[int]):
         self.discarded_messages = discarded_messages
 
-    def to_dict(self):
+    def to_dict(self, overrides):
         return {
             "statistics": {
                 "discarded_messages": self.discarded_messages,
-            }
-        }
+            },
+        } | overrides
 
 
 class EndMarker:
