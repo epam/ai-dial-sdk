@@ -1,13 +1,6 @@
 import asyncio
 from time import time
-from typing import (
-    Any,
-    AsyncGenerator,
-    Callable,
-    Coroutine,
-    List,
-    Union,
-)
+from typing import Any, AsyncGenerator, Callable, Coroutine, List, Union
 from uuid import uuid4
 
 from aidial_sdk.chat_completion.choice import Choice
@@ -58,7 +51,6 @@ class Response:
 
         self._default_chunk = DefaultChunk(
             response_id=str(uuid4()),
-            model=None,
             created=int(time()),
             object=(
                 "chat.completion.chunk" if request.stream else "chat.completion"
@@ -71,7 +63,7 @@ class Response:
     async def _generate_stream(
         self, first_chunk: BaseChunk
     ) -> AsyncGenerator[Any, None]:
-        chunk = first_chunk.to_dict()
+        chunk = first_chunk.to_dict(self._default_chunk)
 
         if self.request.stream:
             yield format_chunk(chunk)
@@ -123,7 +115,7 @@ class Response:
 
             if isinstance(item, EndChoiceChunk):
                 if item.choice_index == (self.request.n or 1) - 1:
-                    last_end_choice_chunk = item.to_dict()
+                    last_end_choice_chunk = item.to_dict(self._default_chunk)
                     self._queue.task_done()
                     continue
 
@@ -131,10 +123,12 @@ class Response:
                 item,
                 (UsageChunk, UsagePerModelChunk, DiscardedMessagesChunk),
             ):
-                usage_chunk = merge(usage_chunk, item.to_dict())
+                usage_chunk = merge(
+                    usage_chunk, item.to_dict(self._default_chunk)
+                )
 
             elif isinstance(item, BaseChunk):
-                chunk = item.to_dict()
+                chunk = item.to_dict(self._default_chunk)
 
                 if self.request.stream:
                     yield format_chunk(chunk)
@@ -283,7 +277,7 @@ class Response:
                 )
 
         if isinstance(chunk, BaseChunk):
-            self._snapshot.add_delta(chunk.to_dict(self._default_chunk.dict()))
+            self._snapshot.add_delta(chunk.to_dict(self._default_chunk))
 
         self._queue.put_nowait(chunk)
 
@@ -304,7 +298,7 @@ class Response:
                 'Trying to set "model" after start of generation'
             )
 
-        self._model = model
+        self._default_chunk["model"] = model
 
     def set_response_id(self, response_id: str):
         if self._generation_started:
@@ -312,4 +306,4 @@ class Response:
                 'Trying to set "response_id" after start of generation',
             )
 
-        self._response_id = response_id
+        self._default_chunk["response_id"] = response_id

@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TypedDict
 
 from openai.types.chat.chat_completion_chunk import ChatCompletionChunk
 
@@ -8,16 +8,16 @@ from aidial_sdk.pydantic_v1 import BaseModel, root_validator
 from aidial_sdk.utils.json import remove_nones
 
 
-class DefaultChunk(BaseModel):
-    response_id: Optional[str] = None
-    model: Optional[str] = None
-    created: Optional[int] = None
-    object: Optional[str] = None
+class DefaultChunk(TypedDict, total=False):
+    response_id: str
+    model: str
+    created: int
+    object: str
 
 
 class BaseChunk(ABC):
     @abstractmethod
-    def to_dict(self, overrides: dict) -> Dict[str, Any]:
+    def to_dict(self, overrides: DefaultChunk) -> Dict[str, Any]:
         pass
 
 
