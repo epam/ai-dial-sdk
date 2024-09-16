@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "aidial-sdk"
-version = "0.12.0rc"
+version = "0.13.0rc"
 description = "Framework to create applications and model adapters for AI DIAL"
 authors = ["EPAM RAIL <SpecialEPM-DIALDevTeam@epam.com>"]
 homepage = "https://epam-rail.com"

@@ -5,9 +5,7 @@ from typing import (
     AsyncGenerator,
     Callable,
     Coroutine,
-    Dict,
     List,
-    Optional,
     Union,
 )
 from uuid import uuid4
@@ -26,9 +24,8 @@ from aidial_sdk.chat_completion.chunks import (
 from aidial_sdk.chat_completion.request import Request
 from aidial_sdk.chat_completion.snapshot import StreamingResponseSnapshot
 from aidial_sdk.exceptions import HTTPException as DIALException
-from aidial_sdk.exceptions import request_validation_error, runtime_server_error
+from aidial_sdk.exceptions import RequestValidationError, RuntimeServerError
 from aidial_sdk.utils.errors import RUNTIME_ERROR_MESSAGE, runtime_error
-from aidial_sdk.utils.json import remove_nones
 from aidial_sdk.utils.logging import log_error, log_exception
 from aidial_sdk.utils.merge_chunks import merge
 from aidial_sdk.utils.streaming import DONE_MARKER, format_chunk
@@ -114,7 +111,7 @@ class Response:
                             self.send_chunk(EndMarker(e))
                             end_chunk_generated = True
                         else:
-                            raise runtime_server_error(
+                            raise RuntimeServerError(
                                 RUNTIME_ERROR_MESSAGE
                             ).to_fastapi_exception()
 
@@ -157,16 +154,17 @@ class Response:
                     if isinstance(item.exc, DIALException):
                         chunk = item.exc.json_error()
                     else:
-                        chunk = runtime_server_error(
-                            RUNTIME_ERROR_MESSAGE
-                        ).json_error()
-
-                    yield format_chunk(chunk)
+                        chunk = format_chunk(
+                            RuntimeServerError(
+                                RUNTIME_ERROR_MESSAGE
+                            ).json_error()
+                        )
+                    yield chunk
                 else:
                     if self._last_choice_index != (self.request.n or 1):
                         log_error("Not all choices were generated")
 
-                        error = runtime_server_error(RUNTIME_ERROR_MESSAGE)
+                        error = RuntimeServerError(RUNTIME_ERROR_MESSAGE)
 
                         if self.request.stream:
                             yield format_chunk(error.json_error())
@@ -201,7 +199,7 @@ class Response:
                 raise e.to_fastapi_exception()
             except Exception:
                 log_exception(RUNTIME_ERROR_MESSAGE)
-                raise runtime_server_error(
+                raise RuntimeServerError(
                     RUNTIME_ERROR_MESSAGE
                 ).to_fastapi_exception()
 
@@ -224,7 +222,7 @@ class Response:
                 "Trying to generate a single choice after choice"
             )
         if (self.request.n or 1) > 1:
-            raise request_validation_error(
+            raise RequestValidationError(
                 message=f"{self.request.deployment_id} deployment doesn't support n > 1"
             )
 
