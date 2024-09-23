@@ -1,6 +1,7 @@
 from typing import Any, List, TypeVar, Union, cast
 
-T = TypeVar("T")
+_T = TypeVar("_T")
+_Chunk = TypeVar("_Chunk", bound=dict)
 
 Path = List[Union[int, str]]
 
@@ -120,15 +121,15 @@ def merge_lists(target: list, source: list, path: Path) -> list:
     return merge_indexed_lists(target, source, path)
 
 
-def merge_recursive(target: T, source: Any, path: Path) -> T:
+def merge_recursive(target: _T, source: Any, path: Path) -> _T:
     if source is None:
         return target
 
     if target is None:
         if isinstance(source, dict):
-            target = cast(T, {})
+            target = cast(_T, {})
         elif isinstance(source, list):
-            target = cast(T, [])
+            target = cast(_T, [])
         else:
             return source
 
@@ -150,15 +151,41 @@ def merge_recursive(target: T, source: Any, path: Path) -> T:
     )
 
 
-def merge(*chunks: T) -> T:
-    assert len(chunks) > 0, "At least one chunk must be provided"
-    ret: T = chunks[0]
-    for chunk in chunks[1:]:
-        ret = merge_recursive(ret, chunk, path=[])
+def merge(*values: _T) -> _T:
+    assert len(values) > 0, "At least one value must be provided"
+    ret: _T = values[0]
+    for value in values[1:]:
+        ret = merge_recursive(ret, value, path=[])
     return ret
 
 
-def cleanup_indices(chunk: T) -> T:
+def merge_chunks(*chunks: _Chunk) -> _Chunk:
+    """
+    The recursive merging procedure that avoids merging top-level atomic fields
+    (e.g. "id", "created", "model", "object", "system_fingerprint") and
+    instead chooses an _override_ merging strategy for such fields.
+    Non-atomic field (e.g. "choice", "usage") are merged following
+    the standard recursive merging procedure.
+    """
+
+    assert len(chunks) > 0, "At least one value must be provided"
+
+    target = chunks[0]
+
+    def _generator():
+        yield target
+        for source in chunks[1:]:
+            source = source.copy()
+            for key, value in list(source.items()):
+                if not isinstance(value, (list, dict)) and value is not None:
+                    target[key] = value
+                    del source[key]
+            yield source
+
+    return merge(*list(_generator()))
+
+
+def cleanup_indices(chunk: _T) -> _T:
     if isinstance(chunk, list):
         ret = []
         for elem in chunk:
@@ -166,11 +193,11 @@ def cleanup_indices(chunk: T) -> T:
                 elem = elem.copy()
                 del elem["index"]
             ret.append(cleanup_indices(elem))
-        return cast(T, ret)
+        return cast(_T, ret)
 
     if isinstance(chunk, dict):
         return cast(
-            T, {key: cleanup_indices(value) for key, value in chunk.items()}
+            _T, {key: cleanup_indices(value) for key, value in chunk.items()}
         )
 
     return chunk

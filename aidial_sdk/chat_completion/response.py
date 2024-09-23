@@ -20,7 +20,7 @@ from aidial_sdk.exceptions import HTTPException as DIALException
 from aidial_sdk.exceptions import RequestValidationError, RuntimeServerError
 from aidial_sdk.utils.errors import RUNTIME_ERROR_MESSAGE, runtime_error
 from aidial_sdk.utils.logging import log_error, log_exception
-from aidial_sdk.utils.merge_chunks import merge
+from aidial_sdk.utils.merge_chunks import merge_chunks
 from aidial_sdk.utils.streaming import DONE_MARKER, format_chunk
 
 
@@ -50,7 +50,7 @@ class Response:
         self.request = request
 
         self._default_chunk = DefaultChunk(
-            response_id=str(uuid4()),
+            id=str(uuid4()),
             created=int(time()),
             object=(
                 "chat.completion.chunk" if request.stream else "chat.completion"
@@ -63,7 +63,7 @@ class Response:
     async def _generate_stream(
         self, first_chunk: BaseChunk
     ) -> AsyncGenerator[Any, None]:
-        chunk = first_chunk.to_dict(self._default_chunk)
+        chunk = first_chunk.to_dict()
 
         if self.request.stream:
             yield format_chunk(chunk)
@@ -115,7 +115,7 @@ class Response:
 
             if isinstance(item, EndChoiceChunk):
                 if item.choice_index == (self.request.n or 1) - 1:
-                    last_end_choice_chunk = item.to_dict(self._default_chunk)
+                    last_end_choice_chunk = item.to_dict()
                     self._queue.task_done()
                     continue
 
@@ -123,12 +123,10 @@ class Response:
                 item,
                 (UsageChunk, UsagePerModelChunk, DiscardedMessagesChunk),
             ):
-                usage_chunk = merge(
-                    usage_chunk, item.to_dict(self._default_chunk)
-                )
+                usage_chunk = merge_chunks(usage_chunk, item.to_dict())
 
             elif isinstance(item, BaseChunk):
-                chunk = item.to_dict(self._default_chunk)
+                chunk = item.to_dict()
 
                 if self.request.stream:
                     yield format_chunk(chunk)
@@ -137,7 +135,7 @@ class Response:
 
             elif isinstance(item, EndMarker):
                 if last_end_choice_chunk:
-                    chunk = merge(last_end_choice_chunk, usage_chunk)
+                    chunk = merge_chunks(last_end_choice_chunk, usage_chunk)
 
                     if self.request.stream:
                         yield format_chunk(chunk)
@@ -148,12 +146,14 @@ class Response:
                     if isinstance(item.exc, DIALException):
                         chunk = item.exc.json_error()
                     else:
-                        chunk = format_chunk(
-                            RuntimeServerError(
-                                RUNTIME_ERROR_MESSAGE
-                            ).json_error()
-                        )
-                    yield chunk
+                        chunk = RuntimeServerError(
+                            RUNTIME_ERROR_MESSAGE
+                        ).json_error()
+
+                    if self.request.stream:
+                        yield format_chunk(chunk)
+                    else:
+                        yield chunk
                 else:
                     if self._last_choice_index != (self.request.n or 1):
                         log_error("Not all choices were generated")
@@ -277,7 +277,8 @@ class Response:
                 )
 
         if isinstance(chunk, BaseChunk):
-            self._snapshot.add_delta(chunk.to_dict(self._default_chunk))
+            chunk.set_overrides(self._default_chunk)
+            self._snapshot.add_delta(chunk.to_dict())
 
         self._queue.put_nowait(chunk)
 
@@ -290,7 +291,7 @@ class Response:
                 'Trying to set "created" after start of generation'
             )
 
-        self._created = created
+        self._default_chunk["created"] = created
 
     def set_model(self, model: str):
         if self._generation_started:
@@ -303,7 +304,7 @@ class Response:
     def set_response_id(self, response_id: str):
         if self._generation_started:
             raise runtime_error(
-                'Trying to set "response_id" after start of generation',
+                'Trying to set "id" after start of generation',
             )
 
-        self._default_chunk["response_id"] = response_id
+        self._default_chunk["id"] = response_id
