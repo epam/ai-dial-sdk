@@ -12,6 +12,9 @@ class StreamingResponseSnapshot(BaseModel):
 
     chunk: dict = {}
 
+    def generation_started(self) -> bool:
+        return self.chunk != {}
+
     def create_choice(self) -> None:
         index = self.n_actual()
         self.add_delta({"choices": [{"index": index}]})

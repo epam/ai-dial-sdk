@@ -29,7 +29,6 @@ class Response:
     _snapshot: StreamingResponseSnapshot
 
     _last_usage_per_model_index: int
-    _generation_started: bool
     _discarded_messages_generated: bool
     _usage_generated: bool
 
@@ -39,7 +38,6 @@ class Response:
         self._queue = asyncio.Queue()
         self._snapshot = StreamingResponseSnapshot(n_expected=request.n or 1)
         self._last_usage_per_model_index = 0
-        self._generation_started = False
         self._discarded_messages_generated = False
         self._usage_generated = False
 
@@ -182,8 +180,6 @@ class Response:
         return get_task.result() if get_task in done else await get_task
 
     def create_choice(self) -> Choice:
-        self._generation_started = True
-
         n_choices = self._snapshot.n_actual()
         if n_choices >= self.n:
             raise runtime_error("Trying to generate more chunks than requested")
@@ -208,8 +204,6 @@ class Response:
     def add_usage_per_model(
         self, model: str, prompt_tokens: int = 0, completion_tokens: int = 0
     ):
-        self._generation_started = True
-
         if not self._snapshot.has_all_choices():
             raise runtime_error(
                 'Trying to set "usage_per_model" before generating all choices',
@@ -226,8 +220,6 @@ class Response:
         self._last_usage_per_model_index += 1
 
     def set_discarded_messages(self, discarded_messages: List[int]):
-        self._generation_started = True
-
         if self._discarded_messages_generated:
             raise runtime_error('Trying to set "discarded_messages" twice')
         if not self._snapshot.has_all_choices():
@@ -239,8 +231,6 @@ class Response:
         self.send_chunk(DiscardedMessagesChunk(discarded_messages))
 
     def set_usage(self, prompt_tokens: int = 0, completion_tokens: int = 0):
-        self._generation_started = True
-
         if self._usage_generated:
             raise runtime_error('Trying to set "usage" twice')
         if not self._snapshot.has_all_choices():
@@ -262,7 +252,7 @@ class Response:
         await self._queue.join()
 
     def set_created(self, created: int):
-        if self._generation_started:
+        if self._snapshot.generation_started():
             raise runtime_error(
                 'Trying to set "created" after start of generation'
             )
@@ -270,7 +260,7 @@ class Response:
         self._default_chunk["created"] = created
 
     def set_model(self, model: str):
-        if self._generation_started:
+        if self._snapshot.generation_started():
             raise runtime_error(
                 'Trying to set "model" after start of generation'
             )
@@ -278,7 +268,7 @@ class Response:
         self._default_chunk["model"] = model
 
     def set_response_id(self, response_id: str):
-        if self._generation_started:
+        if self._snapshot.generation_started():
             raise runtime_error(
                 'Trying to set "id" after start of generation',
             )
