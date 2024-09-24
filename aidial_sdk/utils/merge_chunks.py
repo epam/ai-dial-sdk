@@ -164,11 +164,11 @@ def merge_chunks(*chunks: _Chunk) -> _Chunk:
     The recursive merging procedure that avoids merging top-level atomic fields
     (e.g. "id", "created", "model", "object", "system_fingerprint") and
     instead chooses an _override_ merging strategy for such fields.
-    Non-atomic field (e.g. "choice", "usage") are merged following
+    Non-atomic fields (e.g. "choice", "usage") are merged following
     the standard recursive merging procedure.
     """
 
-    assert len(chunks) > 0, "At least one value must be provided"
+    assert len(chunks) > 0, "At least one chunk must be provided"
 
     target = chunks[0]
 

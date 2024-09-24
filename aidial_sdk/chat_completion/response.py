@@ -21,7 +21,6 @@ from aidial_sdk.exceptions import RequestValidationError, RuntimeServerError
 from aidial_sdk.utils.errors import RUNTIME_ERROR_MESSAGE, runtime_error
 from aidial_sdk.utils.logging import log_error, log_exception
 from aidial_sdk.utils.merge_chunks import merge_chunks
-from aidial_sdk.utils.streaming import DONE_MARKER, format_chunk
 
 
 class Response:
@@ -30,7 +29,7 @@ class Response:
     _queue: asyncio.Queue
     _snapshot: StreamingResponseSnapshot
 
-    _last_choice_index: int
+    _n_choices: int
     _last_usage_per_model_index: int
     _generation_started: bool
     _discarded_messages_generated: bool
@@ -41,7 +40,7 @@ class Response:
     def __init__(self, request: Request):
         self._queue = asyncio.Queue()
         self._snapshot = StreamingResponseSnapshot()
-        self._last_choice_index = 0
+        self._n_choices = 0
         self._last_usage_per_model_index = 0
         self._generation_started = False
         self._discarded_messages_generated = False
@@ -57,18 +56,22 @@ class Response:
             ),
         )
 
+    @property
+    def n(self) -> int:
+        return self.request.n or 1
+
+    @property
+    def stream(self) -> int:
+        return self.request.stream
+
     def get_block_response(self) -> dict:
         return self._snapshot.to_block_response()
 
     async def _generate_stream(
         self, first_chunk: BaseChunk
-    ) -> AsyncGenerator[Any, None]:
+    ) -> AsyncGenerator[dict, None]:
         chunk = first_chunk.to_dict()
-
-        if self.request.stream:
-            yield format_chunk(chunk)
-        else:
-            yield chunk
+        yield chunk
 
         self._queue.task_done()
 
@@ -87,34 +90,31 @@ class Response:
             )[0]
             if self.user_task in done:
                 if not user_task_finished:
-                    end_chunk_generated = False
+                    user_task_finished = True
+
                     try:
                         self.user_task.result()
                     except DIALException as e:
-                        if self.request.stream:
+                        if self.stream:
                             self.send_chunk(EndMarker(e))
-                            end_chunk_generated = True
                         else:
                             raise e.to_fastapi_exception()
                     except Exception as e:
                         log_exception(RUNTIME_ERROR_MESSAGE)
 
-                        if self.request.stream:
+                        if self.stream:
                             self.send_chunk(EndMarker(e))
-                            end_chunk_generated = True
                         else:
                             raise RuntimeServerError(
                                 RUNTIME_ERROR_MESSAGE
                             ).to_fastapi_exception()
-
-                    if not end_chunk_generated:
+                    else:
                         self.send_chunk(EndMarker())
-                    user_task_finished = True
 
             item = get_task.result() if get_task in done else await get_task
 
             if isinstance(item, EndChoiceChunk):
-                if item.choice_index == (self.request.n or 1) - 1:
+                if item.choice_index == self.n - 1:
                     last_end_choice_chunk = item.to_dict()
                     self._queue.task_done()
                     continue
@@ -127,20 +127,12 @@ class Response:
 
             elif isinstance(item, BaseChunk):
                 chunk = item.to_dict()
-
-                if self.request.stream:
-                    yield format_chunk(chunk)
-                else:
-                    yield chunk
+                yield chunk
 
             elif isinstance(item, EndMarker):
                 if last_end_choice_chunk:
                     chunk = merge_chunks(last_end_choice_chunk, usage_chunk)
-
-                    if self.request.stream:
-                        yield format_chunk(chunk)
-                    else:
-                        yield chunk
+                    yield chunk
 
                 if item.exc:
                     if isinstance(item.exc, DIALException):
@@ -150,23 +142,16 @@ class Response:
                             RUNTIME_ERROR_MESSAGE
                         ).json_error()
 
-                    if self.request.stream:
-                        yield format_chunk(chunk)
+                    yield chunk
+                elif self._n_choices != self.n:
+                    log_error("Not all choices were generated")
+
+                    error = RuntimeServerError(RUNTIME_ERROR_MESSAGE)
+
+                    if self.stream:
+                        yield error.json_error()
                     else:
-                        yield chunk
-                else:
-                    if self._last_choice_index != (self.request.n or 1):
-                        log_error("Not all choices were generated")
-
-                        error = RuntimeServerError(RUNTIME_ERROR_MESSAGE)
-
-                        if self.request.stream:
-                            yield format_chunk(error.json_error())
-                        else:
-                            raise error.to_fastapi_exception()
-
-                if self.request.stream:
-                    yield format_chunk(DONE_MARKER)
+                        raise error.to_fastapi_exception()
 
                 self._queue.task_done()
                 return
@@ -202,20 +187,20 @@ class Response:
     def create_choice(self) -> Choice:
         self._generation_started = True
 
-        if self._last_choice_index >= (self.request.n or 1):
+        if self._n_choices >= self.n:
             raise runtime_error("Trying to generate more chunks than requested")
 
-        choice = Choice(self, self._last_choice_index)
-        self._last_choice_index += 1
+        choice = Choice(self, self._n_choices)
+        self._n_choices += 1
 
         return choice
 
     def create_single_choice(self) -> Choice:
-        if self._last_choice_index > 0:
+        if self._n_choices > 0:
             raise runtime_error(
                 "Trying to generate a single choice after choice"
             )
-        if (self.request.n or 1) > 1:
+        if self.n > 1:
             raise RequestValidationError(
                 message=f"{self.request.deployment_id} deployment doesn't support n > 1"
             )
@@ -227,7 +212,7 @@ class Response:
     ):
         self._generation_started = True
 
-        if self._last_choice_index != (self.request.n or 1):
+        if self._n_choices != self.n:
             raise runtime_error(
                 'Trying to set "usage_per_model" before generating all choices',
             )
@@ -247,7 +232,7 @@ class Response:
 
         if self._discarded_messages_generated:
             raise runtime_error('Trying to set "discarded_messages" twice')
-        if self._last_choice_index != (self.request.n or 1):
+        if self._n_choices != self.n:
             raise runtime_error(
                 'Trying to set "discarded_messages" before generating all choices',
             )
@@ -260,7 +245,7 @@ class Response:
 
         if self._usage_generated:
             raise runtime_error('Trying to set "usage" twice')
-        if self._last_choice_index != (self.request.n or 1):
+        if self._n_choices != self.n:
             raise runtime_error(
                 'Trying to set "usage" before generating all choices',
             )
@@ -272,9 +257,7 @@ class Response:
         # FIXME: ugly hack
         if isinstance(chunk, ArbitraryChunk):
             for choice in chunk.data.choices:
-                self._last_choice_index = max(
-                    self._last_choice_index, choice.index + 1
-                )
+                self._n_choices = max(self._n_choices, choice.index + 1)
 
         if isinstance(chunk, BaseChunk):
             chunk.set_overrides(self._default_chunk)

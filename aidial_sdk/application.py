@@ -30,6 +30,7 @@ from aidial_sdk.telemetry.types import TelemetryConfig
 from aidial_sdk.utils._reflection import get_method_implementation
 from aidial_sdk.utils.log_config import LogConfig
 from aidial_sdk.utils.logging import log_debug, set_log_deployment
+from aidial_sdk.utils.streaming import to_sse_stream
 
 logging.config.dictConfig(LogConfig().dict())
 
@@ -203,13 +204,15 @@ class DIALApp(FastAPI):
             stream = response._generate_stream(first_chunk)
 
             if request.stream:
-                return StreamingResponse(stream, media_type="text/event-stream")
+                return StreamingResponse(
+                    to_sse_stream(stream), media_type="text/event-stream"
+                )
             else:
                 async for _chunk in stream:
                     pass
-                response_json = response.get_block_response()
-                log_debug(f"response: {response_json}")
-                return JSONResponse(content=response_json)
+                response_dict = response.get_block_response()
+                log_debug(f"response: {response_dict}")
+                return JSONResponse(content=response_dict)
 
         return _handler
 
