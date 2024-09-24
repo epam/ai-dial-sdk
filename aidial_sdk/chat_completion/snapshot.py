@@ -8,18 +8,23 @@ from aidial_sdk.utils.merge_chunks import cleanup_indices, merge_chunks
 
 
 class StreamingResponseSnapshot(BaseModel):
+    n_expected: int
+
     chunk: dict = {}
 
     def create_choice(self) -> None:
-        choice_index = self.n_choices()
-        self.add_delta({"choices": [{"index": choice_index}]})
+        index = self.n_actual()
+        self.add_delta({"choices": [{"index": index}]})
 
-    def n_choices(self) -> int:
+    def n_actual(self) -> int:
         ret = 0
         for choice in self.chunk.get("choices") or []:
             if (index := choice.get("index")) is not None:
                 ret = max(ret, index + 1)
         return ret
+
+    def has_all_choices(self) -> bool:
+        return self.n_actual() == self.n_expected
 
     def add_delta(self, chunk: dict) -> None:
         logger.debug("chunk: " + json.dumps(chunk))
