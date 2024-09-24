@@ -8,14 +8,25 @@ from aidial_sdk.utils.merge_chunks import cleanup_indices, merge_chunks
 
 
 class StreamingResponseSnapshot(BaseModel):
-    merged_chunks: dict = {}
+    chunk: dict = {}
+
+    def create_choice(self) -> None:
+        choice_index = self.n_choices()
+        self.add_delta({"choices": [{"index": choice_index}]})
+
+    def n_choices(self) -> int:
+        ret = 0
+        for choice in self.chunk.get("choices") or []:
+            if (index := choice.get("index")) is not None:
+                ret = max(ret, index + 1)
+        return ret
 
     def add_delta(self, chunk: dict) -> None:
         logger.debug("chunk: " + json.dumps(chunk))
-        self.merged_chunks = merge_chunks(self.merged_chunks, chunk)
+        self.chunk = merge_chunks(self.chunk, chunk)
 
     def to_block_response(self) -> dict:
-        response = copy.deepcopy(self.merged_chunks)
+        response = copy.deepcopy(self.chunk)
         for choice in response.get("choices") or []:
             if "delta" in choice:
                 choice["message"] = cleanup_indices(choice["delta"])

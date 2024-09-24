@@ -29,7 +29,6 @@ class Response:
     _queue: asyncio.Queue
     _snapshot: StreamingResponseSnapshot
 
-    _n_choices: int
     _last_usage_per_model_index: int
     _generation_started: bool
     _discarded_messages_generated: bool
@@ -40,7 +39,6 @@ class Response:
     def __init__(self, request: Request):
         self._queue = asyncio.Queue()
         self._snapshot = StreamingResponseSnapshot()
-        self._n_choices = 0
         self._last_usage_per_model_index = 0
         self._generation_started = False
         self._discarded_messages_generated = False
@@ -143,7 +141,7 @@ class Response:
                         ).json_error()
 
                     yield chunk
-                elif self._n_choices != self.n:
+                elif self._snapshot.n_choices() != self.n:
                     log_error("Not all choices were generated")
 
                     error = RuntimeServerError(RUNTIME_ERROR_MESSAGE)
@@ -187,16 +185,17 @@ class Response:
     def create_choice(self) -> Choice:
         self._generation_started = True
 
-        if self._n_choices >= self.n:
+        n_choices = self._snapshot.n_choices()
+        if n_choices >= self.n:
             raise runtime_error("Trying to generate more chunks than requested")
 
-        choice = Choice(self, self._n_choices)
-        self._n_choices += 1
+        choice = Choice(self, n_choices)
+        self._snapshot.create_choice()
 
         return choice
 
     def create_single_choice(self) -> Choice:
-        if self._n_choices > 0:
+        if self._snapshot.n_choices() > 0:
             raise runtime_error(
                 "Trying to generate a single choice after choice"
             )
@@ -212,7 +211,7 @@ class Response:
     ):
         self._generation_started = True
 
-        if self._n_choices != self.n:
+        if self._snapshot.n_choices() != self.n:
             raise runtime_error(
                 'Trying to set "usage_per_model" before generating all choices',
             )
@@ -232,7 +231,7 @@ class Response:
 
         if self._discarded_messages_generated:
             raise runtime_error('Trying to set "discarded_messages" twice')
-        if self._n_choices != self.n:
+        if self._snapshot.n_choices() != self.n:
             raise runtime_error(
                 'Trying to set "discarded_messages" before generating all choices',
             )
@@ -245,7 +244,7 @@ class Response:
 
         if self._usage_generated:
             raise runtime_error('Trying to set "usage" twice')
-        if self._n_choices != self.n:
+        if self._snapshot.n_choices() != self.n:
             raise runtime_error(
                 'Trying to set "usage" before generating all choices',
             )
@@ -254,11 +253,6 @@ class Response:
         self.send_chunk(UsageChunk(prompt_tokens, completion_tokens))
 
     def send_chunk(self, chunk: Union[BaseChunk, EndMarker]):
-        # FIXME: ugly hack
-        if isinstance(chunk, ArbitraryChunk):
-            for choice in chunk.data.choices:
-                self._n_choices = max(self._n_choices, choice.index + 1)
-
         if isinstance(chunk, BaseChunk):
             chunk.set_overrides(self._default_chunk)
             self._snapshot.add_delta(chunk.to_dict())
