@@ -115,6 +115,9 @@ def test_discarded_messages_returned_as_last_chunk_in_stream():
     ]
 
 
+dummy_request = fastapi.Request({"type": "http"})
+
+
 def test_discarded_messages_is_set_twice():
     request = Request(
         headers={},

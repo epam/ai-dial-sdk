@@ -1,15 +1,45 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TypedDict
+
+from openai.types.chat.chat_completion_chunk import ChatCompletionChunk
 
 from aidial_sdk.chat_completion.enums import FinishReason, Status
 from aidial_sdk.pydantic_v1 import BaseModel, root_validator
 from aidial_sdk.utils.json import remove_nones
 
 
+class DefaultChunk(TypedDict, total=False):
+    id: str
+    model: str
+    created: int
+    object: str
+
+
 class BaseChunk(ABC):
+    _overrides: Optional[DefaultChunk] = None
+
+    def set_overrides(self, overrides: DefaultChunk):
+        self._overrides = overrides
+
     @abstractmethod
-    def to_dict(self) -> Dict[str, Any]:
+    def to_raw_dict(self) -> Dict[str, Any]:
         pass
+
+    def to_dict(self) -> Dict[str, Any]:
+        dict = self.to_raw_dict()
+        if self._overrides:
+            dict.update(self._overrides)
+        return dict
+
+
+class ArbitraryChunk(BaseChunk):
+    data: ChatCompletionChunk
+
+    def __init__(self, data: ChatCompletionChunk):
+        self.data = data
+
+    def to_raw_dict(self):
+        return self.data.dict()
 
 
 class StartChoiceChunk(BaseChunk):
@@ -18,7 +48,7 @@ class StartChoiceChunk(BaseChunk):
     def __init__(self, choice_index: int):
         self.choice_index = choice_index
 
-    def to_dict(self):
+    def to_raw_dict(self):
         return {
             "choices": [
                 {
@@ -39,7 +69,7 @@ class EndChoiceChunk(BaseChunk):
         self.finish_reason = finish_reason
         self.choice_index = choice_index
 
-    def to_dict(self):
+    def to_raw_dict(self):
         return {
             "choices": [
                 {
@@ -60,7 +90,7 @@ class ContentChunk(BaseChunk):
         self.content = content
         self.choice_index = choice_index
 
-    def to_dict(self):
+    def to_raw_dict(self):
         return {
             "choices": [
                 {
@@ -94,7 +124,7 @@ class FunctionToolCallChunk(BaseChunk):
         self.name = name
         self.arguments = arguments
 
-    def to_dict(self):
+    def to_raw_dict(self):
         return {
             "choices": [
                 {
@@ -138,7 +168,7 @@ class FunctionCallChunk(BaseChunk):
         self.name = name
         self.arguments = arguments
 
-    def to_dict(self):
+    def to_raw_dict(self):
         return {
             "choices": [
                 {
@@ -170,7 +200,7 @@ class StartStageChunk(BaseChunk):
         self.stage_index = stage_index
         self.name = name
 
-    def to_dict(self):
+    def to_raw_dict(self):
         return {
             "choices": [
                 {
@@ -203,7 +233,7 @@ class FinishStageChunk(BaseChunk):
         self.stage_index = stage_index
         self.status = status
 
-    def to_dict(self):
+    def to_raw_dict(self):
         return {
             "choices": [
                 {
@@ -235,7 +265,7 @@ class ContentStageChunk(BaseChunk):
         self.stage_index = stage_index
         self.content = content
 
-    def to_dict(self):
+    def to_raw_dict(self):
         return {
             "choices": [
                 {
@@ -268,7 +298,7 @@ class NameStageChunk(BaseChunk):
         self.stage_index = stage_index
         self.name = name
 
-    def to_dict(self):
+    def to_raw_dict(self):
         return {
             "choices": [
                 {
@@ -302,6 +332,9 @@ class Attachment(BaseModel):
     reference_url: Optional[str]
     reference_type: Optional[str]
 
+    class Config:
+        extra = "allow"
+
     @root_validator
     def check_data_or_url(cls, values):
         data, url = values.get("data"), values.get("url")
@@ -333,7 +366,7 @@ class Attachment(BaseModel):
 
 
 class AttachmentChunk(Attachment, BaseChunk):
-    def to_dict(self):
+    def to_raw_dict(self):
         return {
             "choices": [
                 {
@@ -355,7 +388,7 @@ class AttachmentChunk(Attachment, BaseChunk):
 class AttachmentStageChunk(Attachment, BaseChunk):
     stage_index: int
 
-    def to_dict(self):
+    def to_raw_dict(self):
         return {
             "choices": [
                 {
@@ -390,7 +423,7 @@ class StateChunk(BaseChunk):
         self.state = state
         self.choice_index = choice_index
 
-    def to_dict(self):
+    def to_raw_dict(self):
         return {
             "choices": [
                 {
@@ -411,13 +444,13 @@ class UsageChunk(BaseChunk):
         self.prompt_tokens = prompt_tokens
         self.completion_tokens = completion_tokens
 
-    def to_dict(self):
+    def to_raw_dict(self):
         return {
             "usage": {
                 "prompt_tokens": self.prompt_tokens,
                 "completion_tokens": self.completion_tokens,
                 "total_tokens": self.prompt_tokens + self.completion_tokens,
-            }
+            },
         }
 
 
@@ -439,7 +472,7 @@ class UsagePerModelChunk(BaseChunk):
         self.prompt_tokens = prompt_tokens
         self.completion_tokens = completion_tokens
 
-    def to_dict(self):
+    def to_raw_dict(self):
         return {
             "statistics": {
                 "usage_per_model": [
@@ -452,7 +485,7 @@ class UsagePerModelChunk(BaseChunk):
                         + self.completion_tokens,
                     }
                 ]
-            }
+            },
         }
 
 
@@ -462,15 +495,15 @@ class DiscardedMessagesChunk(BaseChunk):
     def __init__(self, discarded_messages: List[int]):
         self.discarded_messages = discarded_messages
 
-    def to_dict(self):
+    def to_raw_dict(self):
         return {
             "statistics": {
                 "discarded_messages": self.discarded_messages,
-            }
+            },
         }
 
 
-class EndChunk:
+class EndMarker:
     exc: Optional[Exception]
 
     def __init__(self, exc: Optional[Exception] = None):

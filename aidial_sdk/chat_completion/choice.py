@@ -1,8 +1,7 @@
-import json
-from asyncio import Queue
 from types import TracebackType
 from typing import Any, Optional, Type, overload
 
+from aidial_sdk.chat_completion._chunk_consumer import ChunkConsumer
 from aidial_sdk.chat_completion.choice_base import ChoiceBase
 from aidial_sdk.chat_completion.chunks import (
     AttachmentChunk,
@@ -21,11 +20,10 @@ from aidial_sdk.pydantic_v1 import ValidationError
 from aidial_sdk.utils._attachment import create_attachment
 from aidial_sdk.utils._content_stream import ContentStream
 from aidial_sdk.utils.errors import runtime_error
-from aidial_sdk.utils.logging import log_debug
 
 
 class Choice(ChoiceBase):
-    _queue: Queue
+    _sink: ChunkConsumer
     _index: int
     _last_attachment_index: int
     _last_stage_index: int
@@ -36,8 +34,8 @@ class Choice(ChoiceBase):
     _state_submitted: bool
     _last_finish_reason: Optional[FinishReason]
 
-    def __init__(self, queue: Queue, choice_index: int):
-        self._queue = queue
+    def __init__(self, sink: ChunkConsumer, choice_index: int):
+        self._sink = sink
         self._index = choice_index
         self._last_attachment_index = 0
         self._last_stage_index = 0
@@ -62,8 +60,7 @@ class Choice(ChoiceBase):
         return False
 
     def send_chunk(self, chunk: BaseChunk) -> None:
-        log_debug("chunk: " + json.dumps(chunk.to_dict()))
-        self._queue.put_nowait(chunk)
+        self._sink.send_chunk(chunk)
 
     @property
     def index(self) -> int:
@@ -167,7 +164,7 @@ class Choice(ChoiceBase):
         if self._closed:
             raise runtime_error("Trying to create stage to a closed choice")
 
-        stage = Stage(self._queue, self._index, self._last_stage_index, name)
+        stage = Stage(self, self._index, self._last_stage_index, name)
         self._last_stage_index += 1
 
         return stage
