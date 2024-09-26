@@ -180,14 +180,8 @@ class Response:
         return get_task.result() if get_task in done else await get_task
 
     def create_choice(self) -> Choice:
-        n_choices = self._snapshot.n_actual()
-        if n_choices >= self.n:
-            raise runtime_error("Trying to generate more chunks than requested")
-
-        choice = Choice(self, n_choices)
-        self._snapshot.create_choice()
-
-        return choice
+        index = self._snapshot.create_choice()
+        return Choice(self, index)
 
     def create_single_choice(self) -> Choice:
         if self._snapshot.n_actual() > 0:

@@ -3,6 +3,7 @@ import json
 
 from pydantic import BaseModel
 
+from aidial_sdk.utils.errors import runtime_error
 from aidial_sdk.utils.logging import logger
 from aidial_sdk.utils.merge_chunks import cleanup_indices, merge_chunks
 
@@ -15,9 +16,14 @@ class StreamingResponseSnapshot(BaseModel):
     def generation_started(self) -> bool:
         return self.chunk != {}
 
-    def create_choice(self) -> None:
+    def create_choice(self) -> int:
+        # TODO: add to the validation step
+        if self.has_all_choices():
+            raise runtime_error("Trying to generate more chunks than requested")
+
         index = self.n_actual()
         self.add_delta({"choices": [{"index": index}]})
+        return index
 
     def n_actual(self) -> int:
         ret = 0
@@ -31,6 +37,10 @@ class StreamingResponseSnapshot(BaseModel):
 
     def add_delta(self, chunk: dict) -> None:
         logger.debug("chunk: " + json.dumps(chunk))
+
+        # TODO: add a validation step here before merging
+        # remove all the validations in other places
+
         self.chunk = merge_chunks(self.chunk, chunk)
 
     def to_block_response(self) -> dict:
