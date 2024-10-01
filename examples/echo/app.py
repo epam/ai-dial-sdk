@@ -15,17 +15,19 @@ class EchoApplication(ChatCompletion):
         self, request: Request, response: Response
     ) -> None:
         # Get last message (the newest) from the history
-        last_user_message = request.messages[-1]
+        last_message = request.messages[-1]
 
         # Generate response with a single choice
         with response.create_single_choice() as choice:
             # Fill the content of the response with the last user's content
-            choice.append_content(last_user_message.content or "")
+            choice.append_content(
+                last_message.content
+                if isinstance(last_message.content, str)
+                else ""
+            )
 
-            if last_user_message.custom_content is not None:
-                for attachment in (
-                    last_user_message.custom_content.attachments or []
-                ):
+            if last_message.custom_content is not None:
+                for attachment in last_message.custom_content.attachments or []:
                     # Add the same attachment to the response
                     choice.add_attachment(**attachment.dict())
 

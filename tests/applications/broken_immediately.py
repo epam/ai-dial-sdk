@@ -2,6 +2,7 @@ from fastapi import HTTPException as FastAPIException
 
 from aidial_sdk import HTTPException as DIALException
 from aidial_sdk.chat_completion import ChatCompletion, Request, Response
+from tests.utils.request import get_message_text_content
 
 
 def raise_exception(exception_type: str):
@@ -27,4 +28,4 @@ class BrokenApplication(ChatCompletion):
     async def chat_completion(
         self, request: Request, response: Response
     ) -> None:
-        raise_exception(request.messages[0].content or "")
+        raise_exception(get_message_text_content(request.messages[0]))

@@ -58,9 +58,27 @@ class Role(str, Enum):
     TOOL = "tool"
 
 
+class ImageURL(ExtraForbidModel):
+    url: StrictStr
+    detail: Literal["auto", "low", "high"]
+
+
+class MessageContentImagePart(ExtraForbidModel):
+    type: Literal["image_url"]
+    image_url: ImageURL
+
+
+class MessageContentTextPart(ExtraForbidModel):
+    type: Literal["text"]
+    text: StrictStr
+
+
+MessageContentPart = Union[MessageContentTextPart, MessageContentImagePart]
+
+
 class Message(ExtraForbidModel):
     role: Role
-    content: Optional[StrictStr] = None
+    content: Optional[Union[StrictStr, List[MessageContentPart]]] = None
     custom_content: Optional[CustomContent] = None
     name: Optional[StrictStr] = None
     tool_calls: Optional[List[ToolCall]] = None

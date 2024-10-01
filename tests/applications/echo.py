@@ -6,6 +6,7 @@ from aidial_sdk.deployment.truncate_prompt import (
     TruncatePromptRequest,
     TruncatePromptResponse,
 )
+from tests.utils.request import get_message_text_content
 from tests.utils.tokenization import (
     default_truncate_prompt,
     make_batched_tokenize,
@@ -27,7 +28,7 @@ class EchoApplication(ChatCompletion):
         response.set_response_id("test_id")
         response.set_created(0)
 
-        content = request.messages[-1].content or ""
+        content = get_message_text_content(request.messages[-1])
 
         with response.create_single_choice() as choice:
             choice.append_content(content)

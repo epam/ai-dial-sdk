@@ -1,5 +1,6 @@
 from aidial_sdk.chat_completion import ChatCompletion, Request, Response
 from tests.applications.broken_immediately import raise_exception
+from tests.utils.request import get_message_text_content
 
 
 class RuntimeBrokenApplication(ChatCompletion):
@@ -17,4 +18,4 @@ class RuntimeBrokenApplication(ChatCompletion):
             choice.append_content("Test content")
             await response.aflush()
 
-            raise_exception(request.messages[0].content or "")
+            raise_exception(get_message_text_content(request.messages[0]))

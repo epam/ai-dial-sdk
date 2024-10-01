@@ -23,12 +23,13 @@ class RenderTextApplication(ChatCompletion):
         # Create a single choice
         with response.create_single_choice() as choice:
             # Get the last message content
-            content = request.messages[-1].content or ""
+            content = request.messages[-1].content
+            content_text = content if isinstance(content, str) else ""
 
             # The image may be returned either as base64 string or as URL
             # The content specifies the mode of return: 'base64' or 'url'
             try:
-                command, text = content.split(",", 1)
+                command, text = content_text.split(",", 1)
                 if command not in ["base64", "url"]:
                     raise DIALException(
                         message="The command must be either 'base64' or 'url'",
