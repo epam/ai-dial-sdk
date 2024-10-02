@@ -60,7 +60,7 @@ class Role(str, Enum):
 
 class ImageURL(ExtraForbidModel):
     url: StrictStr
-    detail: Literal["auto", "low", "high"]
+    detail: Optional[Literal["auto", "low", "high"]] = None
 
 
 class MessageContentImagePart(ExtraForbidModel):
