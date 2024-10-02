@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any, Dict, List, Literal, Mapping, Optional, Sequence, Union
+from typing import Any, Dict, List, Literal, Mapping, Optional, Union
 
 from aidial_sdk.chat_completion.enums import Status
 from aidial_sdk.deployment.from_request_mixin import FromRequestDeploymentMixin
@@ -78,7 +78,7 @@ MessageContentPart = Union[MessageContentTextPart, MessageContentImagePart]
 
 class Message(ExtraForbidModel):
     role: Role
-    content: Optional[Union[StrictStr, Sequence[MessageContentPart]]] = None
+    content: Optional[Union[StrictStr, List[MessageContentPart]]] = None
     custom_content: Optional[CustomContent] = None
     name: Optional[StrictStr] = None
     tool_calls: Optional[List[ToolCall]] = None
