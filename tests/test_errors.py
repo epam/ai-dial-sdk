@@ -51,6 +51,28 @@ error_testdata = [
             }
         },
     ),
+    (
+        None,
+        400,
+        {
+            "error": {
+                "message": "Unable to retrieve text content of the message: the actual content is null or missing.",
+                "type": "invalid_request_error",
+                "code": "400",
+            }
+        },
+    ),
+    (
+        [{"type": "text", "text": "hello"}],
+        400,
+        {
+            "error": {
+                "message": "Unable to retrieve text content of the message: the actual content is a list of content parts.",
+                "type": "invalid_request_error",
+                "code": "400",
+            }
+        },
+    ),
 ]
 
 
@@ -72,10 +94,8 @@ def test_error(type, response_status_code, response_content):
         headers={"Api-Key": "TEST_API_KEY"},
     )
 
-    assert (
-        response.status_code == response_status_code
-        and response.json() == response_content
-    )
+    assert response.status_code == response_status_code
+    assert response.json() == response_content
 
 
 @pytest.mark.parametrize(
@@ -96,10 +116,8 @@ def test_streaming_error(type, response_status_code, response_content):
         headers={"Api-Key": "TEST_API_KEY"},
     )
 
-    assert (
-        response.status_code == response_status_code
-        and response.json() == response_content
-    )
+    assert response.status_code == response_status_code
+    assert response.json() == response_content
 
 
 @pytest.mark.parametrize(
@@ -184,4 +202,5 @@ def test_no_api_key():
         },
     )
 
-    assert response.status_code == 400 and response.json() == API_KEY_IS_MISSING
+    assert response.status_code == 400
+    assert response.json() == API_KEY_IS_MISSING

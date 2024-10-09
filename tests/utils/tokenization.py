@@ -19,7 +19,6 @@ from aidial_sdk.deployment.truncate_prompt import (
     TruncatePromptResult,
     TruncatePromptSuccess,
 )
-from tests.utils.request import get_message_text_content
 
 
 def word_count_string(string: str) -> int:
@@ -27,7 +26,7 @@ def word_count_string(string: str) -> int:
 
 
 def word_count_message(message: Message) -> int:
-    return word_count_string(get_message_text_content(message))
+    return word_count_string(message.text)
 
 
 def word_count_request(request: ChatCompletionRequest) -> int:

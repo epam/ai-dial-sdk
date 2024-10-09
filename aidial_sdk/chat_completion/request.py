@@ -1,8 +1,11 @@
 from enum import Enum
 from typing import Any, Dict, List, Literal, Mapping, Optional, Union
 
+from typing_extensions import assert_never
+
 from aidial_sdk.chat_completion.enums import Status
 from aidial_sdk.deployment.from_request_mixin import FromRequestDeploymentMixin
+from aidial_sdk.exceptions import InvalidRequestError
 from aidial_sdk.pydantic_v1 import (
     ConstrainedFloat,
     ConstrainedInt,
@@ -84,6 +87,20 @@ class Message(ExtraForbidModel):
     tool_calls: Optional[List[ToolCall]] = None
     tool_call_id: Optional[StrictStr] = None
     function_call: Optional[FunctionCall] = None
+
+    @property
+    def text(self) -> str:
+        def _error_message(actual: str) -> str:
+            return f"Unable to retrieve text content of the message: the actual content is {actual}."
+
+        if self.content is None:
+            raise InvalidRequestError(_error_message("null or missing"))
+        elif isinstance(self.content, str):
+            return self.content
+        elif isinstance(self.content, list):
+            raise InvalidRequestError(_error_message("a list of content parts"))
+        else:
+            assert_never(self.content)
 
 
 class Addon(ExtraForbidModel):
