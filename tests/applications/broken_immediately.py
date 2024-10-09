@@ -27,4 +27,4 @@ class BrokenApplication(ChatCompletion):
     async def chat_completion(
         self, request: Request, response: Response
     ) -> None:
-        raise_exception(request.messages[0].text)
+        raise_exception(request.messages[0].text())

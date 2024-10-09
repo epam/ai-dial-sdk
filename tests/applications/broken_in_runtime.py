@@ -17,4 +17,4 @@ class RuntimeBrokenApplication(ChatCompletion):
             choice.append_content("Test content")
             await response.aflush()
 
-            raise_exception(request.messages[0].text)
+            raise_exception(request.messages[0].text())

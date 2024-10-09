@@ -27,7 +27,7 @@ class EchoApplication(ChatCompletion):
         response.set_response_id("test_id")
         response.set_created(0)
 
-        content = request.messages[-1].text
+        content = request.messages[-1].text()
 
         with response.create_single_choice() as choice:
             choice.append_content(content)

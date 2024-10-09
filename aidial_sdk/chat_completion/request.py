@@ -88,8 +88,12 @@ class Message(ExtraForbidModel):
     tool_call_id: Optional[StrictStr] = None
     function_call: Optional[FunctionCall] = None
 
-    @property
     def text(self) -> str:
+        """
+        Returns content of the message only if it's present as a string.
+        Otherwise, throws an invalid request exception.
+        """
+
         def _error_message(actual: str) -> str:
             return f"Unable to retrieve text content of the message: the actual content is {actual}."
 
