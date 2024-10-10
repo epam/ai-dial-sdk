@@ -61,7 +61,7 @@ class SimpleRAGApplication(ChatCompletion):
 
         with response.create_single_choice() as choice:
             message = request.messages[-1]
-            user_query = message.text
+            user_query = message.text()
 
             file_url = get_last_attachment_url(request.messages)
             file_abs_url = urljoin(f"{DIAL_URL}/v1/", file_url)

@@ -37,7 +37,7 @@ class EchoApplication(ChatCompletion):
         # Generate response with a single choice
         with response.create_single_choice() as choice:
             # Fill the content of the response with the last user's content
-            choice.append_content(last_user_message.text)
+            choice.append_content(last_user_message.text())
 
 
 # DIALApp extends FastAPI to provide a user-friendly interface for routing requests to your applications
