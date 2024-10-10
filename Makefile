@@ -17,7 +17,8 @@ publish: build
 	poetry publish -u __token__ -p ${PYPI_TOKEN} --skip-existing
 
 lint: install
-	poetry run nox -s lint
+	poetry run nox -s lint_sdk
+	poetry run nox -s lint_examples
 
 format: install
 	poetry run nox -s format

@@ -81,7 +81,6 @@ exclude = [
     ".pytest_cache",
     "**/__pycache__",
     "build",
-    "examples/langchain_rag"
 ]
 
 [tool.black]
