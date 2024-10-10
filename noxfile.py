@@ -1,3 +1,6 @@
+import os
+from pathlib import Path
+
 import nox
 
 nox.options.reuse_existing_virtualenvs = True
@@ -12,11 +15,40 @@ def format_with_args(session: nox.Session, *args):
 
 
 @nox.session
-def lint(session: nox.Session):
+def lint_sdk(session: nox.Session):
     """Runs linters and fixers"""
     try:
         session.run("poetry", "install", "--all-extras", external=True)
         session.run("poetry", "check", "--lock", external=True)
+        session.run("pyright", SRC)
+        session.run("flake8", SRC)
+        format_with_args(session, SRC, "--check")
+    except Exception:
+        session.error(
+            "linting has failed. Run 'make format' to fix formatting and fix other errors manually"
+        )
+
+
+EXAMPLES = [
+    folder for folder in os.listdir("examples") if not folder.startswith("_")
+]
+
+
+@nox.session
+@nox.parametrize("example_dir", EXAMPLES)
+def lint_examples(session: nox.Session, example_dir: str):
+    try:
+        root = str(Path(__file__).parent)
+        project_dir = f"{root}/examples/{example_dir}"
+
+        session.run("poetry", "install", "--with=lint", external=True)
+        session.run("poetry", "check", "--lock", external=True)
+
+        session.run(
+            "pip", "install", "-r", f"{project_dir}/requirements.txt", "-q"
+        )
+
+        session.chdir(project_dir)
         session.run("pyright", SRC)
         session.run("flake8", SRC)
         format_with_args(session, SRC, "--check")

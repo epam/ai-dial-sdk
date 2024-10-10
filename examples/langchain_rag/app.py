@@ -14,13 +14,15 @@ from langchain.globals import set_debug
 from langchain.storage import LocalFileStore
 from langchain_community.document_loaders import PyPDFLoader, WebBaseLoader
 from langchain_community.vectorstores import Chroma
+from langchain_core.pydantic_v1 import SecretStr
 from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from utils import get_last_attachment_url, sanitize_namespace
 
 from aidial_sdk import DIALApp
 from aidial_sdk import HTTPException as DIALException
 from aidial_sdk.chat_completion import ChatCompletion, Choice, Request, Response
+
+from .utils import get_last_attachment_url, sanitize_namespace
 
 
 def get_env(name: str) -> str:
@@ -97,8 +99,8 @@ class SimpleRAGApplication(ChatCompletion):
                     azure_deployment=EMBEDDINGS_MODEL,
                     azure_endpoint=DIAL_URL,
                     # Header propagation automatically propagates the API key from the request headers.
-                    openai_api_key="-",
-                    openai_api_version=API_VERSION,
+                    api_key=SecretStr("-"),
+                    api_version=API_VERSION,
                     # The check leads to tokenization of the input strings.
                     # Tokenized input is only supported by OpenAI embedding models.
                     # For other models, the check should be disabled.
@@ -120,8 +122,8 @@ class SimpleRAGApplication(ChatCompletion):
                 azure_deployment=CHAT_MODEL,
                 azure_endpoint=DIAL_URL,
                 # Header propagation automatically propagates the API key from the request headers.
-                openai_api_key="-",
-                openai_api_version=API_VERSION,
+                api_key=SecretStr("-"),
+                api_version=API_VERSION,
                 temperature=0,
                 streaming=True,
                 callbacks=[CustomCallbackHandler(choice)],
