@@ -26,7 +26,7 @@ def word_count_string(string: str) -> int:
 
 
 def word_count_message(message: Message) -> int:
-    return word_count_string(message.content or "")
+    return word_count_string(message.text())
 
 
 def word_count_request(request: ChatCompletionRequest) -> int:

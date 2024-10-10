@@ -23,7 +23,7 @@ class RenderTextApplication(ChatCompletion):
         # Create a single choice
         with response.create_single_choice() as choice:
             # Get the last message content
-            content = request.messages[-1].content or ""
+            content = request.messages[-1].text()
 
             # The image may be returned either as base64 string or as URL
             # The content specifies the mode of return: 'base64' or 'url'

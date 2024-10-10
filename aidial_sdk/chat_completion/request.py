@@ -1,8 +1,11 @@
 from enum import Enum
 from typing import Any, Dict, List, Literal, Mapping, Optional, Union
 
+from typing_extensions import assert_never
+
 from aidial_sdk.chat_completion.enums import Status
 from aidial_sdk.deployment.from_request_mixin import FromRequestDeploymentMixin
+from aidial_sdk.exceptions import InvalidRequestError
 from aidial_sdk.pydantic_v1 import (
     ConstrainedFloat,
     ConstrainedInt,
@@ -58,14 +61,50 @@ class Role(str, Enum):
     TOOL = "tool"
 
 
+class ImageURL(ExtraForbidModel):
+    url: StrictStr
+    detail: Optional[Literal["auto", "low", "high"]] = None
+
+
+class MessageContentImagePart(ExtraForbidModel):
+    type: Literal["image_url"]
+    image_url: ImageURL
+
+
+class MessageContentTextPart(ExtraForbidModel):
+    type: Literal["text"]
+    text: StrictStr
+
+
+MessageContentPart = Union[MessageContentTextPart, MessageContentImagePart]
+
+
 class Message(ExtraForbidModel):
     role: Role
-    content: Optional[StrictStr] = None
+    content: Optional[Union[StrictStr, List[MessageContentPart]]] = None
     custom_content: Optional[CustomContent] = None
     name: Optional[StrictStr] = None
     tool_calls: Optional[List[ToolCall]] = None
     tool_call_id: Optional[StrictStr] = None
     function_call: Optional[FunctionCall] = None
+
+    def text(self) -> str:
+        """
+        Returns content of the message only if it's present as a string.
+        Otherwise, throws an invalid request exception.
+        """
+
+        def _error_message(actual: str) -> str:
+            return f"Unable to retrieve text content of the message: the actual content is {actual}."
+
+        if self.content is None:
+            raise InvalidRequestError(_error_message("null or missing"))
+        elif isinstance(self.content, str):
+            return self.content
+        elif isinstance(self.content, list):
+            raise InvalidRequestError(_error_message("a list of content parts"))
+        else:
+            assert_never(self.content)
 
 
 class Addon(ExtraForbidModel):
