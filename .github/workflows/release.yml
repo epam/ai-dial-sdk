@@ -6,7 +6,7 @@ on:
 
 jobs:
   release:
-    uses: epam/ai-dial-ci/.github/workflows/python_package_release.yml@1.9.1
+    uses: epam/ai-dial-ci/.github/workflows/python_package_release.yml@1.9.2
     secrets: inherit
     with:
       python_version: 3.8
