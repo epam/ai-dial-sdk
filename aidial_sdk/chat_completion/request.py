@@ -19,7 +19,7 @@ from aidial_sdk.utils.pydantic import ExtraForbidModel
 
 
 class Attachment(ExtraForbidModel):
-    type: Optional[StrictStr] = "text/markdown"
+    type: Optional[StrictStr] = None
     title: Optional[StrictStr] = None
     data: Optional[StrictStr] = None
     url: Optional[StrictStr] = None
