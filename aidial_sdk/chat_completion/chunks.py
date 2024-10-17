@@ -306,9 +306,9 @@ class Attachment(BaseModel):
     def check_data_or_url(cls, values):
         data, url = values.get("data"), values.get("url")
 
-        if not data and not url:
+        if data is None and url is None:
             raise ValueError("Trying to add attachment without data and url")
-        if data and url:
+        if data is not None and url is not None:
             raise ValueError("Trying to add attachment with data and url")
 
         return values
