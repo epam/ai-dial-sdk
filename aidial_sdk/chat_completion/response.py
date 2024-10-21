@@ -1,6 +1,6 @@
 import asyncio
 from time import time
-from typing import Any, Callable, Coroutine, Dict, List, Optional
+from typing import Any, Callable, Coroutine, List, Optional
 from uuid import uuid4
 
 from typing_extensions import assert_never
@@ -22,6 +22,7 @@ from aidial_sdk.chat_completion.request import Request
 from aidial_sdk.exceptions import HTTPException as DIALException
 from aidial_sdk.exceptions import RequestValidationError, RuntimeServerError
 from aidial_sdk.utils.errors import RUNTIME_ERROR_MESSAGE, runtime_error
+from aidial_sdk.utils.json import remove_nones
 from aidial_sdk.utils.logging import log_error, log_exception
 from aidial_sdk.utils.merge_chunks import merge
 from aidial_sdk.utils.streaming import ResponseStream
@@ -53,20 +54,20 @@ class Response:
         self._model = None
         self._created = int(time())
 
-    def _add_default_fields(self, target: Dict[str, Any]) -> Dict[str, Any]:
-        target["id"] = self._response_id
-        if self._model:
-            target["model"] = self._model
-        target["created"] = self._created
-        target["object"] = (
-            "chat.completion.chunk"
-            if self.request.stream
-            else "chat.completion"
-        )
-        return target
-
     def _create_chunk(self, chunk: BaseChunk) -> BaseChunkWithDefaults:
-        defaults = self._add_default_fields({})
+        defaults = remove_nones(
+            {
+                "id": self._response_id,
+                "created": self._created,
+                "model": self._model,
+                "object": (
+                    "chat.completion.chunk"
+                    if self.request.stream
+                    else "chat.completion"
+                ),
+            }
+        )
+
         return BaseChunkWithDefaults(chunk=chunk, defaults=defaults)
 
     @property
