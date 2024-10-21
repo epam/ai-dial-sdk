@@ -30,7 +30,7 @@ from aidial_sdk.telemetry.types import TelemetryConfig
 from aidial_sdk.utils._reflection import get_method_implementation
 from aidial_sdk.utils.log_config import LogConfig
 from aidial_sdk.utils.logging import log_debug, set_log_deployment
-from aidial_sdk.utils.streaming import merge_chunks
+from aidial_sdk.utils.streaming import to_block_response, to_streaming_response
 
 logging.config.dictConfig(LogConfig().dict())
 
@@ -197,19 +197,16 @@ class DIALApp(FastAPI):
             )
 
             response = ChatCompletionResponse(request)
-            first_chunk = await response._generator(
-                impl.chat_completion, request
-            )
+
+            stream = response._generate_stream(impl.chat_completion)
 
             if request.stream:
                 return StreamingResponse(
-                    response._generate_stream(first_chunk),
+                    await to_streaming_response(stream),
                     media_type="text/event-stream",
                 )
             else:
-                response_json = await merge_chunks(
-                    response._generate_stream(first_chunk)
-                )
+                response_json = await to_block_response(stream)
 
                 log_debug(f"response: {response_json}")
                 return JSONResponse(content=response_json)
