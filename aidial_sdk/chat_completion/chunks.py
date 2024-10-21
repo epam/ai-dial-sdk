@@ -1,7 +1,8 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TypedDict
 
 from aidial_sdk.chat_completion.enums import FinishReason, Status
+from aidial_sdk.exceptions import HTTPException as DIALException
 from aidial_sdk.pydantic_v1 import BaseModel, root_validator
 from aidial_sdk.utils.json import remove_nones
 
@@ -10,6 +11,28 @@ class BaseChunk(ABC):
     @abstractmethod
     def to_dict(self) -> Dict[str, Any]:
         pass
+
+
+class DefaultChunk(TypedDict, total=False):
+    id: str
+    model: str
+    created: int
+    object: str
+
+
+class BaseChunkWithDefaults:
+    chunk: BaseChunk
+    defaults: DefaultChunk
+
+    def __init__(self, chunk: BaseChunk, defaults: DefaultChunk):
+        self.chunk = chunk
+        self.defaults = defaults
+
+    def to_dict(self, *, with_defaults: bool) -> Dict[str, Any]:
+        if with_defaults:
+            return {**self.chunk.to_dict(), **self.defaults}
+        else:
+            return self.chunk.to_dict()
 
 
 class StartChoiceChunk(BaseChunk):
@@ -470,8 +493,22 @@ class DiscardedMessagesChunk(BaseChunk):
         }
 
 
-class EndChunk:
-    exc: Optional[Exception]
+class ArbitraryChunk(BaseChunk):
+    chunk: Dict[str, Any]
 
-    def __init__(self, exc: Optional[Exception] = None):
+    def __init__(self, chunk: Dict[str, Any]):
+        self.chunk = chunk
+
+    def to_dict(self):
+        return self.chunk
+
+
+class ExceptionChunk:
+    exc: DIALException
+
+    def __init__(self, exc: DIALException):
         self.exc = exc
+
+
+class EndChunk:
+    pass

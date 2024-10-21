@@ -1,22 +1,21 @@
 import asyncio
 from time import time
-from typing import (
-    Any,
-    AsyncGenerator,
-    Callable,
-    Coroutine,
-    Dict,
-    List,
-    Optional,
-)
+from typing import Any, Callable, Coroutine, List
 from uuid import uuid4
 
+from typing_extensions import assert_never
+
+from aidial_sdk.chat_completion._types import ChunkQueue
 from aidial_sdk.chat_completion.choice import Choice
 from aidial_sdk.chat_completion.chunks import (
+    ArbitraryChunk,
     BaseChunk,
+    BaseChunkWithDefaults,
+    DefaultChunk,
     DiscardedMessagesChunk,
     EndChoiceChunk,
     EndChunk,
+    ExceptionChunk,
     UsageChunk,
     UsagePerModelChunk,
 )
@@ -26,21 +25,20 @@ from aidial_sdk.exceptions import RequestValidationError, RuntimeServerError
 from aidial_sdk.utils.errors import RUNTIME_ERROR_MESSAGE, runtime_error
 from aidial_sdk.utils.logging import log_error, log_exception
 from aidial_sdk.utils.merge_chunks import merge
-from aidial_sdk.utils.streaming import DONE_MARKER, format_chunk
+from aidial_sdk.utils.streaming import ResponseStream
 
 
 class Response:
     request: Request
 
-    _queue: asyncio.Queue
+    _queue: ChunkQueue
     _last_choice_index: int
     _last_usage_per_model_index: int
     _generation_started: bool
     _discarded_messages_generated: bool
     _usage_generated: bool
-    _response_id: str
-    _model: Optional[str]
-    _created: int
+
+    _default_chunk: DefaultChunk
 
     def __init__(self, request: Request):
         self._queue = asyncio.Queue()
@@ -51,168 +49,110 @@ class Response:
         self._usage_generated = False
 
         self.request = request
-        self._response_id = str(uuid4())
-        self._model = None
-        self._created = int(time())
 
-    def _add_default_fields(self, target: Dict[str, Any]) -> None:
-        target["id"] = self._response_id
-        if self._model:
-            target["model"] = self._model
-        target["created"] = self._created
-        target["object"] = (
-            "chat.completion.chunk"
-            if self.request.stream
-            else "chat.completion"
+        self._default_chunk = DefaultChunk(
+            id=str(uuid4()),
+            created=int(time()),
+            object=(
+                "chat.completion.chunk"
+                if self.request.stream
+                else "chat.completion"
+            ),
         )
 
+    @property
+    def n(self) -> int:
+        return self.request.n or 1
+
+    @property
+    def stream(self) -> int:
+        return self.request.stream
+
     async def _generate_stream(
-        self, first_chunk: BaseChunk
-    ) -> AsyncGenerator[Any, None]:
-        chunk = first_chunk.to_dict()
+        self,
+        producer: Callable[[Request, "Response"], Coroutine[Any, Any, Any]],
+    ) -> ResponseStream:
 
-        # NOTE: add default fields only to the first chunk in a non-streaming mode and to all chunks in a streaming mode
-        self._add_default_fields(chunk)
+        def _create_chunk(chunk):
+            return BaseChunkWithDefaults(
+                chunk=chunk, defaults=self._default_chunk
+            )
 
-        if self.request.stream:
-            formatted_chunk = format_chunk(chunk)
-            yield formatted_chunk
-        else:
-            yield chunk
+        user_task = asyncio.create_task(producer(self.request, self))
+        user_task_is_done = False
 
-        self._queue.task_done()
+        # A list of chunks whose emitting is delayed up until the very last moment
+        delayed_chunks: List[BaseChunk] = []
 
-        user_task_finished = False
-
-        last_end_choice_chunk = None
-        usage_chunk = {}
         while True:
-            get_task = asyncio.create_task(self._queue.get())
+            get_chunk_task = asyncio.create_task(self._queue.get())
             done = (
                 await asyncio.wait(
-                    [get_task, self.user_task],
+                    [get_chunk_task, user_task],
                     return_when=asyncio.FIRST_COMPLETED,
                 )
             )[0]
-            if self.user_task in done:
-                if not user_task_finished:
-                    end_chunk_generated = False
-                    try:
-                        self.user_task.result()
-                    except DIALException as e:
-                        if self.request.stream:
-                            self._queue.put_nowait(EndChunk(e))
-                            end_chunk_generated = True
-                        else:
-                            raise e.to_fastapi_exception()
-                    except Exception as e:
+
+            if user_task in done and not user_task_is_done:
+                user_task_is_done = True
+                try:
+                    user_task.result()
+                except Exception as e:
+                    if isinstance(e, DIALException):
+                        dial_exception = e
+                    else:
                         log_exception(RUNTIME_ERROR_MESSAGE)
-
-                        if self.request.stream:
-                            self._queue.put_nowait(EndChunk(e))
-                            end_chunk_generated = True
-                        else:
-                            raise RuntimeServerError(
-                                RUNTIME_ERROR_MESSAGE
-                            ).to_fastapi_exception()
-
-                    if not end_chunk_generated:
-                        self._queue.put_nowait(EndChunk())
-                    user_task_finished = True
-            item = get_task.result() if get_task in done else await get_task
-
-            if isinstance(item, EndChoiceChunk):
-                if item.choice_index == (self.request.n or 1) - 1:
-                    last_end_choice_chunk = item.to_dict()
-                    self._queue.task_done()
-                    continue
-
-            if isinstance(
-                item,
-                (UsageChunk, UsagePerModelChunk, DiscardedMessagesChunk),
-            ):
-                usage_chunk = merge(usage_chunk, item.to_dict())
-            elif isinstance(item, BaseChunk):
-                chunk = item.to_dict()
-
-                if self.request.stream:
-                    self._add_default_fields(chunk)
-                    formatted_chunk = format_chunk(chunk)
-                    yield formatted_chunk
-                else:
-                    yield chunk
-            elif isinstance(item, EndChunk):
-                if last_end_choice_chunk:
-                    chunk = merge(last_end_choice_chunk, usage_chunk)
-
-                    if self.request.stream:
-                        self._add_default_fields(chunk)
-                        formatted_chunk = format_chunk(chunk)
-                        yield formatted_chunk
-                    else:
-                        yield chunk
-
-                if item.exc:
-                    if isinstance(item.exc, DIALException):
-                        formatted_chunk = format_chunk(item.exc.json_error())
-                    else:
-                        formatted_chunk = format_chunk(
-                            RuntimeServerError(
-                                RUNTIME_ERROR_MESSAGE
-                            ).json_error()
+                        dial_exception = RuntimeServerError(
+                            RUNTIME_ERROR_MESSAGE
                         )
-                    yield formatted_chunk
+
+                    self._queue.put_nowait(ExceptionChunk(dial_exception))
                 else:
-                    if self._last_choice_index != (self.request.n or 1):
+                    self._queue.put_nowait(EndChunk())
+
+            chunk = await get_chunk_task
+            self._queue.task_done()
+
+            if isinstance(chunk, BaseChunk):
+
+                is_last_end_choice_chunk = (
+                    isinstance(chunk, EndChoiceChunk)
+                    and chunk.choice_index == self.n - 1
+                )
+
+                is_top_level_chunk = isinstance(
+                    chunk,
+                    (UsageChunk, UsagePerModelChunk, DiscardedMessagesChunk),
+                )
+
+                if is_last_end_choice_chunk or is_top_level_chunk:
+                    delayed_chunks.append(chunk)
+                else:
+                    yield _create_chunk(chunk)
+
+            elif isinstance(chunk, (ExceptionChunk, EndChunk)):
+                if delayed_chunks:
+                    final_chunk = merge(*[d.to_dict() for d in delayed_chunks])
+                    yield _create_chunk(ArbitraryChunk(chunk=final_chunk))
+
+                if isinstance(chunk, ExceptionChunk):
+                    yield chunk.exc
+                elif isinstance(chunk, EndChunk):
+                    if self._last_choice_index != self.n:
                         log_error("Not all choices were generated")
-
-                        error = RuntimeServerError(RUNTIME_ERROR_MESSAGE)
-
-                        if self.request.stream:
-                            formatted_chunk = format_chunk(error.json_error())
-                            yield formatted_chunk
-                        else:
-                            raise error.to_fastapi_exception()
-
-                if self.request.stream:
-                    yield format_chunk(DONE_MARKER)
-
-                self._queue.task_done()
+                        yield RuntimeServerError(RUNTIME_ERROR_MESSAGE)
+                else:
+                    assert_never(chunk)
 
                 return
 
-            self._queue.task_done()
-
-    async def _generator(
-        self,
-        producer: Callable[[Request, "Response"], Coroutine[Any, Any, Any]],
-        request: Request,
-    ) -> BaseChunk:
-        self.user_task = asyncio.create_task(producer(request, self))
-
-        get_task = asyncio.create_task(self._queue.get())
-        done = (
-            await asyncio.wait(
-                [get_task, self.user_task], return_when=asyncio.FIRST_COMPLETED
-            )
-        )[0]
-        if self.user_task in done:
-            try:
-                self.user_task.result()
-            except DIALException as e:
-                raise e.to_fastapi_exception()
-            except Exception:
-                log_exception(RUNTIME_ERROR_MESSAGE)
-                raise RuntimeServerError(
-                    RUNTIME_ERROR_MESSAGE
-                ).to_fastapi_exception()
-
-        return get_task.result() if get_task in done else await get_task
+            else:
+                assert_never(chunk)
 
     def create_choice(self) -> Choice:
         self._generation_started = True
 
-        if self._last_choice_index >= (self.request.n or 1):
+        if self._last_choice_index >= self.n:
             raise runtime_error("Trying to generate more chunks than requested")
 
         choice = Choice(self._queue, self._last_choice_index)
@@ -225,7 +165,7 @@ class Response:
             raise runtime_error(
                 "Trying to generate a single choice after choice"
             )
-        if (self.request.n or 1) > 1:
+        if self.n > 1:
             raise RequestValidationError(
                 message=f"{self.request.deployment_id} deployment doesn't support n > 1"
             )
@@ -237,7 +177,7 @@ class Response:
     ):
         self._generation_started = True
 
-        if self._last_choice_index != (self.request.n or 1):
+        if self._last_choice_index != self.n:
             raise runtime_error(
                 'Trying to set "usage_per_model" before generating all choices',
             )
@@ -257,7 +197,7 @@ class Response:
 
         if self._discarded_messages_generated:
             raise runtime_error('Trying to set "discarded_messages" twice')
-        if self._last_choice_index != (self.request.n or 1):
+        if self._last_choice_index != self.n:
             raise runtime_error(
                 'Trying to set "discarded_messages" before generating all choices',
             )
@@ -270,7 +210,7 @@ class Response:
 
         if self._usage_generated:
             raise runtime_error('Trying to set "usage" twice')
-        if self._last_choice_index != (self.request.n or 1):
+        if self._last_choice_index != self.n:
             raise runtime_error(
                 'Trying to set "usage" before generating all choices',
             )
@@ -287,7 +227,7 @@ class Response:
                 'Trying to set "created" after start of generation'
             )
 
-        self._created = created
+        self._default_chunk["created"] = created
 
     def set_model(self, model: str):
         if self._generation_started:
@@ -295,7 +235,7 @@ class Response:
                 'Trying to set "model" after start of generation'
             )
 
-        self._model = model
+        self._default_chunk["model"] = model
 
     def set_response_id(self, response_id: str):
         if self._generation_started:
@@ -303,4 +243,4 @@ class Response:
                 'Trying to set "response_id" after start of generation',
             )
 
-        self._response_id = response_id
+        self._default_chunk["id"] = response_id
