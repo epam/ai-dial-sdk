@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, TypedDict
 
 from aidial_sdk.chat_completion.enums import FinishReason, Status
 from aidial_sdk.exceptions import HTTPException as DIALException
@@ -13,11 +13,18 @@ class BaseChunk(ABC):
         pass
 
 
+class DefaultChunk(TypedDict, total=False):
+    id: str
+    model: str
+    created: int
+    object: str
+
+
 class BaseChunkWithDefaults:
     chunk: BaseChunk
-    defaults: Dict[str, Any]
+    defaults: DefaultChunk
 
-    def __init__(self, chunk: BaseChunk, defaults: Dict[str, Any]):
+    def __init__(self, chunk: BaseChunk, defaults: DefaultChunk):
         self.chunk = chunk
         self.defaults = defaults
 

@@ -1,6 +1,6 @@
 import asyncio
 from time import time
-from typing import Any, Callable, Coroutine, List, Optional
+from typing import Any, Callable, Coroutine, List
 from uuid import uuid4
 
 from typing_extensions import assert_never
@@ -11,6 +11,7 @@ from aidial_sdk.chat_completion.chunks import (
     ArbitraryChunk,
     BaseChunk,
     BaseChunkWithDefaults,
+    DefaultChunk,
     DiscardedMessagesChunk,
     EndChoiceChunk,
     EndChunk,
@@ -22,7 +23,6 @@ from aidial_sdk.chat_completion.request import Request
 from aidial_sdk.exceptions import HTTPException as DIALException
 from aidial_sdk.exceptions import RequestValidationError, RuntimeServerError
 from aidial_sdk.utils.errors import RUNTIME_ERROR_MESSAGE, runtime_error
-from aidial_sdk.utils.json import remove_nones
 from aidial_sdk.utils.logging import log_error, log_exception
 from aidial_sdk.utils.merge_chunks import merge
 from aidial_sdk.utils.streaming import ResponseStream
@@ -37,9 +37,8 @@ class Response:
     _generation_started: bool
     _discarded_messages_generated: bool
     _usage_generated: bool
-    _response_id: str
-    _model: Optional[str]
-    _created: int
+
+    _default_chunk: DefaultChunk
 
     def __init__(self, request: Request):
         self._queue = asyncio.Queue()
@@ -50,34 +49,34 @@ class Response:
         self._usage_generated = False
 
         self.request = request
-        self._response_id = str(uuid4())
-        self._model = None
-        self._created = int(time())
 
-    def _create_chunk(self, chunk: BaseChunk) -> BaseChunkWithDefaults:
-        defaults = remove_nones(
-            {
-                "id": self._response_id,
-                "created": self._created,
-                "model": self._model,
-                "object": (
-                    "chat.completion.chunk"
-                    if self.request.stream
-                    else "chat.completion"
-                ),
-            }
+        self._default_chunk = DefaultChunk(
+            id=str(uuid4()),
+            created=int(time()),
+            object=(
+                "chat.completion.chunk"
+                if self.request.stream
+                else "chat.completion"
+            ),
         )
-
-        return BaseChunkWithDefaults(chunk=chunk, defaults=defaults)
 
     @property
     def n(self) -> int:
         return self.request.n or 1
 
+    @property
+    def stream(self) -> int:
+        return self.request.stream
+
     async def _generate_stream(
         self,
         producer: Callable[[Request, "Response"], Coroutine[Any, Any, Any]],
     ) -> ResponseStream:
+
+        def _create_chunk(chunk):
+            return BaseChunkWithDefaults(
+                chunk=chunk, defaults=self._default_chunk
+            )
 
         user_task = asyncio.create_task(producer(self.request, self))
         user_task_is_done = False
@@ -129,12 +128,12 @@ class Response:
                 if is_last_end_choice_chunk or is_top_level_chunk:
                     delayed_chunks.append(chunk)
                 else:
-                    yield self._create_chunk(chunk)
+                    yield _create_chunk(chunk)
 
             elif isinstance(chunk, (ExceptionChunk, EndChunk)):
                 if delayed_chunks:
                     final_chunk = merge(*[d.to_dict() for d in delayed_chunks])
-                    yield self._create_chunk(ArbitraryChunk(chunk=final_chunk))
+                    yield _create_chunk(ArbitraryChunk(chunk=final_chunk))
 
                 if isinstance(chunk, ExceptionChunk):
                     yield chunk.exc
@@ -228,7 +227,7 @@ class Response:
                 'Trying to set "created" after start of generation'
             )
 
-        self._created = created
+        self._default_chunk["created"] = created
 
     def set_model(self, model: str):
         if self._generation_started:
@@ -236,7 +235,7 @@ class Response:
                 'Trying to set "model" after start of generation'
             )
 
-        self._model = model
+        self._default_chunk["model"] = model
 
     def set_response_id(self, response_id: str):
         if self._generation_started:
@@ -244,4 +243,4 @@ class Response:
                 'Trying to set "response_id" after start of generation',
             )
 
-        self._response_id = response_id
+        self._default_chunk["id"] = response_id
