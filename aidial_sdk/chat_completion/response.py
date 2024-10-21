@@ -83,9 +83,9 @@ class Response:
         self._queue.task_done()
 
         user_task_finished = False
-
         last_end_choice_chunk = None
         usage_chunk = {}
+
         while True:
             get_task = asyncio.create_task(self._queue.get())
             done = (
@@ -94,31 +94,28 @@ class Response:
                     return_when=asyncio.FIRST_COMPLETED,
                 )
             )[0]
-            if self.user_task in done:
-                if not user_task_finished:
-                    end_chunk_generated = False
-                    try:
-                        self.user_task.result()
-                    except DIALException as e:
-                        if self.request.stream:
-                            self._queue.put_nowait(EndChunk(e))
-                            end_chunk_generated = True
-                        else:
-                            raise e.to_fastapi_exception()
-                    except Exception as e:
-                        log_exception(RUNTIME_ERROR_MESSAGE)
 
-                        if self.request.stream:
-                            self._queue.put_nowait(EndChunk(e))
-                            end_chunk_generated = True
-                        else:
-                            raise RuntimeServerError(
-                                RUNTIME_ERROR_MESSAGE
-                            ).to_fastapi_exception()
+            if self.user_task in done and not user_task_finished:
+                user_task_finished = True
+                try:
+                    self.user_task.result()
+                except DIALException as e:
+                    if self.request.stream:
+                        self._queue.put_nowait(EndChunk(e))
+                    else:
+                        raise e.to_fastapi_exception()
+                except Exception as e:
+                    log_exception(RUNTIME_ERROR_MESSAGE)
 
-                    if not end_chunk_generated:
-                        self._queue.put_nowait(EndChunk())
-                    user_task_finished = True
+                    if self.request.stream:
+                        self._queue.put_nowait(EndChunk(e))
+                    else:
+                        raise RuntimeServerError(
+                            RUNTIME_ERROR_MESSAGE
+                        ).to_fastapi_exception()
+                else:
+                    self._queue.put_nowait(EndChunk())
+
             item = get_task.result() if get_task in done else await get_task
 
             if isinstance(item, EndChoiceChunk):
