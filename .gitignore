@@ -9,3 +9,4 @@ dist/
 .idea/
 .env
 ~*
+.vscode/launch.json
