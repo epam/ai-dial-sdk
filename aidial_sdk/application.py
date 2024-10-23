@@ -30,7 +30,11 @@ from aidial_sdk.telemetry.types import TelemetryConfig
 from aidial_sdk.utils._reflection import get_method_implementation
 from aidial_sdk.utils.log_config import LogConfig
 from aidial_sdk.utils.logging import log_debug, set_log_deployment
-from aidial_sdk.utils.streaming import to_block_response, to_streaming_response
+from aidial_sdk.utils.streaming import (
+    add_heartbeat,
+    to_block_response,
+    to_streaming_response,
+)
 
 logging.config.dictConfig(LogConfig().dict())
 
@@ -116,12 +120,20 @@ class DIALApp(FastAPI):
         return self
 
     def add_chat_completion(
-        self, deployment_name: str, impl: ChatCompletion
+        self,
+        deployment_name: str,
+        impl: ChatCompletion,
+        *,
+        heartbeat_timeout: Optional[float] = None,
     ) -> "DIALApp":
 
         self.add_api_route(
             f"/openai/deployments/{deployment_name}/chat/completions",
-            self._chat_completion(deployment_name, impl),
+            self._chat_completion(
+                deployment_name,
+                impl,
+                heartbeat_timeout=heartbeat_timeout,
+            ),
             methods=["POST"],
         )
 
@@ -188,7 +200,13 @@ class DIALApp(FastAPI):
 
         return _handler
 
-    def _chat_completion(self, deployment_id: str, impl: ChatCompletion):
+    def _chat_completion(
+        self,
+        deployment_id: str,
+        impl: ChatCompletion,
+        *,
+        heartbeat_timeout: Optional[float],
+    ):
         async def _handler(original_request: Request):
             set_log_deployment(deployment_id)
 
@@ -201,6 +219,14 @@ class DIALApp(FastAPI):
             stream = response._generate_stream(impl.chat_completion)
 
             if request.stream:
+                if heartbeat_timeout:
+                    stream = add_heartbeat(
+                        stream,
+                        timeout=heartbeat_timeout,
+                        heartbeat_callback=lambda: log_debug("heartbeat"),
+                        heartbeat_object=": heartbeat\n\n",
+                    )
+
                 return StreamingResponse(
                     await to_streaming_response(stream),
                     media_type="text/event-stream",
