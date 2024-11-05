@@ -1,7 +1,7 @@
-from asyncio import Queue
 from types import TracebackType
 from typing import Optional, Type, overload
 
+from aidial_sdk.chat_completion._types import ChunkQueue
 from aidial_sdk.chat_completion.chunks import (
     AttachmentStageChunk,
     ContentStageChunk,
@@ -18,7 +18,7 @@ from aidial_sdk.utils.errors import runtime_error
 
 
 class Stage:
-    _queue: Queue
+    _queue: ChunkQueue
     _choice_index: int
     _stage_index: int
     _name: Optional[str]
@@ -28,7 +28,7 @@ class Stage:
 
     def __init__(
         self,
-        queue: Queue,
+        queue: ChunkQueue,
         choice_index: int,
         stage_index: int,
         name: Optional[str] = None,

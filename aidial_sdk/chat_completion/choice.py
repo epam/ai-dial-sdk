@@ -1,8 +1,8 @@
 import json
-from asyncio import Queue
 from types import TracebackType
 from typing import Any, Optional, Type, overload
 
+from aidial_sdk.chat_completion._types import ChunkQueue
 from aidial_sdk.chat_completion.choice_base import ChoiceBase
 from aidial_sdk.chat_completion.chunks import (
     AttachmentChunk,
@@ -25,7 +25,7 @@ from aidial_sdk.utils.logging import log_debug
 
 
 class Choice(ChoiceBase):
-    _queue: Queue
+    _queue: ChunkQueue
     _index: int
     _last_attachment_index: int
     _last_stage_index: int
@@ -36,7 +36,7 @@ class Choice(ChoiceBase):
     _state_submitted: bool
     _last_finish_reason: Optional[FinishReason]
 
-    def __init__(self, queue: Queue, choice_index: int):
+    def __init__(self, queue: ChunkQueue, choice_index: int):
         self._queue = queue
         self._index = choice_index
         self._last_attachment_index = 0
