@@ -222,7 +222,7 @@ class DIALApp(FastAPI):
                 if heartbeat_timeout:
                     stream = add_heartbeat(
                         stream,
-                        timeout=heartbeat_timeout,
+                        heartbeat_interval=heartbeat_timeout,
                         heartbeat_callback=lambda: log_debug("heartbeat"),
                         heartbeat_object=": heartbeat\n\n",
                     )

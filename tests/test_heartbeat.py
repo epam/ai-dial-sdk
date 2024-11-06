@@ -24,21 +24,36 @@ https://github.com/epam/ai-dial-adapter-bedrock/blob/release-0.15/tests/conftest
 So we resort here to testing purely the output of the application and check the presence of heartbeat messages.
 """
 
+import asyncio
 import itertools
 import json
+from contextlib import contextmanager
 from typing import Generator, Iterator, List, Optional, Union
+from unittest.mock import patch
 
 import pytest
 from pydantic import BaseModel
 from starlette.testclient import TestClient
 
 from aidial_sdk import DIALApp
+from aidial_sdk.utils.streaming import add_heartbeat as original_add_heartbeat
 from tests.applications.idle import IdleApplication
 
 ExpectedStream = List[Union[str, dict]]
 
 BEAT = ": heartbeat"
 DONE = "data: [DONE]"
+
+ERROR = "data: " + json.dumps(
+    {
+        "error": {
+            "message": "Error during processing the request",
+            "type": "runtime_error",
+            "code": "500",
+        }
+    },
+    separators=(",", ":"),
+)
 
 
 def create_choice(
@@ -61,6 +76,17 @@ CHOICE_CLOSE = create_choice(finish_reason="stop")
 
 def content(content: str):
     return create_choice(delta={"content": content})
+
+
+@contextmanager
+def mock_add_heartbeat(**extra_kwargs):
+    with patch("aidial_sdk.application.add_heartbeat") as mock:
+
+        def _updated_add_heartbeat(*args, **kwargs):
+            return original_add_heartbeat(*args, **{**kwargs, **extra_kwargs})
+
+        mock.side_effect = _updated_add_heartbeat
+        yield mock
 
 
 def match_sse_stream(expected: ExpectedStream, actual: Iterator[str]):
@@ -88,6 +114,7 @@ class TestCase(BaseModel):
     __test__ = False
 
     intervals: List[float]
+    throw_exception: bool
     heartbeat_timeout: Optional[float]
     expected: ExpectedStream
 
@@ -98,6 +125,7 @@ class TestCase(BaseModel):
         TestCase(
             intervals=[2.0],
             heartbeat_timeout=1.5,
+            throw_exception=False,
             expected=[
                 BEAT,
                 CHOICE_OPEN,
@@ -109,6 +137,7 @@ class TestCase(BaseModel):
         TestCase(
             intervals=[2.0, 2.0],
             heartbeat_timeout=1.5,
+            throw_exception=False,
             expected=[
                 BEAT,
                 CHOICE_OPEN,
@@ -121,6 +150,7 @@ class TestCase(BaseModel):
         ),
         TestCase(
             intervals=[2.0] * 4,
+            throw_exception=False,
             heartbeat_timeout=1.5,
             expected=[
                 BEAT,
@@ -138,6 +168,7 @@ class TestCase(BaseModel):
         ),
         TestCase(
             intervals=[2.0],
+            throw_exception=False,
             heartbeat_timeout=0.44,
             expected=[
                 BEAT,
@@ -152,6 +183,7 @@ class TestCase(BaseModel):
         ),
         TestCase(
             intervals=[0.5] * 4,
+            throw_exception=False,
             heartbeat_timeout=1.0,
             expected=[
                 CHOICE_OPEN,
@@ -165,6 +197,7 @@ class TestCase(BaseModel):
         ),
         TestCase(
             intervals=[2.0],
+            throw_exception=False,
             heartbeat_timeout=None,
             expected=[
                 CHOICE_OPEN,
@@ -173,27 +206,58 @@ class TestCase(BaseModel):
                 DONE,
             ],
         ),
+        TestCase(
+            intervals=[2.0],
+            throw_exception=True,
+            heartbeat_timeout=1.5,
+            expected=[
+                BEAT,
+                CHOICE_OPEN,
+                content("1"),
+                CHOICE_CLOSE,
+                ERROR,
+                DONE,
+            ],
+        ),
     ],
 )
-def test_heartbeat(test_case: TestCase):
-    app_name = "app-name"
+async def test_heartbeat(test_case: TestCase):
+    beats: int = 0
 
-    app = DIALApp()
-    app.add_chat_completion(
-        app_name,
-        IdleApplication(intervals=test_case.intervals),
-        heartbeat_timeout=test_case.heartbeat_timeout,
-    )
+    def inc_beat_counter():
+        nonlocal beats
+        beats += 1
 
-    client = TestClient(app)
+    with mock_add_heartbeat(heartbeat_callback=inc_beat_counter):
+        app_name = "test-app"
 
-    response = client.post(
-        url=f"/openai/deployments/{app_name}/chat/completions",
-        json={
-            "messages": [{"role": "user", "content": "hello"}],
-            "stream": True,
-        },
-        headers={"Api-Key": "TEST_API_KEY"},
-    )
+        app = DIALApp()
+        app.add_chat_completion(
+            app_name,
+            IdleApplication(
+                intervals=test_case.intervals,
+                throw_exception=test_case.throw_exception,
+            ),
+            heartbeat_timeout=test_case.heartbeat_timeout,
+        )
 
-    match_sse_stream(test_case.expected, response.iter_lines())
+        client = TestClient(app)
+
+        response = client.post(
+            url=f"/openai/deployments/{app_name}/chat/completions",
+            json={
+                "messages": [{"role": "user", "content": "hello"}],
+                "stream": True,
+            },
+            headers={"Api-Key": "TEST_API_KEY"},
+        )
+
+        match_sse_stream(test_case.expected, response.iter_lines())
+
+        assert beats == test_case.expected.count(BEAT)
+
+        # Make sure the beats have stopped
+        if test_case.heartbeat_timeout is not None:
+            current_beats = beats
+            await asyncio.sleep(test_case.heartbeat_timeout * 2)
+            assert current_beats == beats

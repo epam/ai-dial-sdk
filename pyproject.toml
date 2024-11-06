@@ -51,7 +51,8 @@ telemetry = [
 ]
 
 [tool.poetry.group.test.dependencies]
-pytest = "^7.4.2"
+pytest = "^8.2"
+pytest-asyncio = "^0.24.0"
 nox = "^2023.4.22"
 pillow = "^10.2.0"
 respx = "^0.21.1"
@@ -66,6 +67,8 @@ pyright = "1.1.385"
 autoflake = "^2.2.0"
 
 [tool.pytest.ini_options]
+asyncio_default_fixture_loop_scope = "function"
+addopts = "--asyncio-mode=auto"
 testpaths = [
     "tests"
 ]

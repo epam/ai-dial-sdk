@@ -10,9 +10,11 @@ class IdleApplication(ChatCompletion):
     """
 
     intervals: List[float]
+    throw_exception: bool
 
-    def __init__(self, intervals: List[float]):
+    def __init__(self, intervals: List[float], throw_exception: bool):
         self.intervals = intervals
+        self.throw_exception = throw_exception
 
     async def chat_completion(
         self, request: Request, response: Response
@@ -27,4 +29,7 @@ class IdleApplication(ChatCompletion):
             choice.append_content("1")
             for idx, interval in enumerate(self.intervals[1:], 2):
                 await asyncio.sleep(interval)
-                choice.append_content(f"{idx}")
+                choice.append_content(str(idx))
+
+            if self.throw_exception:
+                raise RuntimeError("Something went wrong")

@@ -132,7 +132,7 @@ async def _call_heartbeat_callback(c: _HeartbeatCallback) -> None:
 async def add_heartbeat(
     stream: AsyncGenerator[_T, None],
     *,
-    timeout: float,
+    heartbeat_interval: float,
     heartbeat_object: Optional[_HeartbeatObject] = None,
     heartbeat_callback: Optional[_HeartbeatCallback] = None,
 ) -> AsyncGenerator[_T, None]:
@@ -145,7 +145,7 @@ async def add_heartbeat(
         done = (
             await asyncio.wait(
                 [chunk_task],
-                timeout=timeout,
+                timeout=heartbeat_interval,
                 return_when=asyncio.FIRST_COMPLETED,
             )
         )[0]
