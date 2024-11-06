@@ -124,7 +124,7 @@ class DIALApp(FastAPI):
         deployment_name: str,
         impl: ChatCompletion,
         *,
-        heartbeat_timeout: Optional[float] = None,
+        heartbeat_interval: Optional[float] = None,
     ) -> "DIALApp":
 
         self.add_api_route(
@@ -132,7 +132,7 @@ class DIALApp(FastAPI):
             self._chat_completion(
                 deployment_name,
                 impl,
-                heartbeat_timeout=heartbeat_timeout,
+                heartbeat_interval=heartbeat_interval,
             ),
             methods=["POST"],
         )
@@ -205,7 +205,7 @@ class DIALApp(FastAPI):
         deployment_id: str,
         impl: ChatCompletion,
         *,
-        heartbeat_timeout: Optional[float],
+        heartbeat_interval: Optional[float],
     ):
         async def _handler(original_request: Request):
             set_log_deployment(deployment_id)
@@ -219,10 +219,10 @@ class DIALApp(FastAPI):
             stream = response._generate_stream(impl.chat_completion)
 
             if request.stream:
-                if heartbeat_timeout:
+                if heartbeat_interval:
                     stream = add_heartbeat(
                         stream,
-                        heartbeat_interval=heartbeat_timeout,
+                        heartbeat_interval=heartbeat_interval,
                         heartbeat_callback=lambda: log_debug("heartbeat"),
                         heartbeat_object=": heartbeat\n\n",
                     )

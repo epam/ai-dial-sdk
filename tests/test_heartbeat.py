@@ -115,7 +115,7 @@ class TestCase(BaseModel):
 
     intervals: List[float]
     throw_exception: bool
-    heartbeat_timeout: Optional[float]
+    heartbeat_interval: Optional[float]
     expected: ExpectedStream
 
 
@@ -124,7 +124,7 @@ class TestCase(BaseModel):
     [
         TestCase(
             intervals=[2.0],
-            heartbeat_timeout=1.5,
+            heartbeat_interval=1.5,
             throw_exception=False,
             expected=[
                 BEAT,
@@ -136,7 +136,7 @@ class TestCase(BaseModel):
         ),
         TestCase(
             intervals=[2.0, 2.0],
-            heartbeat_timeout=1.5,
+            heartbeat_interval=1.5,
             throw_exception=False,
             expected=[
                 BEAT,
@@ -151,7 +151,7 @@ class TestCase(BaseModel):
         TestCase(
             intervals=[2.0] * 4,
             throw_exception=False,
-            heartbeat_timeout=1.5,
+            heartbeat_interval=1.5,
             expected=[
                 BEAT,
                 CHOICE_OPEN,
@@ -169,7 +169,7 @@ class TestCase(BaseModel):
         TestCase(
             intervals=[2.0],
             throw_exception=False,
-            heartbeat_timeout=0.44,
+            heartbeat_interval=0.44,
             expected=[
                 BEAT,
                 BEAT,
@@ -184,7 +184,7 @@ class TestCase(BaseModel):
         TestCase(
             intervals=[0.5] * 4,
             throw_exception=False,
-            heartbeat_timeout=1.0,
+            heartbeat_interval=1.0,
             expected=[
                 CHOICE_OPEN,
                 content("1"),
@@ -198,7 +198,7 @@ class TestCase(BaseModel):
         TestCase(
             intervals=[2.0],
             throw_exception=False,
-            heartbeat_timeout=None,
+            heartbeat_interval=None,
             expected=[
                 CHOICE_OPEN,
                 content("1"),
@@ -209,7 +209,7 @@ class TestCase(BaseModel):
         TestCase(
             intervals=[2.0],
             throw_exception=True,
-            heartbeat_timeout=1.5,
+            heartbeat_interval=1.5,
             expected=[
                 BEAT,
                 CHOICE_OPEN,
@@ -238,7 +238,7 @@ async def test_heartbeat(test_case: TestCase):
                 intervals=test_case.intervals,
                 throw_exception=test_case.throw_exception,
             ),
-            heartbeat_timeout=test_case.heartbeat_timeout,
+            heartbeat_interval=test_case.heartbeat_interval,
         )
 
         client = TestClient(app)
@@ -258,6 +258,6 @@ async def test_heartbeat(test_case: TestCase):
         assert beats == expected_beats
 
         # Make sure the beats have stopped
-        if test_case.heartbeat_timeout is not None:
-            await asyncio.sleep(test_case.heartbeat_timeout * 2)
+        if test_case.heartbeat_interval is not None:
+            await asyncio.sleep(test_case.heartbeat_interval * 2)
             assert beats == expected_beats
