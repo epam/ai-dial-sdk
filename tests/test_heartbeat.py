@@ -254,10 +254,10 @@ async def test_heartbeat(test_case: TestCase):
 
         match_sse_stream(test_case.expected, response.iter_lines())
 
-        assert beats == test_case.expected.count(BEAT)
+        expected_beats = test_case.expected.count(BEAT)
+        assert beats == expected_beats
 
         # Make sure the beats have stopped
         if test_case.heartbeat_timeout is not None:
-            current_beats = beats
             await asyncio.sleep(test_case.heartbeat_timeout * 2)
-            assert current_beats == beats
+            assert beats == expected_beats
