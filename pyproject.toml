@@ -53,6 +53,7 @@ telemetry = [
 [tool.poetry.group.test.dependencies]
 pytest = "^8.2"
 pytest-asyncio = "^0.24.0"
+pytest-cov = "^5.0.0"
 nox = "^2023.4.22"
 pillow = "^10.2.0"
 respx = "^0.21.1"
@@ -72,6 +73,19 @@ addopts = "--asyncio-mode=auto"
 testpaths = [
     "tests"
 ]
+
+[tool.coverage.run]
+branch = true
+source = ["."]
+omit = [
+    "tests/*",
+    "examples/*",
+    "*/__init__.py",
+    "noxfile.py"
+]
+
+[tool.coverage.html]
+directory = "coverage_html_report"
 
 [tool.pyright]
 typeCheckingMode = "basic"

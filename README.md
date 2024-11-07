@@ -149,6 +149,14 @@ Run unit tests for the specific python version:
 make test PYTHON=3.11
 ```
 
+## Code coverage
+
+Run code coverage:
+
+```sh
+make coverage
+```
+
 ## Clean
 
 To remove the virtual environment and build artifacts run:

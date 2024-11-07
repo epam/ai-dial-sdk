@@ -10,3 +10,5 @@ dist/
 .env
 ~*
 .vscode/launch.json
+coverage.xml
+.coverage

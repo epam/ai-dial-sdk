@@ -33,6 +33,19 @@ def format(session: nox.Session):
     format_with_args(session, SRC)
 
 
+@nox.session
+def coverage(session: nox.Session) -> None:
+    """Run tests and generate coverage report"""
+    session.run("poetry", "install", external=True)
+    session.run(
+        "pytest",
+        f"--cov={SRC}",
+        "--cov-report=xml",
+        "--cov-report=term",
+    )
+    session.run("coverage", "html", "--data-file=.coverage")
+
+
 @nox.session(python=["3.8", "3.9", "3.10", "3.11", "3.12"])
 # Testing against earliest and latest supported versions of the dependencies
 @nox.parametrize("pydantic", ["1.10.17", "2.8.2"])

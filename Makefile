@@ -25,6 +25,9 @@ format: install
 test: install
 	poetry run nox -s test $(if $(PYTHON),--python=$(PYTHON),)
 
+coverage: install
+	poetry run nox -s coverage
+
 help:
 	@echo '===================='
 	@echo 'build                        - build the library'
