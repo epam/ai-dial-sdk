@@ -1,6 +1,8 @@
+import copy
+import json
 import re
 from dataclasses import dataclass
-from typing import Any, List, Union
+from typing import Any, List, Set, Union
 
 import pytest
 
@@ -181,10 +183,69 @@ test_cases: List[Test] = [
 
 @pytest.mark.parametrize("test", test_cases, ids=lambda t: t.desc)
 def test_merge_chunks(test: Test):
+    def _merge_chunks():
+        old_chunks = [copy.deepcopy(chunk) for chunk in test.chunks]
+        old_ids = [id(chunk) for chunk in test.chunks]
+
+        merged = cleanup_indices(merge(*test.chunks))
+
+        new_chunks = test.chunks
+        new_ids = [id(chunk) for chunk in test.chunks]
+
+        assert old_chunks[1:] == new_chunks[1:]
+        assert old_ids[1:] == new_ids[1:]
+
+        for new_chunk in new_chunks[1:]:
+            assert (
+                collect_shared_mutable_objects(new_chunks[0], new_chunk)
+                == set()
+            )
+
+        return merged
+
     if isinstance(test.expected, Exception):
         with pytest.raises(
             type(test.expected), match=re.escape(str(test.expected))
         ):
-            cleanup_indices(merge(*test.chunks))
+            _merge_chunks()
     else:
-        assert cleanup_indices(merge(*test.chunks)) == test.expected
+        assert _merge_chunks() == test.expected
+
+
+class IdHashable:
+    obj: Any
+
+    def __init__(self, obj: Any) -> None:
+        self.obj = obj
+
+    def __hash__(self):
+        return id(self.obj)
+
+    def __eq__(self, other: object) -> bool:
+        return (type(self), hash(self)) == (type(other), hash(other))
+
+    def __repr__(self):
+        return json.dumps(self.obj)
+
+
+def collect_mutable_objects(a: Any) -> Set[IdHashable]:
+    ret: set[IdHashable] = set()
+
+    def _register(obj: Any):
+        if isinstance(obj, (dict, list, tuple)):
+            ret.add(IdHashable(obj))
+
+    def _rec(obj: Any):
+        _register(obj)
+        if isinstance(obj, dict):
+            list(map(_rec, obj.values()))
+        elif isinstance(obj, (list, tuple)):
+            list(map(_rec, obj))
+
+    _rec(a)
+
+    return ret
+
+
+def collect_shared_mutable_objects(a: Any, b: Any) -> Set[IdHashable]:
+    return collect_mutable_objects(a) & collect_mutable_objects(b)
