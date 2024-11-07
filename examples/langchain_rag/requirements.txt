@@ -1,10 +1,10 @@
 aidial-sdk>=0.10
-langchain==0.2.10
-langchain-community==0.2.9
-langchain-openai==0.1.17
-langchain-text-splitters==0.2.2
+langchain==0.3.0
+langchain-community==0.3.0
+langchain-openai==0.2.6
+langchain-text-splitters==0.3.0
 tiktoken==0.7.0
-openai==1.35.15
+openai==1.54.0
 beautifulsoup4==4.12.3
 chromadb==0.5.4
 uvicorn==0.30.1
