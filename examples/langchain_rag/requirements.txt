@@ -1,5 +1,5 @@
 aidial-sdk>=0.10
-langchain==0.3.0
+langchain==0.3.7
 langchain-community==0.3.0
 langchain-openai==0.2.6
 langchain-text-splitters==0.3.0
