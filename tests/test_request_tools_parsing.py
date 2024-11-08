@@ -1,33 +1,14 @@
-import json
+from unittest.mock import Mock
 
-from fastapi import Request as FastAPIRequest
+import pytest
+from fastapi.testclient import TestClient
 
-from aidial_sdk.chat_completion.request import Request, StaticTool, Tool
+from aidial_sdk.application import DIALApp
+from aidial_sdk.chat_completion.request import StaticTool, Tool
+from examples.echo.app import EchoApplication
 
-
-def _create_mock_request(json_data):
-    async def _async_receive(json_data):
-        return {
-            "type": "http.request",
-            "body": json.dumps(json_data).encode(),
-        }
-
-    return FastAPIRequest(
-        scope={
-            "type": "http",
-            "method": "POST",
-            "headers": [
-                (b"content-type", b"application/json"),
-                (b"api-key", b"TEST_API_KEY"),
-            ],
-            "query_string": "api-version=2024-02-01",
-        },
-        receive=lambda: _async_receive(json_data),
-    )
-
-
-async def test_with_simple_tools():
-    mock_data = {
+TEST_CASES = [
+    {
         "messages": [{"role": "user", "content": "Hello"}],
         "tools": [
             {
@@ -48,22 +29,30 @@ async def test_with_simple_tools():
             },
         ],
         "model": "gpt-3.5-turbo",
-    }
-
-    mock_request = _create_mock_request(mock_data)
-
-    request = await Request.from_request(mock_request, "gpt-3.5-turbo")
-    assert request.model == "gpt-3.5-turbo"
-    assert request.tools is not None
-    assert len(request.tools) == 2
-    assert isinstance(request.tools[0], Tool)
-    assert request.tools[0].function.name == "test_tool"
-    assert isinstance(request.tools[1], Tool)
-    assert request.tools[1].function.name == "test_tool_2"
-
-
-async def test_with_only_static_tools():
-    mock_data = {
+    },
+    {
+        "model": "gpt-3.5-turbo",
+        "messages": [{"role": "user", "content": "Hello"}],
+        "tools": [
+            {
+                "type": "function",
+                "function": {
+                    "name": "test_tool",
+                    "description": "Test tool",
+                    "parameters": {"type": "object", "properties": {}},
+                },
+            },
+            {
+                "type": "function",
+                "function": {
+                    "name": "test_tool_2",
+                    "description": "Test tool 2",
+                    "parameters": {"type": "object", "properties": {}},
+                },
+            },
+        ],
+    },
+    {
         "messages": [{"role": "user", "content": "Hello"}],
         "tools": [
             {
@@ -79,25 +68,8 @@ async def test_with_only_static_tools():
             },
         ],
         "model": "gpt-3.5-turbo",
-    }
-
-    mock_request = _create_mock_request(mock_data)
-    request = await Request.from_request(mock_request, "gpt-3.5-turbo")
-    assert request.tools is not None
-    assert len(request.tools) == 1
-    assert isinstance(request.tools[0], StaticTool)
-    assert request.tools[0].type == "static_function"
-    assert request.tools[0].static_function.name == "test_static_tool"
-    assert request.tools[0].static_function.configuration
-    assert (
-        request.tools[0].static_function.configuration["datastore"]
-        == "test_datastore"
-    )
-    assert request.tools[0].static_function.configuration["threshold"] == 0.5
-
-
-async def test_with_mixed_tool_types():
-    mock_data = {
+    },
+    {
         "messages": [{"role": "user", "content": "Hello"}],
         "tools": [
             {
@@ -121,25 +93,36 @@ async def test_with_mixed_tool_types():
             },
         ],
         "model": "gpt-3.5-turbo",
-    }
+    },
+]
 
-    mock_request = _create_mock_request(mock_data)
-    request = await Request.from_request(mock_request, "gpt-3.5-turbo")
-    assert request.tools is not None
-    assert len(request.tools) == 2
 
-    # Verify first tool (regular function)
-    assert isinstance(request.tools[0], Tool)
-    assert request.tools[0].type == "function"
-    assert request.tools[0].function.name == "test_tool"
+@pytest.mark.parametrize(
+    "mock_data",
+    TEST_CASES,
+)
+def test_tools_parsing(mock_data):
+    dial_app = DIALApp()
+    chat_completion = Mock(wraps=EchoApplication())
+    dial_app.add_chat_completion("test_app", chat_completion)
 
-    # Verify second tool (static function)
-    assert isinstance(request.tools[1], StaticTool)
-    assert request.tools[1].type == "static_function"
-    assert request.tools[1].static_function.name == "test_static_tool"
-    assert request.tools[1].static_function.configuration
-    assert (
-        request.tools[1].static_function.configuration["datastore"]
-        == "test_datastore"
+    test_app = TestClient(dial_app)
+
+    test_app.post(
+        "/openai/deployments/test_app/chat/completions",
+        json=mock_data,
+        headers={"Api-Key": "TEST_API_KEY"},
     )
-    assert request.tools[1].static_function.configuration["threshold"] == 0.5
+
+    args, _ = chat_completion.chat_completion.call_args
+    request, _ = args
+
+    request_dict = request.dict(exclude_none=True)
+    for key in mock_data:
+        assert request_dict[key] == mock_data[key]
+    assert request.tools and len(request.tools) == len(mock_data["tools"])
+    for mock_tool, tool in zip(mock_data["tools"], request.tools):
+        if mock_tool["type"] == "function":
+            assert isinstance(tool, Tool)
+        elif mock_tool["type"] == "static_function":
+            assert isinstance(tool, StaticTool)
