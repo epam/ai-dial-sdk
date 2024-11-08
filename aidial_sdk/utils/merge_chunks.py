@@ -193,3 +193,39 @@ def cleanup_indices(chunk: T) -> T:
         )
 
     return chunk
+
+
+_Chunk = TypeVar("_Chunk", bound=dict)
+
+
+def merge_chat_completion_chunks(*chunks: _Chunk) -> _Chunk:
+    """
+    The recursive merging procedure that avoids merging top-level atomic fields
+    (e.g. "id", "created", "model", "object", "system_fingerprint") and
+    instead chooses an _override_ merging strategy for such fields.
+    Non-atomic fields (e.g. "choice", "usage") are merged following
+    the standard recursive merging procedure.
+
+    The very first chunk is modified in-place.
+    The subsequent chunks are left unmodified.
+    """
+
+    assert (
+        len(chunks) > 0
+    ), "At least one chat completion chunk must be provided"
+
+    assert all(
+        isinstance(chunk, dict) for chunk in chunks
+    ), "The chat completion chunks are expected to be dictionaries"
+
+    target, *sources = chunks
+
+    for chunk in sources:
+        source = cast(_Chunk, chunk.copy())
+        for key, value in list(source.items()):
+            if not isinstance(value, (list, dict)) and value is not None:
+                target[key] = value
+                del source[key]
+        target = merge(target, source)
+
+    return target
