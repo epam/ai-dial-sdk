@@ -16,6 +16,7 @@ from typing_extensions import assert_never
 
 from aidial_sdk.chat_completion.chunks import BaseChunkWithDefaults
 from aidial_sdk.exceptions import HTTPException as DIALException
+from aidial_sdk.utils._concurrency import TaskGroup
 from aidial_sdk.utils.logging import log_debug
 from aidial_sdk.utils.merge_chunks import cleanup_indices, merge
 
@@ -136,12 +137,12 @@ async def add_heartbeat(
     heartbeat_object: Optional[_HeartbeatObject] = None,
     heartbeat_callback: Optional[_HeartbeatCallback] = None,
 ) -> AsyncGenerator[_T, None]:
-    chunk_task: Optional[asyncio.Task[_T]] = None
+    async with TaskGroup() as tg:
+        chunk_task: Optional[asyncio.Task[_T]] = None
 
-    try:
         while True:
             if chunk_task is None:
-                chunk_task = asyncio.create_task(stream.__anext__())
+                chunk_task = tg.create_task(stream.__anext__())
 
             done = (
                 await asyncio.wait(
@@ -163,16 +164,3 @@ async def add_heartbeat(
 
                 if heartbeat_callback is not None:
                     await _call_heartbeat_callback(heartbeat_callback)
-
-    except asyncio.CancelledError:
-        if chunk_task is not None:
-            await _cancel_task(chunk_task)
-        raise
-
-
-async def _cancel_task(task: asyncio.Task) -> None:
-    task.cancel()
-    try:
-        await task
-    except asyncio.CancelledError:
-        pass
