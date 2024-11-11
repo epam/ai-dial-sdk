@@ -1,11 +1,7 @@
-from unittest.mock import Mock
-
 import pytest
-from fastapi.testclient import TestClient
 
-from aidial_sdk.application import DIALApp
-from aidial_sdk.chat_completion.request import StaticTool, Tool
-from examples.echo.app import EchoApplication
+from aidial_sdk.chat_completion.request import Request, StaticTool, Tool
+from tests.utils.validate_chat_completion import validate_chat_completion
 
 TEST_CASES = [
     {
@@ -102,27 +98,18 @@ TEST_CASES = [
     TEST_CASES,
 )
 def test_tools_parsing(mock_data):
-    dial_app = DIALApp()
-    chat_completion = Mock(wraps=EchoApplication())
-    dial_app.add_chat_completion("test_app", chat_completion)
 
-    test_app = TestClient(dial_app)
+    def _request_validator(r: Request):
+        assert r.dict(exclude_none=True) == mock_data
+        assert r.tools
+        assert len(r.tools) == len(mock_data["tools"])
+        for mock_tool, tool in zip(mock_data["tools"], r.tools):
+            if mock_tool["type"] == "function":
+                assert isinstance(tool, Tool)
+            elif mock_tool["type"] == "static_function":
+                assert isinstance(tool, StaticTool)
 
-    test_app.post(
-        "/openai/deployments/test_app/chat/completions",
-        json=mock_data,
-        headers={"Api-Key": "TEST_API_KEY"},
+    validate_chat_completion(
+        input_request=mock_data,
+        request_validator=_request_validator,
     )
-
-    args, _ = chat_completion.chat_completion.call_args
-    request, _ = args
-
-    request_dict = request.dict(exclude_none=True)
-    for key in mock_data:
-        assert request_dict[key] == mock_data[key]
-    assert request.tools and len(request.tools) == len(mock_data["tools"])
-    for mock_tool, tool in zip(mock_data["tools"], request.tools):
-        if mock_tool["type"] == "function":
-            assert isinstance(tool, Tool)
-        elif mock_tool["type"] == "static_function":
-            assert isinstance(tool, StaticTool)
