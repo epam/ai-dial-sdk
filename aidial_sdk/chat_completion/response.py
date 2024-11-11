@@ -25,7 +25,7 @@ from aidial_sdk.exceptions import RequestValidationError, RuntimeServerError
 from aidial_sdk.utils.errors import RUNTIME_ERROR_MESSAGE, runtime_error
 from aidial_sdk.utils.logging import log_error, log_exception
 from aidial_sdk.utils.merge_chunks import merge
-from aidial_sdk.utils.streaming import ResponseStream
+from aidial_sdk.utils.streaming import ResponseStream, _cancel_task
 
 
 class Response:
@@ -72,7 +72,6 @@ class Response:
         self,
         producer: Callable[[Request, "Response"], Coroutine[Any, Any, Any]],
     ) -> ResponseStream:
-
         def _create_chunk(chunk):
             return BaseChunkWithDefaults(
                 chunk=chunk, defaults=self._default_chunk
@@ -86,12 +85,18 @@ class Response:
 
         while True:
             get_chunk_task = asyncio.create_task(self._queue.get())
-            done = (
-                await asyncio.wait(
-                    [get_chunk_task, user_task],
-                    return_when=asyncio.FIRST_COMPLETED,
-                )
-            )[0]
+
+            try:
+                done = (
+                    await asyncio.wait(
+                        [get_chunk_task, user_task],
+                        return_when=asyncio.FIRST_COMPLETED,
+                    )
+                )[0]
+            except asyncio.CancelledError:
+                await _cancel_task(user_task)
+                await _cancel_task(get_chunk_task)
+                raise
 
             if user_task in done and not user_task_is_done:
                 user_task_is_done = True

@@ -138,29 +138,41 @@ async def add_heartbeat(
 ) -> AsyncGenerator[_T, None]:
     chunk_task: Optional[asyncio.Task[_T]] = None
 
-    while True:
-        if chunk_task is None:
-            chunk_task = asyncio.create_task(stream.__anext__())
+    try:
+        while True:
+            if chunk_task is None:
+                chunk_task = asyncio.create_task(stream.__anext__())
 
-        done = (
-            await asyncio.wait(
-                [chunk_task],
-                timeout=heartbeat_interval,
-                return_when=asyncio.FIRST_COMPLETED,
-            )
-        )[0]
+            done = (
+                await asyncio.wait(
+                    [chunk_task],
+                    timeout=heartbeat_interval,
+                    return_when=asyncio.FIRST_COMPLETED,
+                )
+            )[0]
 
-        if chunk_task in done:
-            try:
-                chunk, chunk_task = chunk_task.result(), None
-                yield chunk
-            except StopAsyncIteration:
-                break
-            except Exception as e:
-                raise e
-        else:
-            if heartbeat_object is not None:
-                yield await _eval_heartbeat_object(heartbeat_object)
+            if chunk_task in done:
+                try:
+                    chunk, chunk_task = chunk_task.result(), None
+                    yield chunk
+                except StopAsyncIteration:
+                    break
+            else:
+                if heartbeat_object is not None:
+                    yield await _eval_heartbeat_object(heartbeat_object)
 
-            if heartbeat_callback is not None:
-                await _call_heartbeat_callback(heartbeat_callback)
+                if heartbeat_callback is not None:
+                    await _call_heartbeat_callback(heartbeat_callback)
+
+    except asyncio.CancelledError:
+        if chunk_task is not None:
+            await _cancel_task(chunk_task)
+        raise
+
+
+async def _cancel_task(task: asyncio.Task) -> None:
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
