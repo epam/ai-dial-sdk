@@ -28,6 +28,9 @@ from aidial_sdk.utils.logging import log_error, log_exception
 from aidial_sdk.utils.merge_chunks import merge
 from aidial_sdk.utils.streaming import ResponseStream
 
+_Producer = Callable[[Request, "Response"], Coroutine[Any, Any, Any]]
+_TaskFactory = Callable[[Coroutine[Any, Any, Any]], asyncio.Task]
+
 
 class Response:
     request: Request
@@ -69,93 +72,96 @@ class Response:
     def stream(self) -> int:
         return self.request.stream
 
-    async def _generate_stream(
-        self,
-        producer: Callable[[Request, "Response"], Coroutine[Any, Any, Any]],
+    async def _generate_stream(self, producer: _Producer) -> ResponseStream:
+        async with TaskGroup() as tg:
+            async for chunk in self._generate_stream_with_factory(
+                tg.create_task, producer
+            ):
+                yield chunk
+
+    async def _generate_stream_with_factory(
+        self, create_task: _TaskFactory, producer: _Producer
     ) -> ResponseStream:
         def _create_chunk(chunk):
             return BaseChunkWithDefaults(
                 chunk=chunk, defaults=self._default_chunk
             )
 
-        async with TaskGroup() as tg:
-            user_task = tg.create_task(producer(self.request, self))
-            user_task_is_done = False
+        user_task = create_task(producer(self.request, self))
+        user_task_is_done = False
 
-            # A list of chunks whose emitting is delayed up until the very last moment
-            delayed_chunks: List[BaseChunk] = []
+        # A list of chunks whose emitting is delayed up until the very last moment
+        delayed_chunks: List[BaseChunk] = []
 
-            while True:
-                get_chunk_task = tg.create_task(self._queue.get())
+        while True:
+            get_chunk_task = create_task(self._queue.get())
 
-                done = (
-                    await asyncio.wait(
-                        [get_chunk_task, user_task],
-                        return_when=asyncio.FIRST_COMPLETED,
-                    )
-                )[0]
+            done = (
+                await asyncio.wait(
+                    [get_chunk_task, user_task],
+                    return_when=asyncio.FIRST_COMPLETED,
+                )
+            )[0]
 
-                if user_task in done and not user_task_is_done:
-                    user_task_is_done = True
-                    try:
-                        user_task.result()
-                    except Exception as e:
-                        if isinstance(e, DIALException):
-                            dial_exception = e
-                        else:
-                            log_exception(RUNTIME_ERROR_MESSAGE)
-                            dial_exception = RuntimeServerError(
-                                RUNTIME_ERROR_MESSAGE
-                            )
-
-                        self._queue.put_nowait(ExceptionChunk(dial_exception))
+            if user_task in done and not user_task_is_done:
+                user_task_is_done = True
+                try:
+                    user_task.result()
+                except Exception as e:
+                    if isinstance(e, DIALException):
+                        dial_exception = e
                     else:
-                        self._queue.put_nowait(EndChunk())
-
-                chunk = await get_chunk_task
-                self._queue.task_done()
-
-                if isinstance(chunk, BaseChunk):
-
-                    is_last_end_choice_chunk = (
-                        isinstance(chunk, EndChoiceChunk)
-                        and chunk.choice_index == self.n - 1
-                    )
-
-                    is_top_level_chunk = isinstance(
-                        chunk,
-                        (
-                            UsageChunk,
-                            UsagePerModelChunk,
-                            DiscardedMessagesChunk,
-                        ),
-                    )
-
-                    if is_last_end_choice_chunk or is_top_level_chunk:
-                        delayed_chunks.append(chunk)
-                    else:
-                        yield _create_chunk(chunk)
-
-                elif isinstance(chunk, (ExceptionChunk, EndChunk)):
-                    if delayed_chunks:
-                        final_chunk = merge(
-                            *[d.to_dict() for d in delayed_chunks]
+                        log_exception(RUNTIME_ERROR_MESSAGE)
+                        dial_exception = RuntimeServerError(
+                            RUNTIME_ERROR_MESSAGE
                         )
-                        yield _create_chunk(ArbitraryChunk(chunk=final_chunk))
 
-                    if isinstance(chunk, ExceptionChunk):
-                        yield chunk.exc
-                    elif isinstance(chunk, EndChunk):
-                        if self._last_choice_index != self.n:
-                            log_error("Not all choices were generated")
-                            yield RuntimeServerError(RUNTIME_ERROR_MESSAGE)
-                    else:
-                        assert_never(chunk)
+                    self._queue.put_nowait(ExceptionChunk(dial_exception))
+                else:
+                    self._queue.put_nowait(EndChunk())
 
-                    return
+            chunk = await get_chunk_task
+            self._queue.task_done()
 
+            if isinstance(chunk, BaseChunk):
+
+                is_last_end_choice_chunk = (
+                    isinstance(chunk, EndChoiceChunk)
+                    and chunk.choice_index == self.n - 1
+                )
+
+                is_top_level_chunk = isinstance(
+                    chunk,
+                    (
+                        UsageChunk,
+                        UsagePerModelChunk,
+                        DiscardedMessagesChunk,
+                    ),
+                )
+
+                if is_last_end_choice_chunk or is_top_level_chunk:
+                    delayed_chunks.append(chunk)
+                else:
+                    yield _create_chunk(chunk)
+
+            elif isinstance(chunk, (ExceptionChunk, EndChunk)):
+                if delayed_chunks:
+                    final_chunk = merge(*[d.to_dict() for d in delayed_chunks])
+                    yield _create_chunk(ArbitraryChunk(chunk=final_chunk))
+
+                if isinstance(chunk, ExceptionChunk):
+                    yield chunk.exc
+                elif isinstance(chunk, EndChunk):
+                    if self._last_choice_index != self.n:
+                        log_error("Not all choices were generated")
+                        yield RuntimeServerError(RUNTIME_ERROR_MESSAGE)
                 else:
                     assert_never(chunk)
+
+                return
+
+            else:
+                assert_never(chunk)
 
     def create_choice(self) -> Choice:
         self._generation_started = True
