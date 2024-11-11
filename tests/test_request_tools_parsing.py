@@ -1,3 +1,5 @@
+from itertools import zip_longest
+
 import pytest
 
 from aidial_sdk.chat_completion.request import Request, StaticTool, Tool
@@ -102,8 +104,9 @@ def test_tools_parsing(mock_data):
     def _request_validator(r: Request):
         assert r.dict(exclude_none=True) == mock_data
         assert r.tools
-        assert len(r.tools) == len(mock_data["tools"])
-        for mock_tool, tool in zip(mock_data["tools"], r.tools):
+        for mock_tool, tool in zip_longest(
+            mock_data["tools"], r.tools, fillvalue={}
+        ):
             if mock_tool["type"] == "function":
                 assert isinstance(tool, Tool)
             elif mock_tool["type"] == "static_function":
