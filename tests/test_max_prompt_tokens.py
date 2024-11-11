@@ -1,4 +1,4 @@
-from tests.utils.validate_chat_completion import validate_chat_completion
+from tests.utils.chat_completion_validation import validate_chat_completion
 
 
 def test_max_prompt_tokens_is_set():

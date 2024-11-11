@@ -1,10 +1,10 @@
-from typing import Callable
+from typing import Callable, Optional
 
 from aidial_sdk.chat_completion import ChatCompletion, Request, Response
 
 # It can be either function that raises AssertionError, or lambda that returns
 # boolean, that will be used for assertion
-RequestValidator = Callable[[Request], bool | None]
+RequestValidator = Callable[[Request], Optional[bool]]
 
 
 class ValidatorApplication(ChatCompletion):
