@@ -8,10 +8,9 @@ from aidial_sdk.chat_completion.response import (
 )
 from aidial_sdk.pydantic_v1 import SecretStr
 from aidial_sdk.utils.streaming import add_heartbeat
-from tests.utils.condition_with_value import ConditionWithValue
 
 
-def create_chat_completion(status: ConditionWithValue[bool]):
+def create_chat_completion(status: asyncio.Future):
 
     async def _chat_completion(
         request: ChatCompletionRequest, response: ChatCompletionResponse
@@ -20,12 +19,10 @@ def create_chat_completion(status: ConditionWithValue[bool]):
             for _ in range(10):
                 await asyncio.sleep(1)
         except asyncio.CancelledError:
-            async with status:
-                status.set_value(True)
+            status.set_result(True)
             raise
-
-        async with status:
-            status.set_value(False)
+        else:
+            status.set_result(False)
 
     return _chat_completion
 
@@ -42,7 +39,7 @@ async def test_cancellation(with_heartbeat: bool):
 
     response = ChatCompletionResponse(request)
 
-    cancellation_flag: ConditionWithValue[bool] = ConditionWithValue()
+    cancellation_flag: asyncio.Future = asyncio.Future()
     chat_completion = create_chat_completion(cancellation_flag)
 
     async def _exhaust_stream(stream):
@@ -64,7 +61,4 @@ async def test_cancellation(with_heartbeat: bool):
     else:
         assert False, "Stream should have timed out"
 
-    async with cancellation_flag:
-        assert (
-            await cancellation_flag.wait_for_value()
-        ), "Stream should have been cancelled"
+    assert await cancellation_flag, "Stream should have been cancelled"
