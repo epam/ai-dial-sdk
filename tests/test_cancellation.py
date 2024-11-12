@@ -1,5 +1,6 @@
 import asyncio
 
+import fastapi
 import pytest
 
 from aidial_sdk.chat_completion.request import Request as ChatCompletionRequest
@@ -8,6 +9,7 @@ from aidial_sdk.chat_completion.response import (
 )
 from aidial_sdk.pydantic_v1 import SecretStr
 from aidial_sdk.utils.streaming import add_heartbeat
+from tests.utils.constants import DUMMY_FASTAPI_REQUEST
 
 
 def create_chat_completion(status: asyncio.Future):
@@ -31,6 +33,7 @@ def create_chat_completion(status: asyncio.Future):
 async def test_cancellation(with_heartbeat: bool):
 
     request = ChatCompletionRequest(
+        original_request=DUMMY_FASTAPI_REQUEST,
         messages=[],
         api_key_secret=SecretStr("api-key"),
         deployment_id="test-app",

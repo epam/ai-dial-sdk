@@ -1,17 +1,15 @@
 import json
 from unittest.mock import Mock
 
-import fastapi
 import pytest
 from starlette.testclient import TestClient
 
 from aidial_sdk import DIALApp, HTTPException
 from aidial_sdk.chat_completion import ChatCompletion, Request, Response
 from aidial_sdk.pydantic_v1 import SecretStr
+from tests.utils.constants import DUMMY_FASTAPI_REQUEST
 
 DISCARDED_MESSAGES = list(range(0, 12))
-
-dummy_request = fastapi.Request({"type": "http"})
 
 
 def test_discarded_messages_returned():
@@ -118,7 +116,7 @@ def test_discarded_messages_returned_as_last_chunk_in_stream():
 def test_discarded_messages_is_set_twice():
     request = Request(
         headers={},
-        original_request=dummy_request,
+        original_request=DUMMY_FASTAPI_REQUEST,
         api_key_secret=SecretStr("dummy_key"),
         deployment_id="",
         messages=[],
@@ -138,7 +136,7 @@ def test_discarded_messages_is_set_twice():
 def test_discarded_messages_is_set_before_choice():
     request = Request(
         headers={},
-        original_request=dummy_request,
+        original_request=DUMMY_FASTAPI_REQUEST,
         api_key_secret=SecretStr("dummy_key"),
         deployment_id="",
         messages=[],
