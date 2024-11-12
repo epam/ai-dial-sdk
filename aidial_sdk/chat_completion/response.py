@@ -82,45 +82,34 @@ class Response:
     async def _generate_stream_with_factory(
         self, create_task: _TaskFactory, producer: _Producer
     ) -> ResponseStream:
-        def _create_chunk(chunk):
+        def _create_chunk(chunk: BaseChunk):
             return BaseChunkWithDefaults(
                 chunk=chunk, defaults=self._default_chunk
             )
 
-        user_task = create_task(producer(self.request, self))
-        user_task_is_done = False
+        def _on_user_task_done(task: asyncio.Task):
+            try:
+                task.result()
+            except Exception as e:
+                if isinstance(e, DIALException):
+                    dial_exception = e
+                else:
+                    log_exception(RUNTIME_ERROR_MESSAGE)
+                    dial_exception = RuntimeServerError(RUNTIME_ERROR_MESSAGE)
+
+                self._queue.put_nowait(ExceptionChunk(dial_exception))
+            else:
+                self._queue.put_nowait(EndChunk())
+
+        create_task(producer(self.request, self)).add_done_callback(
+            _on_user_task_done
+        )
 
         # A list of chunks whose emitting is delayed up until the very last moment
         delayed_chunks: List[BaseChunk] = []
 
         while True:
-            get_chunk_task = create_task(self._queue.get())
-
-            done = (
-                await asyncio.wait(
-                    [get_chunk_task, user_task],
-                    return_when=asyncio.FIRST_COMPLETED,
-                )
-            )[0]
-
-            if user_task in done and not user_task_is_done:
-                user_task_is_done = True
-                try:
-                    user_task.result()
-                except Exception as e:
-                    if isinstance(e, DIALException):
-                        dial_exception = e
-                    else:
-                        log_exception(RUNTIME_ERROR_MESSAGE)
-                        dial_exception = RuntimeServerError(
-                            RUNTIME_ERROR_MESSAGE
-                        )
-
-                    self._queue.put_nowait(ExceptionChunk(dial_exception))
-                else:
-                    self._queue.put_nowait(EndChunk())
-
-            chunk = await get_chunk_task
+            chunk = await self._queue.get()
             self._queue.task_done()
 
             if isinstance(chunk, BaseChunk):
