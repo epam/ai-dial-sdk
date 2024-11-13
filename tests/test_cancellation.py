@@ -1,6 +1,5 @@
 import asyncio
 
-import fastapi
 import pytest
 
 from aidial_sdk.chat_completion.request import Request as ChatCompletionRequest
