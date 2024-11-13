@@ -22,7 +22,7 @@ from aidial_sdk.chat_completion.chunks import (
 from aidial_sdk.chat_completion.request import Request
 from aidial_sdk.exceptions import HTTPException as DIALException
 from aidial_sdk.exceptions import RequestValidationError, RuntimeServerError
-from aidial_sdk.utils._concurrency import TaskGroup
+from aidial_sdk.utils._taskgroup import TaskGroup
 from aidial_sdk.utils.errors import RUNTIME_ERROR_MESSAGE, runtime_error
 from aidial_sdk.utils.logging import log_error, log_exception
 from aidial_sdk.utils.merge_chunks import merge

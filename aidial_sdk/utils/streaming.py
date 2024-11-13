@@ -16,7 +16,7 @@ from typing_extensions import assert_never
 
 from aidial_sdk.chat_completion.chunks import BaseChunkWithDefaults
 from aidial_sdk.exceptions import HTTPException as DIALException
-from aidial_sdk.utils._concurrency import TaskGroup
+from aidial_sdk.utils._taskgroup import TaskGroup
 from aidial_sdk.utils.logging import log_debug
 from aidial_sdk.utils.merge_chunks import cleanup_indices, merge
 
