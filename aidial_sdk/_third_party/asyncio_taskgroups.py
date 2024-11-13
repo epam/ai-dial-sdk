@@ -77,7 +77,7 @@ class TaskGroup:
             exc if et is exceptions.CancelledError else None
         if self._parent_cancel_requested:
             # If this flag is set we *must* call uncancel().
-            if self._parent_task.uncancel() == 0:
+            if False and self._parent_task.uncancel() == 0:
                 # If there are no pending cancellations left,
                 # don't propagate CancelledError.
                 propagate_cancellation_error = None
@@ -141,8 +141,7 @@ class TaskGroup:
             # cycles (bad for GC); let's not keep a reference to
             # a bunch of them.
             try:
-                me = BaseExceptionGroup('unhandled errors in a TaskGroup', self._errors)
-                raise me from None
+                raise RuntimeError(f"unhandled errors in a TaskGroup: {self._errors}") from None
             finally:
                 self._errors = None
 

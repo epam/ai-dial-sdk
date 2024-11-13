@@ -29,7 +29,6 @@ from aidial_sdk.utils.merge_chunks import merge
 from aidial_sdk.utils.streaming import ResponseStream
 
 _Producer = Callable[[Request, "Response"], Coroutine[Any, Any, Any]]
-_TaskFactory = Callable[[Coroutine[Any, Any, Any]], asyncio.Task]
 
 
 class Response:
@@ -72,38 +71,32 @@ class Response:
     def stream(self) -> int:
         return self.request.stream
 
+    async def _run_producer(self, producer: _Producer):
+        try:
+            await producer(self.request, self)
+        except Exception as e:
+            if isinstance(e, DIALException):
+                dial_exception = e
+            else:
+                log_exception(RUNTIME_ERROR_MESSAGE)
+                dial_exception = RuntimeServerError(RUNTIME_ERROR_MESSAGE)
+
+            self._queue.put_nowait(ExceptionChunk(dial_exception))
+        else:
+            self._queue.put_nowait(EndChunk())
+
     async def _generate_stream(self, producer: _Producer) -> ResponseStream:
         async with TaskGroup() as tg:
-            async for chunk in self._generate_stream_with_factory(
-                tg.create_task, producer
-            ):
+            tg.create_task(self._run_producer(producer))
+
+            async for chunk in self._generate_chunk_stream():
                 yield chunk
 
-    async def _generate_stream_with_factory(
-        self, create_task: _TaskFactory, producer: _Producer
-    ) -> ResponseStream:
+    async def _generate_chunk_stream(self) -> ResponseStream:
         def _create_chunk(chunk: BaseChunk):
             return BaseChunkWithDefaults(
                 chunk=chunk, defaults=self._default_chunk
             )
-
-        def _on_user_task_done(task: asyncio.Task):
-            try:
-                task.result()
-            except Exception as e:
-                if isinstance(e, DIALException):
-                    dial_exception = e
-                else:
-                    log_exception(RUNTIME_ERROR_MESSAGE)
-                    dial_exception = RuntimeServerError(RUNTIME_ERROR_MESSAGE)
-
-                self._queue.put_nowait(ExceptionChunk(dial_exception))
-            else:
-                self._queue.put_nowait(EndChunk())
-
-        create_task(producer(self.request, self)).add_done_callback(
-            _on_user_task_done
-        )
 
         # A list of chunks whose emitting is delayed up until the very last moment
         delayed_chunks: List[BaseChunk] = []
