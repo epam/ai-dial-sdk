@@ -12,5 +12,4 @@ exclude =
     .nox,
     .pytest_cache
     __pycache__,
-    __init__.py,
-    aidial_sdk/_third_party
+    __init__.py

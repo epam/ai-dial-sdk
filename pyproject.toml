@@ -84,22 +84,15 @@ exclude = [
     ".pytest_cache",
     "**/__pycache__",
     "build",
-    "examples/langchain_rag",
-    "aidial_sdk/_third_party"
+    "examples/langchain_rag"
 ]
 
 [tool.black]
 line-length = 80
-extend-exclude = '''
-    aidial_sdk/_third_party/
-'''
 
 [tool.isort]
 line_length = 80
 profile = "black"
-extend_skip = [
-    "aidial_sdk/_third_party"
-]
 
 [tool.autoflake]
 ignore_init_module_imports = true
@@ -110,6 +103,5 @@ quiet = true
 exclude = [
     ".nox",
     ".pytest_cache",
-    "\\.venv",
-    "aidial_sdk/_third_party"
+    "\\.venv"
 ]
