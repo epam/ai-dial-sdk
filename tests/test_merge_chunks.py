@@ -4,7 +4,7 @@ import re
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from operator import attrgetter
-from typing import Any, Callable, Iterable, List, Optional, Sequence, Union
+from typing import Any, Callable, Iterable, List, Sequence, Union
 
 import pytest
 
@@ -16,6 +16,7 @@ from aidial_sdk.utils.merge_chunks import (
     merge,
     merge_chat_completion_chunks,
 )
+from tests.utils.chunks import create_chunk
 from tests.utils.sharing import collect_shared_mutable_objects
 
 
@@ -267,23 +268,6 @@ merge_chunks_cases: List[Test] = [
         desc="Merge nested usage",
     ),
 ]
-
-
-def create_chunk(*, delta: dict = {}, finish_reason: Optional[str] = None):
-    return {
-        "id": "chatcmpl-AQws8iVykPBIQJfnmCQnMEkTLLUUA",
-        "object": "chat.completion.chunk",
-        "created": 1730986196,
-        "model": "gpt-4o-2024-05-13",
-        "system_fingerprint": "fp_67802d9a6d",
-        "choices": [
-            {
-                "index": 0,
-                "delta": delta,
-                "finish_reason": finish_reason,
-            }
-        ],
-    }
 
 
 OPEN_CHUNK = create_chunk(delta={"role": "assistant", "content": None})
