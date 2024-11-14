@@ -148,6 +148,17 @@ class Tool(ExtraForbidModel):
     function: Function
 
 
+class StaticFunction(ExtraForbidModel):
+    name: str
+    description: Optional[str] = None
+    configuration: Optional[Dict[str, Any]] = None
+
+
+class StaticTool(ExtraForbidModel):
+    type: Literal["static_function"]
+    static_function: StaticFunction
+
+
 class FunctionChoice(ExtraForbidModel):
     name: StrictStr
 
@@ -168,7 +179,7 @@ class AzureChatCompletionRequest(ExtraForbidModel):
     function_call: Optional[Union[Literal["auto", "none"], FunctionChoice]] = (
         None
     )
-    tools: Optional[List[Tool]] = None
+    tools: Optional[List[Union[Tool, StaticTool]]] = None
     tool_choice: Optional[Union[Literal["auto", "none"], ToolChoice]] = None
     stream: bool = False
     temperature: Optional[Temperature] = None
