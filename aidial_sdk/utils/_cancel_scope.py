@@ -1,46 +1,48 @@
 import asyncio
-from asyncio import events, exceptions
+from asyncio import exceptions
+from typing import Optional, Set
 
 
 class CancelScope:
     """
-    Async context manager that enforces cancellation of all tasks created created within the scope when either:
-    1. the parent thread has been cancelled or
-    2. any of the tasks created within the scope have thrown an exception.
+    Async context manager that enforces cancellation of all tasks created within its scope when either:
+    1. the parent task has been cancelled or has thrown an exception or
+    2. any of the tasks created within the scope has thrown an exception.
     """
 
     def __init__(self):
-        self._aborting = False
-        self._loop = events.get_running_loop()
-        self._tasks = set()
-        self._on_completed_fut = None
+        self._tasks: Set[asyncio.Task] = set()
+        self._on_completed_fut: Optional[asyncio.Future] = None
+        self._cancelling: bool = False
 
     async def __aenter__(self):
         return self
 
     async def __aexit__(self, et, exc, tb):
 
-        cancellation_error = exc if et is exceptions.CancelledError else None
+        cancelled_error = (
+            exc if isinstance(exc, exceptions.CancelledError) else None
+        )
 
+        # If the parent task has thrown an exception, cancel all the tasks
         if et is not None:
-            self._abort()
+            self._cancel_tasks()
 
         while self._tasks:
             if self._on_completed_fut is None:
                 self._on_completed_fut = asyncio.Future()
 
+            # If the parent task was cancelled, cancel all the tasks
             try:
                 await self._on_completed_fut
             except exceptions.CancelledError as ex:
-                cancellation_error = ex
-                self._abort()
+                cancelled_error = ex
+                self._cancel_tasks()
 
             self._on_completed_fut = None
 
-        assert not self._tasks
-
-        if cancellation_error:
-            raise cancellation_error
+        if cancelled_error:
+            raise cancelled_error
 
     def create_task(self, coro):
         task = asyncio.create_task(coro)
@@ -48,9 +50,9 @@ class CancelScope:
         self._tasks.add(task)
         return task
 
-    def _abort(self):
-        if not self._aborting:
-            self._aborting = True
+    def _cancel_tasks(self):
+        if not self._cancelling:
+            self._cancelling = True
             for t in self._tasks:
                 if not t.done():
                     t.cancel()
@@ -65,5 +67,6 @@ class CancelScope:
         ):
             self._on_completed_fut.set_result(True)
 
+        # If any of the tasks was cancelled, cancel all the tasks
         if task.exception() is not None:
-            self._abort()
+            self._cancel_tasks()
