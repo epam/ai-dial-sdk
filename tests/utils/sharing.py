@@ -22,7 +22,7 @@ def collect_mutable_objects(a: Any) -> Set[IdHashable]:
     ret: set[IdHashable] = set()
 
     def _register(obj: Any):
-        if isinstance(obj, (dict, list, tuple)):
+        if isinstance(obj, (dict, list)):
             ret.add(IdHashable(obj))
 
     def _rec(obj: Any):

@@ -16,7 +16,7 @@ from aidial_sdk.utils.merge_chunks import (
     merge,
     merge_chat_completion_chunks,
 )
-from tests.utils.chunks import create_chunk
+from tests.utils.chunks import create_chunk, create_tool_call_chunk
 from tests.utils.sharing import collect_shared_mutable_objects
 
 
@@ -35,12 +35,23 @@ class Fixed(OrderConstraint):
 
 
 @dataclass
-class Before(OrderConstraint):
+class BeforeElem(OrderConstraint):
     elem1: Any
     elem2: Any
 
     def satisfy(self, orig_seq: Sequence[Any], seq: Sequence[Any]) -> bool:
         return seq.index(self.elem1) < seq.index(self.elem2)
+
+
+@dataclass
+class BeforeIdx(OrderConstraint):
+    idx1: int
+    idx2: int
+
+    def satisfy(self, orig_seq: Sequence[Any], seq: Sequence[Any]) -> bool:
+        return BeforeElem(orig_seq[self.idx1], orig_seq[self.idx2]).satisfy(
+            orig_seq, seq
+        )
 
 
 class Test:
@@ -73,14 +84,16 @@ class Test:
             yield self
             return
 
-        for idx, chunks in enumerate(itertools.permutations(self.chunks)):
+        n = len(self.chunks)
+        for indices in itertools.permutations(range(n)):
+            chunks = [self.chunks[idx] for idx in indices]
             if all(
                 c.satisfy(self.chunks, chunks) for c in self.order_constraints
             ):
                 yield Test(
                     chunks=list(chunks),
                     expected=self.expected,
-                    desc=f"{self.desc} perm{idx}",
+                    desc=f"{self.desc} {' '.join(map(str, indices))}",
                 )
 
 
@@ -274,6 +287,7 @@ OPEN_CHUNK = create_chunk(delta={"role": "assistant", "content": None})
 CONTENT_CHUNK1 = create_chunk(delta={"content": "hello"})
 CONTENT_CHUNK2 = create_chunk(delta={"content": " world"})
 
+
 merge_chat_completion_chunks_cases: List[Test] = [
     Test(
         chunks=[1, 2],
@@ -301,11 +315,54 @@ merge_chat_completion_chunks_cases: List[Test] = [
     ),
     Test(
         chunks=[OPEN_CHUNK, CONTENT_CHUNK1, CONTENT_CHUNK2],
-        order_constraints=[Before(CONTENT_CHUNK1, CONTENT_CHUNK2)],
+        order_constraints=[BeforeElem(CONTENT_CHUNK1, CONTENT_CHUNK2)],
         expected=create_chunk(
             delta={"role": "assistant", "content": "hello world"}
         ),
         desc="Merge open with two content chunks",
+    ),
+    Test(
+        chunks=[
+            OPEN_CHUNK,  # 0
+            create_chunk(delta={"content": "sure, I'm calling the tools"}),  # 1
+            create_tool_call_chunk(
+                0,
+                id="tool_call_1",
+                name="get_weather",
+                type="function",
+            ),  # 2
+            create_tool_call_chunk(0, arguments='{"cit'),  # 3
+            create_tool_call_chunk(0, arguments='y": "London"}'),  # 4
+            create_tool_call_chunk(
+                1, id="tool_call_2", name="get_time", type="function"
+            ),  # 5
+            create_tool_call_chunk(1, arguments="{}"),  # 6
+        ],
+        order_constraints=[Fixed(0), BeforeIdx(3, 4)],
+        expected=create_chunk(
+            delta={
+                "role": "assistant",
+                "content": "sure, I'm calling the tools",
+                "tool_calls": [
+                    {
+                        "index": 0,
+                        "id": "tool_call_1",
+                        "type": "function",
+                        "function": {
+                            "name": "get_weather",
+                            "arguments": '{"city": "London"}',
+                        },
+                    },
+                    {
+                        "index": 1,
+                        "id": "tool_call_2",
+                        "type": "function",
+                        "function": {"name": "get_time", "arguments": "{}"},
+                    },
+                ],
+            }
+        ),
+        desc="Merge with tool calls",
     ),
 ]
 
