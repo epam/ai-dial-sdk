@@ -35,11 +35,12 @@ class Fixed(OrderConstraint):
 
 
 @dataclass
-class BeforeElem(OrderConstraint):
+class BeforeValue(OrderConstraint):
     elem1: Any
     elem2: Any
 
     def satisfy(self, orig_seq: Sequence[Any], seq: Sequence[Any]) -> bool:
+        # NOTE: it only works when elem1 and elem2 are unique elements in the sequence
         return seq.index(self.elem1) < seq.index(self.elem2)
 
 
@@ -49,7 +50,7 @@ class BeforeIdx(OrderConstraint):
     idx2: int
 
     def satisfy(self, orig_seq: Sequence[Any], seq: Sequence[Any]) -> bool:
-        return BeforeElem(orig_seq[self.idx1], orig_seq[self.idx2]).satisfy(
+        return BeforeValue(orig_seq[self.idx1], orig_seq[self.idx2]).satisfy(
             orig_seq, seq
         )
 
@@ -79,7 +80,6 @@ class Test:
         self.order_constraints = order_constraints
 
     def permutations(self) -> Iterable["Test"]:
-
         if self.fixed_order:
             yield self
             return
@@ -359,7 +359,7 @@ merge_chat_completion_chunks_cases: List[Test] = [
     ),
     Test(
         chunks=[OPEN_CHUNK, CONTENT_CHUNK1, CONTENT_CHUNK2],
-        order_constraints=[BeforeElem(CONTENT_CHUNK1, CONTENT_CHUNK2)],
+        order_constraints=[BeforeValue(CONTENT_CHUNK1, CONTENT_CHUNK2)],
         expected=create_chunk(
             delta={"role": "assistant", "content": "hello world"}
         ),
