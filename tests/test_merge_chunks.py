@@ -135,6 +135,14 @@ merge_chunks_cases: List[Test] = [
         desc="str+int type-error",
     ),
     Test(
+        chunks=[{"a": ("foo", "bar")}, {"a": ("baz", "quz")}],
+        expected=TypeError(
+            "Cannot merge 'tuple' with incoming 'tuple' at path $.a"
+        ),
+        fixed_order=True,
+        desc="tuple+tuple type-error",
+    ),
+    Test(
         chunks=[{"a": {"b": 1}}, {"a": {"b": "foo"}}],
         expected=TypeError(
             "Cannot merge 'int' with incoming 'str' at path $.a.b"
@@ -281,6 +289,42 @@ merge_chunks_cases: List[Test] = [
         desc="Merge nested usage",
     ),
 ]
+
+
+def test_deep_copy_for_non_indexed_lists():
+    chunk_actual = {"list": [{"content": "hello"}]}
+    chunk_expected = copy.deepcopy(chunk_actual)
+
+    chunk = {}
+    chunk = merge(chunk, chunk_actual)
+    chunk["list"][0]["content"] += " world"
+
+    assert chunk_actual == chunk_expected
+    assert chunk == {"list": [{"content": "hello world"}]}
+
+
+def test_deep_copy_for_indexed_lists():
+    chunk_actual = {"list": [{"index": 0, "content": "hello"}]}
+    chunk_expected = copy.deepcopy(chunk_actual)
+
+    chunk = {}
+    chunk = merge(chunk, chunk_actual)
+    chunk = merge(chunk, {"list": [{"index": 0, "content": " world"}]})
+
+    assert chunk_actual == chunk_expected
+    assert chunk == {"list": [{"index": 0, "content": "hello world"}]}
+
+
+def test_deep_copy_for_dict_values():
+    chunk_actual = {"a": {}}
+    chunk_expected = copy.deepcopy(chunk_actual)
+
+    chunk = {}
+    chunk = merge(chunk, chunk_actual)
+    chunk = merge(chunk, {"a": {"b": "c"}})
+
+    assert chunk_actual == chunk_expected
+    assert chunk == {"a": {"b": "c"}}
 
 
 OPEN_CHUNK = create_chunk(delta={"role": "assistant", "content": None})
