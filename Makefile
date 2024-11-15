@@ -25,6 +25,9 @@ format: install
 test: install
 	poetry run nox -s test $(if $(PYTHON),--python=$(PYTHON),)
 
+benchmark: install
+	python -m benchmark.benchmark_merge_chunks
+
 help:
 	@echo '===================='
 	@echo 'build                        - build the library'
@@ -36,3 +39,4 @@ help:
 	@echo '-- TESTS --'
 	@echo 'test                         - run unit tests'
 	@echo 'test PYTHON=<python_version> - run unit tests with the specific python version'
+	@echo 'benchmark                    - run benchmarks'

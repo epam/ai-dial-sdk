@@ -1,3 +1,4 @@
+import copy
 from typing import Any, List, TypeVar, Union, cast
 
 T = TypeVar("T")
@@ -90,7 +91,7 @@ def merge_indexed_lists(target: list, source: list, path: Path) -> list:
             target[index] = merge_recursive(target[index], elem, path)
         else:
             target.extend([{"index": idx} for idx in range(len(target), index)])
-            target.append(elem)
+            target.append(copy.deepcopy(elem))
 
         path.pop()
 
@@ -108,7 +109,7 @@ def merge_lists(target: list, source: list, path: Path) -> list:
         if is_source_indexed:
             return merge_indexed_lists(target, source, path)
         else:
-            return source
+            return copy.deepcopy(source)
 
     if not is_target_indexed and not is_source_indexed:
         raise AssertionError(CANNOT_MERGE_NON_INDEXED_LISTS_ERROR_MESSAGE)
@@ -121,6 +122,12 @@ def merge_lists(target: list, source: list, path: Path) -> list:
 
 
 def merge_recursive(target: T, source: Any, path: Path) -> T:
+    """
+    Recursively merging content of the source object into the target object.
+    The target object is modified in-place.
+    The source object is left unmodified.
+    """
+
     if source is None:
         return target
 
@@ -151,6 +158,13 @@ def merge_recursive(target: T, source: Any, path: Path) -> T:
 
 
 def merge(*chunks: T) -> T:
+    """
+    Merge a list of chunks into one.
+    The very first chunk is modified in-place by accumulating the content of the subsequent chunks.
+    The subsequent chunks aren't modified.
+    The new content added to the first chunk is deeply copied from a source chunk.
+    """
+
     assert len(chunks) > 0, "At least one chunk must be provided"
     ret: T = chunks[0]
     for chunk in chunks[1:]:
@@ -159,6 +173,11 @@ def merge(*chunks: T) -> T:
 
 
 def cleanup_indices(chunk: T) -> T:
+    """
+    Recursively remove all "index" fields inside list elements in the given chunk.
+    The chunk is modified in-place.
+    """
+
     if isinstance(chunk, list):
         ret = []
         for elem in chunk:
@@ -174,3 +193,39 @@ def cleanup_indices(chunk: T) -> T:
         )
 
     return chunk
+
+
+_Chunk = TypeVar("_Chunk", bound=dict)
+
+
+def merge_chat_completion_chunks(*chunks: _Chunk) -> _Chunk:
+    """
+    The recursive merging procedure that avoids merging top-level atomic fields
+    (e.g. "id", "created", "model", "object", "system_fingerprint") and
+    instead chooses an _override_ merging strategy for such fields.
+    Non-atomic fields (e.g. "choice", "usage") are merged following
+    the standard recursive merging procedure.
+
+    The very first chunk is modified in-place.
+    The subsequent chunks are left unmodified.
+    """
+
+    assert (
+        len(chunks) > 0
+    ), "At least one chat completion chunk must be provided"
+
+    assert all(
+        isinstance(chunk, dict) for chunk in chunks
+    ), "The chat completion chunks are expected to be dictionaries"
+
+    target, *sources = chunks
+
+    for chunk in sources:
+        source = cast(_Chunk, chunk.copy())
+        for key, value in list(source.items()):
+            if not isinstance(value, (list, dict)) and value is not None:
+                target[key] = value
+                del source[key]
+        target = merge(target, source)
+
+    return target
