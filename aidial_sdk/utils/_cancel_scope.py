@@ -18,14 +18,14 @@ class CancelScope:
     async def __aenter__(self):
         return self
 
-    async def __aexit__(self, et, exc, tb):
+    async def __aexit__(self, exc_type, exc, tb):
 
         cancelled_error = (
             exc if isinstance(exc, exceptions.CancelledError) else None
         )
 
         # If the parent task has thrown an exception, cancel all the tasks
-        if et is not None:
+        if exc_type is not None:
             self._cancel_tasks()
 
         while self._tasks:
