@@ -1,11 +1,10 @@
 import pytest
-from starlette.testclient import TestClient
 
-from aidial_sdk import DIALApp
 from tests.applications.broken_immediately import BrokenApplication
 from tests.applications.broken_in_runtime import RuntimeBrokenApplication
 from tests.applications.noop import NoopApplication
 from tests.utils.chunks import check_sse_stream, create_single_choice_chunk
+from tests.utils.client import create_app_client
 
 DEFAULT_RUNTIME_ERROR = {
     "error": {
@@ -79,13 +78,10 @@ error_testdata = [
     "type, response_status_code, response_content", error_testdata
 )
 def test_error(type, response_status_code, response_content):
-    dial_app = DIALApp()
-    dial_app.add_chat_completion("test_app", BrokenApplication())
+    client = create_app_client(BrokenApplication())
 
-    test_app = TestClient(dial_app)
-
-    response = test_app.post(
-        "/openai/deployments/test_app/chat/completions",
+    response = client.post(
+        "chat/completions",
         json={
             "messages": [{"role": "user", "content": type}],
             "stream": False,
@@ -101,13 +97,10 @@ def test_error(type, response_status_code, response_content):
     "type, response_status_code, response_content", error_testdata
 )
 def test_streaming_error(type, response_status_code, response_content):
-    dial_app = DIALApp()
-    dial_app.add_chat_completion("test_app", BrokenApplication())
+    client = create_app_client(BrokenApplication())
 
-    test_app = TestClient(dial_app)
-
-    response = test_app.post(
-        "/openai/deployments/test_app/chat/completions",
+    response = client.post(
+        "chat/completions",
         json={
             "messages": [{"role": "user", "content": type}],
             "stream": True,
@@ -123,18 +116,14 @@ def test_streaming_error(type, response_status_code, response_content):
     "type, response_status_code, response_content", error_testdata
 )
 def test_runtime_streaming_error(type, response_status_code, response_content):
-    dial_app = DIALApp()
-    dial_app.add_chat_completion("test_app", RuntimeBrokenApplication())
+    client = create_app_client(RuntimeBrokenApplication())
 
-    test_app = TestClient(dial_app)
-
-    response = test_app.post(
-        "/openai/deployments/test_app/chat/completions",
+    response = client.post(
+        "chat/completions",
         json={
             "messages": [{"role": "user", "content": type}],
             "stream": True,
         },
-        headers={"Api-Key": "TEST_API_KEY"},
     )
 
     check_sse_stream(
@@ -149,13 +138,10 @@ def test_runtime_streaming_error(type, response_status_code, response_content):
 
 
 def test_no_api_key():
-    dial_app = DIALApp()
-    dial_app.add_chat_completion("test_app", NoopApplication())
+    client = create_app_client(NoopApplication(), api_key=None)
 
-    test_app = TestClient(dial_app)
-
-    response = test_app.post(
-        "/openai/deployments/test_app/chat/completions",
+    response = client.post(
+        "chat/completions",
         json={
             "messages": [{"role": "user", "content": "test"}],
             "stream": False,

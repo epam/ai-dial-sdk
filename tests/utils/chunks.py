@@ -26,7 +26,7 @@ def create_chunk(
 
 
 def create_single_choice_chunk(
-    delta: dict = {}, finish_reason: Optional[str] = None
+    delta: dict = {}, finish_reason: Optional[str] = None, **kwargs
 ):
     return {
         "choices": [
@@ -40,6 +40,7 @@ def create_single_choice_chunk(
         "id": "test_id",
         "created": 0,
         "object": "chat.completion.chunk",
+        **kwargs,
     }
 
 
