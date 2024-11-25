@@ -1,4 +1,6 @@
-from typing import Literal, Optional
+import itertools
+import json
+from typing import List, Literal, Optional, Union
 
 
 def create_chunk(
@@ -23,6 +25,24 @@ def create_chunk(
     }
 
 
+def create_single_choice_chunk(
+    delta: dict = {}, finish_reason: Optional[str] = None
+):
+    return {
+        "choices": [
+            {
+                "index": 0,
+                "finish_reason": finish_reason,
+                "delta": delta,
+            }
+        ],
+        "usage": None,
+        "id": "test_id",
+        "created": 0,
+        "object": "chat.completion.chunk",
+    }
+
+
 def create_tool_call_chunk(
     idx: int,
     *,
@@ -43,3 +63,31 @@ def create_tool_call_chunk(
             ]
         }
     )
+
+
+def _check_chunk(actual: str, expected: Union[str, dict]):
+    assert actual.startswith("data: "), f"Invalid data SSE entry: {actual!r}"
+    actual = actual[len("data: ") :]
+
+    if isinstance(expected, str):
+        assert (
+            actual == expected
+        ), f"actual != expected: {actual!r} != {expected!r}"
+    else:
+        try:
+            actual_dict = json.loads(actual)
+        except json.JSONDecodeError:
+            raise AssertionError(f"Invalid JSON in data SSE entry: {actual!r}")
+        assert (
+            actual_dict == expected
+        ), f"actual != expected: {actual_dict!r} != {expected!r}"
+
+
+def check_sse_stream(actual: List[str], expected: List[dict]):
+    for e_chunk in itertools.chain(expected, ["[DONE]"]):
+        a_chunk = actual.pop(0)
+        _check_chunk(a_chunk, e_chunk)
+        a_chunk = actual.pop(0)
+        assert a_chunk == ""
+
+    assert actual == [], f"There are more SSE entries than expected: {actual!r}"

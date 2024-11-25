@@ -1,9 +1,8 @@
-import json
-
 from starlette.testclient import TestClient
 
 from aidial_sdk import DIALApp
 from tests.applications.single_choice import SingleChoiceApplication
+from tests.utils.chunks import check_sse_stream, create_single_choice_chunk
 
 
 def test_single_choice():
@@ -54,49 +53,11 @@ def test_single_choice_streaming():
         headers={"Api-Key": "TEST_API_KEY"},
     )
 
-    for index, value in enumerate(response.iter_lines()):
-        if index % 2:
-            assert value == ""
-            continue
-
-        assert value.startswith("data: ")
-        data = value[6:]
-
-        if index == 0:
-            assert json.loads(data) == {
-                "choices": [
-                    {
-                        "index": 0,
-                        "finish_reason": None,
-                        "delta": {"role": "assistant"},
-                    }
-                ],
-                "usage": None,
-                "id": "test_id",
-                "created": 0,
-                "object": "chat.completion.chunk",
-            }
-        elif index == 2:
-            assert json.loads(data) == {
-                "choices": [
-                    {
-                        "index": 0,
-                        "finish_reason": None,
-                        "delta": {"content": "Test response content"},
-                    }
-                ],
-                "usage": None,
-                "id": "test_id",
-                "created": 0,
-                "object": "chat.completion.chunk",
-            }
-        elif index == 4:
-            assert json.loads(data) == {
-                "choices": [{"index": 0, "finish_reason": "stop", "delta": {}}],
-                "usage": None,
-                "id": "test_id",
-                "created": 0,
-                "object": "chat.completion.chunk",
-            }
-        elif index == 6:
-            assert data == "[DONE]"
+    check_sse_stream(
+        list(response.iter_lines()),
+        [
+            create_single_choice_chunk({"role": "assistant"}),
+            create_single_choice_chunk({"content": "Test response content"}),
+            create_single_choice_chunk({}, "stop"),
+        ],
+    )
