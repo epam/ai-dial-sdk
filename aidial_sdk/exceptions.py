@@ -31,8 +31,10 @@ class HTTPException(Exception):
         self.headers = headers
 
     def __repr__(self):
+        # headers field is omitted deliberately
+        # since it may contain sensitive information
         return (
-            "%s(message=%r, status_code=%r, type=%r, param=%r, code=%r, display_message=%r, headers=%r)"
+            "%s(message=%r, status_code=%r, type=%r, param=%r, code=%r, display_message=%r)"
             % (
                 self.__class__.__name__,
                 self.message,
@@ -41,7 +43,6 @@ class HTTPException(Exception):
                 self.param,
                 self.code,
                 self.display_message,
-                self.headers,
             )
         )
 
