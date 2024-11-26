@@ -1,7 +1,7 @@
 import functools
 import warnings
 from http import HTTPStatus
-from typing import Optional
+from typing import Dict, Optional
 
 from fastapi import HTTPException as FastAPIException
 from fastapi.responses import JSONResponse
@@ -18,6 +18,7 @@ class HTTPException(Exception):
         param: Optional[str] = None,
         code: Optional[str] = None,
         display_message: Optional[str] = None,
+        headers: Optional[Dict[str, str]] = None,
     ) -> None:
         status_code = int(status_code)
 
@@ -27,8 +28,11 @@ class HTTPException(Exception):
         self.param = param
         self.code = code or str(status_code)
         self.display_message = display_message
+        self.headers = headers
 
     def __repr__(self):
+        # headers field is omitted deliberately
+        # since it may contain sensitive information
         return (
             "%s(message=%r, status_code=%r, type=%r, param=%r, code=%r, display_message=%r)"
             % (
@@ -59,12 +63,14 @@ class HTTPException(Exception):
         return JSONResponse(
             status_code=self.status_code,
             content=self.json_error(),
+            headers=self.headers,
         )
 
     def to_fastapi_exception(self) -> FastAPIException:
         return FastAPIException(
             status_code=self.status_code,
             detail=self.json_error(),
+            headers=self.headers,
         )
 
 
