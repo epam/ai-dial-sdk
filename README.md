@@ -1,5 +1,7 @@
 # AI DIAL Python SDK
 
+[![PyPI version](https://img.shields.io/pypi/v/aidial-sdk.svg)](https://pypi.org/project/aidial-sdk/)
+
 ## Overview
 
 Framework to create applications and model adapters for [AI DIAL](https://epam-rail.com).
