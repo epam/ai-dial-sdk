@@ -1,6 +1,6 @@
 import itertools
 import json
-from typing import List, Literal, Optional, Union
+from typing import Iterable, Literal, Optional, Union
 
 
 def create_chunk(
@@ -66,29 +66,41 @@ def create_tool_call_chunk(
     )
 
 
-def _check_chunk(actual: str, expected: Union[str, dict]):
-    assert actual.startswith("data: "), f"Invalid data SSE entry: {actual!r}"
-    actual = actual[len("data: ") :]
-
+def _check_sse_line(actual: str, expected: Union[str, dict]):
     if isinstance(expected, str):
         assert (
             actual == expected
-        ), f"actual != expected: {actual!r} != {expected!r}"
-    else:
-        try:
-            actual_dict = json.loads(actual)
-        except json.JSONDecodeError:
-            raise AssertionError(f"Invalid JSON in data SSE entry: {actual!r}")
+        ), f"actual line != expected line: {actual!r} != {expected!r}"
+        return
+
+    assert actual.startswith("data: "), f"Invalid data SSE entry: {actual!r}"
+    actual = actual[len("data: ") :]
+
+    try:
+        actual_dict = json.loads(actual)
+    except json.JSONDecodeError:
+        raise AssertionError(f"Invalid JSON in data SSE entry: {actual!r}")
+    assert (
+        actual_dict == expected
+    ), f"actual json != expected json: {actual_dict!r} != {expected!r}"
+
+
+ExpectedSSEStream = Iterable[Union[str, dict]]
+
+
+def check_sse_stream(actual: Iterable[str], expected: ExpectedSSEStream):
+    expected = itertools.chain(expected, ["data: [DONE]"])
+    expected = itertools.chain.from_iterable((line, "") for line in expected)
+
+    sentinel = object()
+    for a_line, e_obj in itertools.zip_longest(
+        actual, expected, fillvalue=sentinel
+    ):
         assert (
-            actual_dict == expected
-        ), f"actual != expected: {actual_dict!r} != {expected!r}"
+            a_line is not sentinel
+        ), "The list of actual values is shorter than the list of expected values"
+        assert (
+            e_obj is not sentinel
+        ), "The list of expected values is shorter than the list of actual values"
 
-
-def check_sse_stream(actual: List[str], expected: List[dict]):
-    for e_chunk in itertools.chain(expected, ["[DONE]"]):
-        a_chunk = actual.pop(0)
-        _check_chunk(a_chunk, e_chunk)
-        a_chunk = actual.pop(0)
-        assert a_chunk == ""
-
-    assert actual == [], f"There are more SSE entries than expected: {actual!r}"
+        _check_sse_line(a_line, e_obj)  # type: ignore
