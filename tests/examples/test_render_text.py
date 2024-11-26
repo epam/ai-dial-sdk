@@ -7,13 +7,17 @@ from PIL import Image
 
 from examples.render_text.app.main import app
 
-http_client = TestClient(app)
-
 
 def test_app():
-    response = http_client.post(
-        "/openai/deployments/render-text/chat/completions?api-version=2023-03-15-preview",
+    client = TestClient(
+        app,
         headers={"Api-Key": "dial_api_key"},
+        base_url="http://testserver/openai/deployments/render-text",
+    )
+
+    response = client.post(
+        "chat/completions",
+        params={"api-version": "2023-03-15-preview"},
         json={
             "messages": [
                 {

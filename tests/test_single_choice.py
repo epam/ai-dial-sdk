@@ -1,6 +1,3 @@
-from starlette.testclient import TestClient
-
-from aidial_sdk import DIALApp
 from tests.applications.single_choice import SingleChoiceApplication
 from tests.utils.chunks import check_sse_stream, create_single_choice_chunk
 from tests.utils.client import create_app_client

@@ -37,9 +37,9 @@ class TestCase:
 
 def run_endpoint_test(testcase: TestCase):
 
-    test_app = TestClient(testcase.app)
+    client = TestClient(testcase.app)
 
-    actual_response = test_app.post(
+    actual_response = client.post(
         f"/openai/deployments/{testcase.deployment}/{testcase.endpoint}",
         json=testcase.request_body,
         headers={"Api-Key": "TEST_API_KEY", **testcase.request_headers},

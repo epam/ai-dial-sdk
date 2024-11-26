@@ -2,10 +2,14 @@ from fastapi.testclient import TestClient
 
 from examples.echo.app import app
 
-http_client = TestClient(app)
-
 
 def test_app():
+    client = TestClient(
+        app,
+        headers={"Api-Key": "dial_api_key"},
+        base_url="http://testserver/openai/deployments/echo",
+    )
+
     content = "Hello world!"
     attachment = {
         "type": "image/png",
@@ -13,9 +17,9 @@ def test_app():
         "title": "Image",
     }
 
-    response = http_client.post(
-        "/openai/deployments/echo/chat/completions?api-version=2023-03-15-preview",
-        headers={"Api-Key": "dial_api_key"},
+    response = client.post(
+        "chat/completions",
+        params={"api-version": "2023-03-15-preview"},
         json={
             "messages": [
                 {

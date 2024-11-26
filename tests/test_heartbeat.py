@@ -33,11 +33,10 @@ from unittest.mock import patch
 
 import pytest
 from pydantic import BaseModel
-from starlette.testclient import TestClient
 
-from aidial_sdk import DIALApp
 from aidial_sdk.utils.streaming import add_heartbeat as original_add_heartbeat
 from tests.applications.idle import IdleApplication
+from tests.utils.client import create_app_client
 
 ExpectedStream = List[Union[str, dict]]
 
@@ -229,11 +228,7 @@ async def test_heartbeat(test_case: TestCase):
         beats += 1
 
     with mock_add_heartbeat(heartbeat_callback=inc_beat_counter):
-        app_name = "test-app"
-
-        app = DIALApp()
-        app.add_chat_completion(
-            app_name,
+        client = create_app_client(
             IdleApplication(
                 intervals=test_case.intervals,
                 throw_exception=test_case.throw_exception,
@@ -241,15 +236,12 @@ async def test_heartbeat(test_case: TestCase):
             heartbeat_interval=test_case.heartbeat_interval,
         )
 
-        client = TestClient(app)
-
         response = client.post(
-            url=f"/openai/deployments/{app_name}/chat/completions",
+            url="chat/completions",
             json={
                 "messages": [{"role": "user", "content": "hello"}],
                 "stream": True,
             },
-            headers={"Api-Key": "TEST_API_KEY"},
         )
 
         match_sse_stream(test_case.expected, response.iter_lines())
