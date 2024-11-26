@@ -138,7 +138,7 @@ def test_runtime_streaming_error(type, response_status_code, response_content):
 
 
 def test_no_api_key():
-    client = create_app_client(NoopApplication(), api_key=None)
+    client = create_app_client(NoopApplication(), headers={})
 
     response = client.post(
         "chat/completions",

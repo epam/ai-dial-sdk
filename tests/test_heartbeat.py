@@ -34,9 +34,10 @@ from unittest.mock import patch
 import pytest
 from pydantic import BaseModel
 
+from aidial_sdk.application import DIALApp
 from aidial_sdk.utils.streaming import add_heartbeat as original_add_heartbeat
 from tests.applications.idle import IdleApplication
-from tests.utils.client import create_app_client
+from tests.utils.client import create_test_client
 
 ExpectedStream = List[Union[str, dict]]
 
@@ -228,13 +229,17 @@ async def test_heartbeat(test_case: TestCase):
         beats += 1
 
     with mock_add_heartbeat(heartbeat_callback=inc_beat_counter):
-        client = create_app_client(
+        name = "test-deployment-name"
+        app = DIALApp().add_chat_completion(
+            name,
             IdleApplication(
                 intervals=test_case.intervals,
                 throw_exception=test_case.throw_exception,
             ),
             heartbeat_interval=test_case.heartbeat_interval,
         )
+
+        client = create_test_client(app, name=name)
 
         response = client.post(
             url="chat/completions",

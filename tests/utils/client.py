@@ -1,5 +1,3 @@
-from typing import Optional
-
 import httpx
 from fastapi import FastAPI
 from starlette.testclient import TestClient
@@ -12,28 +10,18 @@ def create_app_client(
     chat_completion: ChatCompletion,
     *,
     name: str = "test-deployment-name",
-    api_key: Optional[str] = "TEST_API_KEY",
-    heartbeat_interval: Optional[float] = None,
+    headers: dict[str, str] = {"api-key": "TEST_API_KEY"},
 ) -> httpx.Client:
-    app = DIALApp().add_chat_completion(
-        name,
-        chat_completion,
-        heartbeat_interval=heartbeat_interval,
-    )
-
-    return create_test_client(app, name=name, api_key=api_key)
+    app = DIALApp().add_chat_completion(name, chat_completion)
+    return create_test_client(app, name=name, headers=headers)
 
 
 def create_test_client(
     app: FastAPI,
     *,
     name: str = "test-deployment-name",
-    api_key: Optional[str] = "TEST_API_KEY",
+    headers: dict[str, str] = {"api-key": "TEST_API_KEY"},
 ) -> httpx.Client:
-    headers: dict[str, str] = {}
-    if api_key:
-        headers["Api-Key"] = api_key
-
     return TestClient(
         app=app,
         headers=headers,

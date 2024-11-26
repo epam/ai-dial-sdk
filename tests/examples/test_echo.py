@@ -1,14 +1,9 @@
-from fastapi.testclient import TestClient
-
 from examples.echo.app import app
+from tests.utils.client import create_test_client
 
 
 def test_app():
-    client = TestClient(
-        app,
-        headers={"Api-Key": "dial_api_key"},
-        base_url="http://testserver/openai/deployments/echo",
-    )
+    client = create_test_client(app, name="echo")
 
     content = "Hello world!"
     attachment = {

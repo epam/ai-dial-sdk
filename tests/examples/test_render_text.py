@@ -2,18 +2,14 @@ import base64
 from io import BytesIO
 from typing import Tuple
 
-from fastapi.testclient import TestClient
 from PIL import Image
 
 from examples.render_text.app.main import app
+from tests.utils.client import create_test_client
 
 
 def test_app():
-    client = TestClient(
-        app,
-        headers={"Api-Key": "dial_api_key"},
-        base_url="http://testserver/openai/deployments/render-text",
-    )
+    client = create_test_client(app, name="render-text")
 
     response = client.post(
         "chat/completions",
