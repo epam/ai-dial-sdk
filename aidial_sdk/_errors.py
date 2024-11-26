@@ -23,6 +23,7 @@ def fastapi_exception_handler(request: Request, exc: Exception) -> JSONResponse:
     return JSONResponse(
         status_code=exc.status_code,
         content=exc.detail,
+        headers=exc.headers,
     )
 
 

@@ -1,11 +1,15 @@
+import dataclasses
 import json
+from typing import Any, Dict, List
 
 import pytest
 from starlette.testclient import TestClient
 
 from aidial_sdk import DIALApp
-from tests.applications.broken_immediately import BrokenApplication
-from tests.applications.broken_in_runtime import RuntimeBrokenApplication
+from tests.applications.broken import (
+    ImmediatelyBrokenApplication,
+    RuntimeBrokenApplication,
+)
 from tests.applications.noop import NoopApplication
 
 DEFAULT_RUNTIME_ERROR = {
@@ -24,11 +28,20 @@ API_KEY_IS_MISSING = {
     }
 }
 
-error_testdata = [
-    ("fastapi_exception", 500, DEFAULT_RUNTIME_ERROR),
-    ("value_error_exception", 500, DEFAULT_RUNTIME_ERROR),
-    ("zero_division_exception", 500, DEFAULT_RUNTIME_ERROR),
-    (
+
+@dataclasses.dataclass
+class ErrorTestCase:
+    content: Any
+    response_code: int
+    response_error: dict
+    response_headers: Dict[str, str] = dataclasses.field(default_factory=dict)
+
+
+error_testcases: List[ErrorTestCase] = [
+    ErrorTestCase("fastapi_exception", 500, DEFAULT_RUNTIME_ERROR),
+    ErrorTestCase("value_error_exception", 500, DEFAULT_RUNTIME_ERROR),
+    ErrorTestCase("zero_division_exception", 500, DEFAULT_RUNTIME_ERROR),
+    ErrorTestCase(
         "sdk_exception",
         503,
         {
@@ -39,7 +52,7 @@ error_testdata = [
             }
         },
     ),
-    (
+    ErrorTestCase(
         "sdk_exception_with_display_message",
         503,
         {
@@ -51,7 +64,7 @@ error_testdata = [
             }
         },
     ),
-    (
+    ErrorTestCase(
         None,
         400,
         {
@@ -62,7 +75,7 @@ error_testdata = [
             }
         },
     ),
-    (
+    ErrorTestCase(
         [{"type": "text", "text": "hello"}],
         400,
         {
@@ -73,57 +86,66 @@ error_testdata = [
             }
         },
     ),
+    ErrorTestCase(
+        "sdk_exception_with_headers",
+        429,
+        {
+            "error": {
+                "message": "Too many requests",
+                "type": "runtime_error",
+                "code": "429",
+            }
+        },
+        {"Retry-after": "42"},
+    ),
 ]
 
 
-@pytest.mark.parametrize(
-    "type, response_status_code, response_content", error_testdata
-)
-def test_error(type, response_status_code, response_content):
+@pytest.mark.parametrize("test_case", error_testcases)
+def test_error(test_case: ErrorTestCase):
     dial_app = DIALApp()
-    dial_app.add_chat_completion("test_app", BrokenApplication())
+    dial_app.add_chat_completion("test_app", ImmediatelyBrokenApplication())
 
     test_app = TestClient(dial_app)
 
     response = test_app.post(
         "/openai/deployments/test_app/chat/completions",
         json={
-            "messages": [{"role": "user", "content": type}],
+            "messages": [{"role": "user", "content": test_case.content}],
             "stream": False,
         },
         headers={"Api-Key": "TEST_API_KEY"},
     )
 
-    assert response.status_code == response_status_code
-    assert response.json() == response_content
+    assert response.status_code == test_case.response_code
+    assert response.json() == test_case.response_error
+
+    for k, v in test_case.response_headers.items():
+        assert response.headers.get(k) == v
 
 
-@pytest.mark.parametrize(
-    "type, response_status_code, response_content", error_testdata
-)
-def test_streaming_error(type, response_status_code, response_content):
+@pytest.mark.parametrize("test_case", error_testcases)
+def test_streaming_error(test_case: ErrorTestCase):
     dial_app = DIALApp()
-    dial_app.add_chat_completion("test_app", BrokenApplication())
+    dial_app.add_chat_completion("test_app", ImmediatelyBrokenApplication())
 
     test_app = TestClient(dial_app)
 
     response = test_app.post(
         "/openai/deployments/test_app/chat/completions",
         json={
-            "messages": [{"role": "user", "content": type}],
+            "messages": [{"role": "user", "content": test_case.content}],
             "stream": True,
         },
         headers={"Api-Key": "TEST_API_KEY"},
     )
 
-    assert response.status_code == response_status_code
-    assert response.json() == response_content
+    assert response.status_code == test_case.response_code
+    assert response.json() == test_case.response_error
 
 
-@pytest.mark.parametrize(
-    "type, response_status_code, response_content", error_testdata
-)
-def test_runtime_streaming_error(type, response_status_code, response_content):
+@pytest.mark.parametrize("test_case", error_testcases)
+def test_runtime_streaming_error(test_case: ErrorTestCase):
     dial_app = DIALApp()
     dial_app.add_chat_completion("test_app", RuntimeBrokenApplication())
 
@@ -132,7 +154,7 @@ def test_runtime_streaming_error(type, response_status_code, response_content):
     response = test_app.post(
         "/openai/deployments/test_app/chat/completions",
         json={
-            "messages": [{"role": "user", "content": type}],
+            "messages": [{"role": "user", "content": test_case.content}],
             "stream": True,
         },
         headers={"Api-Key": "TEST_API_KEY"},
@@ -183,7 +205,7 @@ def test_runtime_streaming_error(type, response_status_code, response_content):
                 "object": "chat.completion.chunk",
             }
         elif index == 6:
-            assert json.loads(data) == response_content
+            assert json.loads(data) == test_case.response_error
         elif index == 8:
             assert data == "[DONE]"
 
