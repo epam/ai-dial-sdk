@@ -112,7 +112,20 @@ class Response:
                     and chunk.choice_index == self.n - 1
                 )
 
-                is_top_level_chunk = isinstance(
+                # It's not clear if a chunk without
+                # a missing `choices` field (or a empty list for `choices`)
+                # will be parsed correctly downstream.
+                # To eliminate choiceless chunks altogether we
+                # (1) delay their sending until the very last moment and
+                # (2) merge them with the final choice closing chunk, so
+                #     there will be at least one choice attached to
+                #     this combined chunk.
+                # The alternatives:
+                #   (1) to send the choiceless chunks with a choice containing empty content or
+                #   (2) allow sending chunks with an empty list of choices.
+                #       After all stream_options.include_usage=True leads to
+                #       creation of such a chunk.
+                is_choiceless_chunk = isinstance(
                     chunk,
                     (
                         UsageChunk,
@@ -121,7 +134,7 @@ class Response:
                     ),
                 )
 
-                if is_last_end_choice_chunk or is_top_level_chunk:
+                if is_last_end_choice_chunk or is_choiceless_chunk:
                     delayed_chunks.append(chunk)
                 else:
                     yield _create_chunk(chunk)
