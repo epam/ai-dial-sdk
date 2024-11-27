@@ -61,7 +61,7 @@ class HeaderPropagator:
         except ImportError:
             return
 
-        async def _request_start(
+        async def _on_request_start(
             session: aiohttp.ClientSession,
             trace_config_ctx: types.SimpleNamespace,
             params: aiohttp.TraceRequestStartParams,
@@ -70,7 +70,7 @@ class HeaderPropagator:
 
         def instrumented_init(wrapped, instance, args, kwargs):
             trace_config = aiohttp.TraceConfig()
-            trace_config.on_request_start.append(_request_start)
+            trace_config.on_request_start.append(_on_request_start)
 
             trace_configs = list(kwargs.get("trace_configs") or [])
             trace_configs.append(trace_config)
