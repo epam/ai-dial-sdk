@@ -970,25 +970,6 @@ deprecated = ">=1.2.6"
 importlib-metadata = ">=6.0,<7.0"
 
 [[package]]
-name = "opentelemetry-distro"
-version = "0.41b0"
-description = "OpenTelemetry Python Distro"
-optional = true
-python-versions = ">=3.7"
-files = [
-    {file = "opentelemetry_distro-0.41b0-py3-none-any.whl", hash = "sha256:61a028dc8c1418b8634a5bf71e15ad85427cb55d97a0cd6a58dd135e456cc027"},
-    {file = "opentelemetry_distro-0.41b0.tar.gz", hash = "sha256:8ce05f9499a09c99d9c5f550ff2ed6d229444cae17ae36baf705b0ccb647a959"},
-]
-
-[package.dependencies]
-opentelemetry-api = ">=1.12,<2.0"
-opentelemetry-instrumentation = "0.41b0"
-opentelemetry-sdk = ">=1.13,<2.0"
-
-[package.extras]
-otlp = ["opentelemetry-exporter-otlp (==1.20.0)"]
-
-[[package]]
 name = "opentelemetry-exporter-otlp-proto-common"
 version = "1.20.0"
 description = "OpenTelemetry Protobuf encoding"
@@ -2249,9 +2230,9 @@ doc = ["furo", "jaraco.packaging (>=9.3)", "jaraco.tidelift (>=1.4)", "rst.linke
 test = ["big-O", "jaraco.functools", "jaraco.itertools", "jaraco.test", "more-itertools", "pytest (>=6,!=8.1.*)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=2.2)", "pytest-ignore-flaky", "pytest-mypy", "pytest-ruff (>=0.2.1)"]
 
 [extras]
-telemetry = ["opentelemetry-api", "opentelemetry-distro", "opentelemetry-exporter-otlp-proto-grpc", "opentelemetry-exporter-prometheus", "opentelemetry-instrumentation", "opentelemetry-instrumentation-aiohttp-client", "opentelemetry-instrumentation-fastapi", "opentelemetry-instrumentation-httpx", "opentelemetry-instrumentation-logging", "opentelemetry-instrumentation-requests", "opentelemetry-instrumentation-system-metrics", "opentelemetry-instrumentation-urllib", "opentelemetry-sdk", "prometheus-client"]
+telemetry = ["opentelemetry-api", "opentelemetry-exporter-otlp-proto-grpc", "opentelemetry-exporter-prometheus", "opentelemetry-instrumentation-aiohttp-client", "opentelemetry-instrumentation-fastapi", "opentelemetry-instrumentation-httpx", "opentelemetry-instrumentation-logging", "opentelemetry-instrumentation-requests", "opentelemetry-instrumentation-system-metrics", "opentelemetry-instrumentation-urllib", "opentelemetry-sdk", "prometheus-client"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8.1,<4.0"
-content-hash = "04514235426dad72f5368517a74020c5a401de566fbdd3805cde17387ad9725e"
+content-hash = "e3e7990015104bea82768a07c91a20eb0e7a2cd5503e2ffd6f449fea52ed3b9d"
