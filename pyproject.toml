@@ -17,7 +17,7 @@ wrapt = ">=1.10,<2"
 opentelemetry-sdk = {version = "1.20.0", optional = true}
 opentelemetry-api = {version = "1.20.0", optional = true}
 opentelemetry-exporter-otlp-proto-grpc = {version = "1.20.0", optional = true}
-opentelemetry-distro ={version = "0.41b0", optional = true}
+opentelemetry-distro = {version = "0.41b0", optional = true}
 opentelemetry-instrumentation = {version = "0.41b0", optional = true}
 opentelemetry-instrumentation-aiohttp-client = {version = "0.41b0", optional = true}
 opentelemetry-instrumentation-fastapi = {version = "0.41b0", optional = true}
