@@ -6,8 +6,6 @@ import wrapt
 from fastapi import FastAPI
 from starlette.types import ASGIApp, Receive, Scope, Send
 
-from aidial_sdk.utils.logging import log_debug
-
 
 class FastAPIMiddleware:
     def __init__(
@@ -61,9 +59,6 @@ class HeaderPropagator:
         try:
             import aiohttp
         except ImportError:
-            log_debug(
-                "aiohttp package isn't installed. Skipping the instrumentation."
-            )
             return
 
         async def _request_start(
@@ -91,9 +86,6 @@ class HeaderPropagator:
         try:
             import requests
         except ImportError:
-            log_debug(
-                "requests package isn't installed. Skipping the instrumentation."
-            )
             return
 
         def instrumented_send(wrapped, instance, args, kwargs):
@@ -107,9 +99,6 @@ class HeaderPropagator:
         try:
             import httpx
         except ImportError:
-            log_debug(
-                "httpx package isn't installed. Skipping the instrumentation."
-            )
             return
 
         def instrumented_build_request(wrapped, instance, args, kwargs):

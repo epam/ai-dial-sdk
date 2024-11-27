@@ -10,13 +10,8 @@ from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
     OTLPSpanExporter,
 )
 from opentelemetry.exporter.prometheus import PrometheusMetricReader
-from opentelemetry.instrumentation.aiohttp_client import (
-    AioHttpClientInstrumentor,
-)
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-from opentelemetry.instrumentation.httpx import HTTPXClientInstrumentor
 from opentelemetry.instrumentation.logging import LoggingInstrumentor
-from opentelemetry.instrumentation.requests import RequestsInstrumentor
 from opentelemetry.instrumentation.system_metrics import (
     SystemMetricsInstrumentor,
 )
@@ -57,10 +52,34 @@ def init_telemetry(
 
         set_tracer_provider(tracer_provider)
 
-        RequestsInstrumentor().instrument()
-        AioHttpClientInstrumentor().instrument()
+        try:
+            from opentelemetry.instrumentation.requests import (
+                RequestsInstrumentor,
+            )
+
+            RequestsInstrumentor().instrument()
+        except ImportError:
+            pass
+
+        try:
+            from opentelemetry.instrumentation.aiohttp_client import (
+                AioHttpClientInstrumentor,
+            )
+
+            AioHttpClientInstrumentor().instrument()
+        except ImportError:
+            pass
+
         URLLibInstrumentor().instrument()
-        HTTPXClientInstrumentor().instrument()
+
+        try:
+            from opentelemetry.instrumentation.httpx import (
+                HTTPXClientInstrumentor,
+            )
+
+            HTTPXClientInstrumentor().instrument()
+        except ImportError:
+            pass
 
         if config.tracing.logging:
             # Setting the root logger format in order to include
