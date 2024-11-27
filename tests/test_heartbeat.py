@@ -200,7 +200,7 @@ async def test_heartbeat(test_case: TestCase):
             },
         )
 
-        check_sse_stream(list(response.iter_lines()), test_case.expected)
+        check_sse_stream(response.iter_lines(), test_case.expected)
 
         expected_beats = test_case.expected.count(BEAT)
         assert beats == expected_beats

@@ -88,7 +88,9 @@ def _check_sse_line(actual: str, expected: Union[str, dict]):
 ExpectedSSEStream = Iterable[Union[str, dict]]
 
 
-def check_sse_stream(actual: Iterable[str], expected: ExpectedSSEStream):
+def check_sse_stream(
+    actual: Iterable[str], expected: ExpectedSSEStream
+) -> bool:
     expected = itertools.chain(expected, ["data: [DONE]"])
     expected = itertools.chain.from_iterable((line, "") for line in expected)
 
@@ -104,3 +106,5 @@ def check_sse_stream(actual: Iterable[str], expected: ExpectedSSEStream):
         ), "The list of expected values is shorter than the list of actual values"
 
         _check_sse_line(a_line, e_obj)  # type: ignore
+
+    return True

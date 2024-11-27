@@ -44,7 +44,7 @@ def test_single_choice_streaming():
     )
 
     check_sse_stream(
-        list(response.iter_lines()),
+        response.iter_lines(),
         [
             create_single_choice_chunk({"role": "assistant"}),
             create_single_choice_chunk({"content": "Test response content"}),

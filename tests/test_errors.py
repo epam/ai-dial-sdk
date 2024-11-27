@@ -150,7 +150,7 @@ def test_runtime_streaming_error(test_case: ErrorTestCase):
     )
 
     check_sse_stream(
-        list(response.iter_lines()),
+        response.iter_lines(),
         [
             create_single_choice_chunk({"role": "assistant"}),
             create_single_choice_chunk({"content": "Test content"}),

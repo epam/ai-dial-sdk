@@ -13,7 +13,6 @@ def test_app():
 
     response = client.post(
         "chat/completions",
-        params={"api-version": "2023-03-15-preview"},
         json={
             "messages": [
                 {
