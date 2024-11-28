@@ -16,17 +16,17 @@ pydantic = ">=1.10,<3"
 wrapt = ">=1.10,<2"
 
 # Telemetry extras
-opentelemetry-sdk = {version = "^1.20.0", optional = true}
-opentelemetry-api = {version = "^1.20.0", optional = true}
-opentelemetry-exporter-otlp-proto-grpc = {version = "^1.20.0", optional = true}
-opentelemetry-instrumentation-aiohttp-client = {version = ">=0.41b0", optional = true}
-opentelemetry-instrumentation-fastapi = {version = ">=0.41b0", optional = true}
-opentelemetry-instrumentation-httpx = {version = ">=0.41b0", optional = true}
-opentelemetry-instrumentation-logging = {version = ">=0.41b0", optional = true}
-opentelemetry-instrumentation-requests = {version = ">=0.41b0", optional = true}
-opentelemetry-instrumentation-system-metrics = {version = ">=0.41b0", optional = true}
-opentelemetry-instrumentation-urllib = {version = ">=0.41b0", optional = true}
-opentelemetry-exporter-prometheus = {version = ">=0.41b0", optional = true}
+opentelemetry-sdk = {version = "^1.22.0", optional = true}
+opentelemetry-api = {version = "^1.22.0", optional = true}
+opentelemetry-exporter-otlp-proto-grpc = {version = "^1.22.0", optional = true}
+opentelemetry-instrumentation-aiohttp-client = {version = ">=0.43b0", optional = true}
+opentelemetry-instrumentation-fastapi = {version = ">=0.43b0", optional = true}
+opentelemetry-instrumentation-httpx = {version = ">=0.43b0", optional = true}
+opentelemetry-instrumentation-logging = {version = ">=0.43b0", optional = true}
+opentelemetry-instrumentation-requests = {version = ">=0.43b0", optional = true}
+opentelemetry-instrumentation-system-metrics = {version = ">=0.43b0", optional = true}
+opentelemetry-instrumentation-urllib = {version = ">=0.43b0", optional = true}
+opentelemetry-exporter-prometheus = {version = ">=0.43b0", optional = true}
 prometheus-client = {version = ">=0.17.1,<=0.21", optional = true}
 
 [tool.poetry.extras]
