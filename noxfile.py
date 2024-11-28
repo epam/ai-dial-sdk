@@ -40,6 +40,8 @@ def format(session: nox.Session):
 def test(session: nox.Session, pydantic: str, httpx: str) -> None:
     """Runs tests"""
     session.run("poetry", "install", external=True)
-    session.install(f"pydantic=={pydantic}")
-    session.install(f"httpx=={httpx}")
+    session.install(
+        f"pydantic=={pydantic}",
+        f"httpx=={httpx}",
+    )
     session.run("pytest")
