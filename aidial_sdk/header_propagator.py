@@ -2,9 +2,6 @@ import types
 from contextvars import ContextVar
 from typing import MutableMapping, Optional
 
-import aiohttp
-import httpx
-import requests
 import wrapt
 from fastapi import FastAPI
 from starlette.types import ASGIApp, Receive, Scope, Send
@@ -59,9 +56,21 @@ class HeaderPropagator:
         app.add_middleware(FastAPIMiddleware, api_key=self._api_key)
 
     def _instrument_aiohttp(self):
+        try:
+            import aiohttp
+        except ImportError:
+            return
+
+        async def _on_request_start(
+            session: aiohttp.ClientSession,
+            trace_config_ctx: types.SimpleNamespace,
+            params: aiohttp.TraceRequestStartParams,
+        ):
+            self._modify_headers(str(params.url), params.headers)
+
         def instrumented_init(wrapped, instance, args, kwargs):
             trace_config = aiohttp.TraceConfig()
-            trace_config.on_request_start.append(self._on_aiohttp_request_start)
+            trace_config.on_request_start.append(_on_request_start)
 
             trace_configs = list(kwargs.get("trace_configs") or [])
             trace_configs.append(trace_config)
@@ -73,15 +82,12 @@ class HeaderPropagator:
             aiohttp.ClientSession, "__init__", instrumented_init
         )
 
-    async def _on_aiohttp_request_start(
-        self,
-        session: aiohttp.ClientSession,
-        trace_config_ctx: types.SimpleNamespace,
-        params: aiohttp.TraceRequestStartParams,
-    ):
-        self._modify_headers(str(params.url), params.headers)
-
     def _instrument_requests(self):
+        try:
+            import requests
+        except ImportError:
+            return
+
         def instrumented_send(wrapped, instance, args, kwargs):
             request: requests.PreparedRequest = args[0]
             self._modify_headers(request.url or "", request.headers)
@@ -90,6 +96,10 @@ class HeaderPropagator:
         wrapt.wrap_function_wrapper(requests.Session, "send", instrumented_send)
 
     def _instrument_httpx(self):
+        try:
+            import httpx
+        except ImportError:
+            return
 
         def instrumented_build_request(wrapped, instance, args, kwargs):
             request: httpx.Request = wrapped(*args, **kwargs)
