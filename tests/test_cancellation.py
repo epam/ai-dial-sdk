@@ -3,13 +3,11 @@ from typing import Optional
 
 import pytest
 
-from aidial_sdk.chat_completion.request import Request as ChatCompletionRequest
 from aidial_sdk.chat_completion.response import (
     Response as ChatCompletionResponse,
 )
-from aidial_sdk.pydantic_v1 import SecretStr
 from aidial_sdk.utils.streaming import add_heartbeat
-from tests.utils.constants import DUMMY_FASTAPI_REQUEST
+from tests.utils.constants import DUMMY_DIAL_REQUEST
 
 
 class Counter:
@@ -36,7 +34,6 @@ async def _wait_forever():
 async def _wait(counter: Counter, secs: Optional[int] = None):
     try:
         if secs is None:
-            # wait forever
             await _wait_forever()
         else:
             for _ in range(secs):
@@ -88,15 +85,7 @@ async def test_cancellation(
     with_heartbeat: bool, chat_completion, expected_cancelled, expected_done
 ):
 
-    request = ChatCompletionRequest(
-        original_request=DUMMY_FASTAPI_REQUEST,
-        messages=[],
-        api_key_secret=SecretStr("api-key"),
-        deployment_id="test-app",
-        headers={},
-    )
-
-    response = ChatCompletionResponse(request)
+    response = ChatCompletionResponse(DUMMY_DIAL_REQUEST)
 
     counter = Counter()
     chat_completion = chat_completion(counter)

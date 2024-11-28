@@ -25,57 +25,36 @@ So we resort here to testing purely the output of the application and check the 
 """
 
 import asyncio
-import itertools
-import json
 from contextlib import contextmanager
-from typing import Generator, Iterator, List, Optional, Union
+from typing import List, Optional, Union
 from unittest.mock import patch
 
 import pytest
 from pydantic import BaseModel
-from starlette.testclient import TestClient
 
-from aidial_sdk import DIALApp
+from aidial_sdk.application import DIALApp
 from aidial_sdk.utils.streaming import add_heartbeat as original_add_heartbeat
 from tests.applications.idle import IdleApplication
-
-ExpectedStream = List[Union[str, dict]]
+from tests.utils.chunks import check_sse_stream, create_single_choice_chunk
+from tests.utils.client import create_test_client
 
 BEAT = ": heartbeat"
-DONE = "data: [DONE]"
 
-ERROR = "data: " + json.dumps(
-    {
-        "error": {
-            "message": "Error during processing the request",
-            "type": "runtime_error",
-            "code": "500",
-        }
-    },
-    separators=(",", ":"),
-)
-
-
-def create_choice(
-    *, finish_reason: Optional[str] = None, delta: Optional[dict] = {}
-) -> dict:
-    return {
-        "choices": [
-            {"index": 0, "finish_reason": finish_reason, "delta": delta}
-        ],
-        "usage": None,
-        "id": "test_id",
-        "created": 0,
-        "object": "chat.completion.chunk",
+ERROR = {
+    "error": {
+        "message": "Error during processing the request",
+        "type": "runtime_error",
+        "code": "500",
     }
+}
 
 
-CHOICE_OPEN = create_choice(delta={"role": "assistant"})
-CHOICE_CLOSE = create_choice(finish_reason="stop")
+CHOICE_OPEN = create_single_choice_chunk(delta={"role": "assistant"})
+CHOICE_CLOSE = create_single_choice_chunk(finish_reason="stop")
 
 
 def content(content: str):
-    return create_choice(delta={"content": content})
+    return create_single_choice_chunk(delta={"content": content})
 
 
 @contextmanager
@@ -89,34 +68,13 @@ def mock_add_heartbeat(**extra_kwargs):
         yield mock
 
 
-def match_sse_stream(expected: ExpectedStream, actual: Iterator[str]):
-
-    def _add_newlines(
-        stream: ExpectedStream,
-    ) -> Generator[Union[str, dict], None, None]:
-        for line in stream:
-            yield line
-            yield ""
-
-    for expected_item, actual_line in itertools.zip_longest(
-        _add_newlines(expected), actual
-    ):
-        if isinstance(expected_item, dict):
-            assert actual_line[: len("data:")] == "data:"
-            actual_line = actual_line[len("data:") :]
-            actual_obj = json.loads(actual_line)
-            assert actual_obj == expected_item
-        else:
-            assert actual_line == expected_item
-
-
 class TestCase(BaseModel):
     __test__ = False
 
     intervals: List[float]
     throw_exception: bool
     heartbeat_interval: Optional[float]
-    expected: ExpectedStream
+    expected: List[Union[str, dict]]
 
 
 @pytest.mark.parametrize(
@@ -131,7 +89,6 @@ class TestCase(BaseModel):
                 CHOICE_OPEN,
                 content("1"),
                 CHOICE_CLOSE,
-                DONE,
             ],
         ),
         TestCase(
@@ -145,7 +102,6 @@ class TestCase(BaseModel):
                 BEAT,
                 content("2"),
                 CHOICE_CLOSE,
-                DONE,
             ],
         ),
         TestCase(
@@ -163,7 +119,6 @@ class TestCase(BaseModel):
                 BEAT,
                 content("4"),
                 CHOICE_CLOSE,
-                DONE,
             ],
         ),
         TestCase(
@@ -178,7 +133,6 @@ class TestCase(BaseModel):
                 CHOICE_OPEN,
                 content("1"),
                 CHOICE_CLOSE,
-                DONE,
             ],
         ),
         TestCase(
@@ -192,7 +146,6 @@ class TestCase(BaseModel):
                 content("3"),
                 content("4"),
                 CHOICE_CLOSE,
-                DONE,
             ],
         ),
         TestCase(
@@ -203,7 +156,6 @@ class TestCase(BaseModel):
                 CHOICE_OPEN,
                 content("1"),
                 CHOICE_CLOSE,
-                DONE,
             ],
         ),
         TestCase(
@@ -216,7 +168,6 @@ class TestCase(BaseModel):
                 content("1"),
                 CHOICE_CLOSE,
                 ERROR,
-                DONE,
             ],
         ),
     ],
@@ -229,11 +180,9 @@ async def test_heartbeat(test_case: TestCase):
         beats += 1
 
     with mock_add_heartbeat(heartbeat_callback=inc_beat_counter):
-        app_name = "test-app"
-
-        app = DIALApp()
-        app.add_chat_completion(
-            app_name,
+        name = "test-deployment-name"
+        app = DIALApp().add_chat_completion(
+            name,
             IdleApplication(
                 intervals=test_case.intervals,
                 throw_exception=test_case.throw_exception,
@@ -241,18 +190,17 @@ async def test_heartbeat(test_case: TestCase):
             heartbeat_interval=test_case.heartbeat_interval,
         )
 
-        client = TestClient(app)
+        client = create_test_client(app, name=name)
 
         response = client.post(
-            url=f"/openai/deployments/{app_name}/chat/completions",
+            url="chat/completions",
             json={
                 "messages": [{"role": "user", "content": "hello"}],
                 "stream": True,
             },
-            headers={"Api-Key": "TEST_API_KEY"},
         )
 
-        match_sse_stream(test_case.expected, response.iter_lines())
+        check_sse_stream(response.iter_lines(), test_case.expected)
 
         expected_beats = test_case.expected.count(BEAT)
         assert beats == expected_beats

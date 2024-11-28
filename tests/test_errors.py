@@ -1,16 +1,15 @@
 import dataclasses
-import json
 from typing import Any, Dict, List
 
 import pytest
-from starlette.testclient import TestClient
 
-from aidial_sdk import DIALApp
 from tests.applications.broken import (
     ImmediatelyBrokenApplication,
     RuntimeBrokenApplication,
 )
 from tests.applications.noop import NoopApplication
+from tests.utils.chunks import check_sse_stream, create_single_choice_chunk
+from tests.utils.client import create_app_client
 
 DEFAULT_RUNTIME_ERROR = {
     "error": {
@@ -103,13 +102,10 @@ error_testcases: List[ErrorTestCase] = [
 
 @pytest.mark.parametrize("test_case", error_testcases)
 def test_error(test_case: ErrorTestCase):
-    dial_app = DIALApp()
-    dial_app.add_chat_completion("test_app", ImmediatelyBrokenApplication())
+    client = create_app_client(ImmediatelyBrokenApplication())
 
-    test_app = TestClient(dial_app)
-
-    response = test_app.post(
-        "/openai/deployments/test_app/chat/completions",
+    response = client.post(
+        "chat/completions",
         json={
             "messages": [{"role": "user", "content": test_case.content}],
             "stream": False,
@@ -126,13 +122,10 @@ def test_error(test_case: ErrorTestCase):
 
 @pytest.mark.parametrize("test_case", error_testcases)
 def test_streaming_error(test_case: ErrorTestCase):
-    dial_app = DIALApp()
-    dial_app.add_chat_completion("test_app", ImmediatelyBrokenApplication())
+    client = create_app_client(ImmediatelyBrokenApplication())
 
-    test_app = TestClient(dial_app)
-
-    response = test_app.post(
-        "/openai/deployments/test_app/chat/completions",
+    response = client.post(
+        "chat/completions",
         json={
             "messages": [{"role": "user", "content": test_case.content}],
             "stream": True,
@@ -146,78 +139,32 @@ def test_streaming_error(test_case: ErrorTestCase):
 
 @pytest.mark.parametrize("test_case", error_testcases)
 def test_runtime_streaming_error(test_case: ErrorTestCase):
-    dial_app = DIALApp()
-    dial_app.add_chat_completion("test_app", RuntimeBrokenApplication())
+    client = create_app_client(RuntimeBrokenApplication())
 
-    test_app = TestClient(dial_app)
-
-    response = test_app.post(
-        "/openai/deployments/test_app/chat/completions",
+    response = client.post(
+        "chat/completions",
         json={
             "messages": [{"role": "user", "content": test_case.content}],
             "stream": True,
         },
-        headers={"Api-Key": "TEST_API_KEY"},
     )
 
-    for index, value in enumerate(response.iter_lines()):
-        if index % 2:
-            assert value == ""
-            continue
-
-        assert value.startswith("data: ")
-        data = value[6:]
-
-        if index == 0:
-            assert json.loads(data) == {
-                "choices": [
-                    {
-                        "index": 0,
-                        "finish_reason": None,
-                        "delta": {"role": "assistant"},
-                    }
-                ],
-                "usage": None,
-                "id": "test_id",
-                "created": 0,
-                "object": "chat.completion.chunk",
-            }
-        elif index == 2:
-            assert json.loads(data) == {
-                "choices": [
-                    {
-                        "index": 0,
-                        "finish_reason": None,
-                        "delta": {"content": "Test content"},
-                    }
-                ],
-                "usage": None,
-                "id": "test_id",
-                "created": 0,
-                "object": "chat.completion.chunk",
-            }
-        elif index == 4:
-            assert json.loads(data) == {
-                "choices": [{"index": 0, "finish_reason": "stop", "delta": {}}],
-                "usage": None,
-                "id": "test_id",
-                "created": 0,
-                "object": "chat.completion.chunk",
-            }
-        elif index == 6:
-            assert json.loads(data) == test_case.response_error
-        elif index == 8:
-            assert data == "[DONE]"
+    check_sse_stream(
+        response.iter_lines(),
+        [
+            create_single_choice_chunk({"role": "assistant"}),
+            create_single_choice_chunk({"content": "Test content"}),
+            create_single_choice_chunk({}, "stop"),
+            test_case.response_error,
+        ],
+    )
 
 
 def test_no_api_key():
-    dial_app = DIALApp()
-    dial_app.add_chat_completion("test_app", NoopApplication())
+    client = create_app_client(NoopApplication(), headers={})
 
-    test_app = TestClient(dial_app)
-
-    response = test_app.post(
-        "/openai/deployments/test_app/chat/completions",
+    response = client.post(
+        "chat/completions",
         json={
             "messages": [{"role": "user", "content": "test"}],
             "stream": False,

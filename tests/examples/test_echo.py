@@ -1,11 +1,10 @@
-from fastapi.testclient import TestClient
-
 from examples.echo.app import app
-
-http_client = TestClient(app)
+from tests.utils.client import create_test_client
 
 
 def test_app():
+    client = create_test_client(app, name="echo")
+
     content = "Hello world!"
     attachment = {
         "type": "image/png",
@@ -13,9 +12,8 @@ def test_app():
         "title": "Image",
     }
 
-    response = http_client.post(
-        "/openai/deployments/echo/chat/completions?api-version=2023-03-15-preview",
-        headers={"Api-Key": "dial_api_key"},
+    response = client.post(
+        "chat/completions",
         json={
             "messages": [
                 {

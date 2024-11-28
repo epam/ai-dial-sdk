@@ -1,20 +1,18 @@
-from fastapi.testclient import TestClient
-
 from examples.image_size.app.main import app
-
-http_client = TestClient(app)
+from tests.utils.client import create_test_client
 
 
 def test_app():
+    client = create_test_client(app, name="image-size")
+
     attachment = {
         "type": "image/png",
         "data": "iVBORw0KGgoAAAANSUhEUgAAAAUAAAAFCAYAAACNbyblAAAAHElEQVQI12P4//8/w38GIAXDIBKE0DHxgljNBAAO9TXL0Y4OHwAAAABJRU5ErkJggg==",
         "title": "Image",
     }
 
-    response = http_client.post(
-        "/openai/deployments/image-size/chat/completions?api-version=2023-03-15-preview",
-        headers={"Api-Key": "dial_api_key"},
+    response = client.post(
+        "chat/completions",
         json={
             "messages": [
                 {

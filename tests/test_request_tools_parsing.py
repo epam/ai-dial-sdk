@@ -113,6 +113,6 @@ def test_tools_parsing(mock_data):
                 assert isinstance(tool, StaticTool)
 
     validate_chat_completion(
-        input_request=mock_data,
+        request=mock_data,
         request_validator=_request_validator,
     )
