@@ -17,6 +17,7 @@ from aidial_sdk.chat_completion.request import Request as ChatCompletionRequest
 from aidial_sdk.chat_completion.response import (
     Response as ChatCompletionResponse,
 )
+from aidial_sdk.deployment.configuration import ConfigurationRequest
 from aidial_sdk.deployment.from_request_mixin import FromRequestMixin
 from aidial_sdk.deployment.rate import RateRequest
 from aidial_sdk.deployment.tokenize import TokenizeRequest
@@ -171,7 +172,7 @@ class DIALApp(FastAPI):
                     deployment_name,
                     endpoint_impl,
                     "configuration",
-                    TruncatePromptRequest,
+                    ConfigurationRequest,
                 ),
                 methods=["GET"],
             )
