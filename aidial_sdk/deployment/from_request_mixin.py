@@ -7,7 +7,6 @@ from pydantic import Field
 
 from aidial_sdk.exceptions import HTTPException as DIALException
 from aidial_sdk.pydantic_v1 import SecretStr, StrictStr, root_validator
-from aidial_sdk.utils.logging import log_debug
 from aidial_sdk.utils.pydantic import ExtraForbidModel
 
 T = TypeVar("T", bound="FromRequestMixin")
@@ -21,11 +20,20 @@ class FromRequestMixin(ABC, ExtraForbidModel):
     ) -> T:
         pass
 
+    @staticmethod
+    @abstractmethod
+    async def get_request_body(request: fastapi.Request) -> Any:
+        pass
+
 
 class FromRequestBasicMixin(FromRequestMixin):
     @classmethod
     async def from_request(cls, request: fastapi.Request, deployment_id: str):
-        return cls(**(await _get_request_body(request)))
+        return cls(**(await cls.get_request_body(request)))
+
+    @staticmethod
+    async def get_request_body(request: fastapi.Request) -> dict:
+        return await _get_request_json_body(request)
 
 
 class FromRequestDeploymentMixin(FromRequestMixin):
@@ -84,7 +92,7 @@ class FromRequestDeploymentMixin(FromRequestMixin):
         del headers["Authorization"]
 
         return cls(
-            **(await _get_request_body(request)),
+            **(await cls.get_request_body(request)),
             api_key_secret=SecretStr(api_key),
             jwt_secret=SecretStr(jwt) if jwt else None,
             deployment_id=deployment_id,
@@ -93,12 +101,14 @@ class FromRequestDeploymentMixin(FromRequestMixin):
             original_request=request,
         )
 
+    @staticmethod
+    async def get_request_body(request: fastapi.Request) -> dict:
+        return await _get_request_json_body(request)
 
-async def _get_request_body(request: fastapi.Request) -> Any:
+
+async def _get_request_json_body(request: fastapi.Request) -> dict:
     try:
-        body = await request.json()
-        log_debug(f"request: {body}")
-        return body
+        return await request.json()
     except JSONDecodeError as e:
         raise DIALException(
             status_code=400,

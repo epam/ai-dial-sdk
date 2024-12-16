@@ -281,6 +281,31 @@ class ContentStageChunk(BaseChunk):
         }
 
 
+class FormSchemaChunk(BaseChunk):
+    choice_index: int
+    form_schema: str
+
+    def __init__(self, choice_index: int, form_schema: Any):
+        self.choice_index = choice_index
+        self.form_schema = form_schema
+
+    def to_dict(self):
+        return {
+            "choices": [
+                {
+                    "index": self.choice_index,
+                    "finish_reason": None,
+                    "delta": {
+                        "custom_content": {
+                            "form_schema": self.form_schema,
+                        }
+                    },
+                }
+            ],
+            "usage": None,
+        }
+
+
 class NameStageChunk(BaseChunk):
     choice_index: int
     stage_index: int

@@ -9,6 +9,7 @@ from aidial_sdk.chat_completion.chunks import (
     BaseChunk,
     ContentChunk,
     EndChoiceChunk,
+    FormSchemaChunk,
     StartChoiceChunk,
     StateChunk,
 )
@@ -34,6 +35,7 @@ class Choice(ChoiceBase):
     _opened: bool
     _closed: bool
     _state_submitted: bool
+    _schema_submitted: bool
     _last_finish_reason: Optional[FinishReason]
 
     def __init__(self, queue: ChunkQueue, choice_index: int):
@@ -46,6 +48,7 @@ class Choice(ChoiceBase):
         self._opened = False
         self._closed = False
         self._state_submitted = False
+        self._schema_submitted = False
         self._last_finish_reason = None
 
     def __enter__(self):
@@ -160,6 +163,22 @@ class Choice(ChoiceBase):
 
         self._state_submitted = True
         self.send_chunk(StateChunk(self._index, state))
+
+    def set_form_schema(self, form_schema: Any) -> None:
+        if self._schema_submitted:
+            raise runtime_error("Trying to set form schema twice")
+
+        if not self._opened:
+            raise runtime_error(
+                "Trying to append form schema to an unopened choice"
+            )
+        if self._closed:
+            raise runtime_error(
+                "Trying to append form schema to a closed choice"
+            )
+
+        self._schema_submitted = True
+        self.send_chunk(FormSchemaChunk(self._index, form_schema))
 
     def create_stage(self, name: Optional[str] = None) -> Stage:
         if not self._opened:

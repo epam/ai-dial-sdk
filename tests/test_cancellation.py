@@ -65,8 +65,14 @@ def chat_completion_gather(counter: Counter):
 def chat_completion_create_task(counter: Counter):
 
     async def _chat_completion(*args, **kwargs):
+        # Saving tasks in a set to avoid potential deallocation by GC
+        # https://docs.python.org/3/library/asyncio-task.html#asyncio.create_task
+        bg_tasks = set()
+
         for _ in range(10):
-            asyncio.create_task(_wait(counter, 3))
+            task = asyncio.create_task(_wait(counter, 3))
+            bg_tasks.add(task)
+            task.add_done_callback(bg_tasks.discard)
         await _wait_forever()
 
     return _chat_completion

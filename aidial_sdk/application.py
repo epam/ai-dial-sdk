@@ -164,13 +164,25 @@ class DIALApp(FastAPI):
                 methods=["POST"],
             )
 
+        if endpoint_impl := get_method_implementation(impl, "configuration"):
+            self.add_api_route(
+                f"/openai/deployments/{deployment_name}/configuration",
+                self._endpoint_factory(
+                    deployment_name,
+                    endpoint_impl,
+                    "configuration",
+                    TruncatePromptRequest,
+                ),
+                methods=["GET"],
+            )
+
         return self
 
     def _endpoint_factory(
         self,
         deployment_id: str,
         endpoint_impl: Callable[[RequestType], Coroutine[Any, Any, Any]],
-        endpoint: Literal["tokenize", "truncate_prompt"],
+        endpoint: Literal["tokenize", "truncate_prompt", "configuration"],
         request_type: Type["RequestType"],
     ):
         async def _handler(original_request: Request) -> Response:
@@ -179,10 +191,12 @@ class DIALApp(FastAPI):
             request = await request_type.from_request(
                 original_request, deployment_id
             )
-            response = await endpoint_impl(request)
+            log_debug(f"request[{endpoint}]: {request}")
 
+            response = await endpoint_impl(request)
             response_json = response.dict()
-            log_debug(f"response [{endpoint}]: {response_json}")
+            log_debug(f"response[{endpoint}]: {response_json}")
+
             return JSONResponse(content=response_json)
 
         return _handler

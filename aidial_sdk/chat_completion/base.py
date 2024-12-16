@@ -2,6 +2,10 @@ from abc import ABC, abstractmethod
 
 from aidial_sdk.chat_completion.request import Request
 from aidial_sdk.chat_completion.response import Response
+from aidial_sdk.deployment.configuration import (
+    ConfigurationRequest,
+    ConfigurationResponse,
+)
 from aidial_sdk.deployment.rate import RateRequest
 from aidial_sdk.deployment.tokenize import TokenizeRequest, TokenizeResponse
 from aidial_sdk.deployment.truncate_prompt import (
@@ -28,4 +32,10 @@ class ChatCompletion(ABC):
         self, request: TruncatePromptRequest
     ) -> TruncatePromptResponse:
         """Implement truncate prompt logic"""
+        raise NotImplementedError()
+
+    async def configuration(
+        self, request: ConfigurationRequest
+    ) -> ConfigurationResponse:
+        """Implement configuration logic"""
         raise NotImplementedError()

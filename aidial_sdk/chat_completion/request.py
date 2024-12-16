@@ -38,6 +38,8 @@ class CustomContent(ExtraForbidModel):
     stages: Optional[List[Stage]] = None
     attachments: Optional[List[Attachment]] = None
     state: Optional[Any] = None
+    form_value: Optional[Any] = None
+    form_schema: Optional[Any] = None
 
 
 class FunctionCall(ExtraForbidModel):
