@@ -2,7 +2,7 @@ import asyncio
 import json
 from typing import (
     Any,
-    AsyncGenerator,
+    AsyncIterator,
     Awaitable,
     Callable,
     Dict,
@@ -23,9 +23,7 @@ from aidial_sdk.utils.merge_chunks import cleanup_indices, merge
 _DONE_MARKER = "[DONE]"
 
 
-async def merge_chunks(
-    chunk_stream: AsyncGenerator[dict, None]
-) -> Dict[str, Any]:
+async def merge_chunks(chunk_stream: AsyncIterator[dict]) -> Dict[str, Any]:
     response: Dict[str, Any] = {}
     async for chunk in chunk_stream:
         response = merge(response, chunk)
@@ -47,18 +45,16 @@ def _format_chunk(data: Union[dict, str]) -> str:
     return f"{data}\n\n"
 
 
-ResponseStream = AsyncGenerator[
-    Union[BaseChunkWithDefaults, DIALException], None
-]
+ResponseStream = AsyncIterator[Union[BaseChunkWithDefaults, DIALException]]
 
-ResponseStreamWithStr = AsyncGenerator[
-    Union[BaseChunkWithDefaults, DIALException, str], None
+ResponseStreamWithStr = AsyncIterator[
+    Union[BaseChunkWithDefaults, DIALException, str]
 ]
 
 
 async def _handle_exceptions_in_block_response(
     stream: ResponseStream,
-) -> AsyncGenerator[dict, None]:
+) -> AsyncIterator[dict]:
     is_first_chunk = True
 
     async for chunk in stream:
@@ -79,7 +75,7 @@ async def to_block_response(stream: ResponseStream) -> dict:
 
 async def to_streaming_response(
     stream: ResponseStreamWithStr,
-) -> AsyncGenerator[str, None]:
+) -> AsyncIterator[str]:
 
     first_chunk = await stream.__anext__()
 
@@ -98,7 +94,7 @@ async def to_streaming_response(
         else:
             assert_never(chunk)
 
-    async def _generator() -> AsyncGenerator[str, None]:
+    async def _generator() -> AsyncIterator[str]:
         yield _chunk_to_str(first_chunk)
 
         async for chunk in stream:
@@ -131,12 +127,12 @@ async def _call_heartbeat_callback(c: _HeartbeatCallback) -> None:
 
 
 async def add_heartbeat(
-    stream: AsyncGenerator[_T, None],
+    stream: AsyncIterator[_T],
     *,
     heartbeat_interval: float,
     heartbeat_object: Optional[_HeartbeatObject] = None,
     heartbeat_callback: Optional[_HeartbeatCallback] = None,
-) -> AsyncGenerator[_T, None]:
+) -> AsyncIterator[_T]:
     async with CancelScope() as cs:
         chunk_task: Optional[asyncio.Task[_T]] = None
 
