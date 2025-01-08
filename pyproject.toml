@@ -5,47 +5,32 @@ description = "Framework to create applications and model adapters for AI DIAL"
 authors = [{ name = "EPAM RAIL", email = "SpecialEPM-DIALDevTeam@epam.com" }]
 license = "Apache-2.0"
 readme = "README.md"
-dynamic = ["dependencies", "requires-python"]
+requires-python = ">=3.8.1,<4.0"
+dependencies = [
+    "fastapi (>=0.51,<1.0)",
+    "uvicorn (>=0.19,<1.0)",
+    "pydantic (>=1.10,<3)",
+    "wrapt (>=1.10,<2)",
+]
 
 [project.urls]
 homepage = "https://epam-rail.com"
 repository = "https://github.com/epam/ai-dial-sdk"
 
-[tool.poetry.dependencies]
-python = ">=3.8.1,<4.0"
-fastapi = ">=0.51,<1.0"
-uvicorn = ">=0.19,<1.0"
-pydantic = ">=1.10,<3"
-wrapt = ">=1.10,<2"
-
-# Telemetry extras
-opentelemetry-sdk = { version = "^1.22.0", optional = true }
-opentelemetry-api = { version = "^1.22.0", optional = true }
-opentelemetry-exporter-otlp-proto-grpc = { version = "^1.22.0", optional = true }
-opentelemetry-instrumentation-aiohttp-client = { version = ">=0.43b0", optional = true }
-opentelemetry-instrumentation-fastapi = { version = ">=0.43b0", optional = true }
-opentelemetry-instrumentation-httpx = { version = ">=0.43b0", optional = true }
-opentelemetry-instrumentation-logging = { version = ">=0.43b0", optional = true }
-opentelemetry-instrumentation-requests = { version = ">=0.43b0", optional = true }
-opentelemetry-instrumentation-system-metrics = { version = ">=0.43b0", optional = true }
-opentelemetry-instrumentation-urllib = { version = ">=0.43b0", optional = true }
-opentelemetry-exporter-prometheus = { version = ">=0.43b0", optional = true }
-prometheus-client = { version = ">=0.17.1,<=0.21", optional = true }
-
-[tool.poetry.extras]
+[project.optional-dependencies]
 telemetry = [
-    "opentelemetry-sdk",
-    "opentelemetry-api",
-    "opentelemetry-exporter-otlp-proto-grpc",
-    "opentelemetry-instrumentation-aiohttp-client",
-    "opentelemetry-instrumentation-fastapi",
-    "opentelemetry-instrumentation-httpx",
-    "opentelemetry-instrumentation-logging",
-    "opentelemetry-instrumentation-requests",
-    "opentelemetry-instrumentation-system-metrics",
-    "opentelemetry-instrumentation-urllib",
-    "opentelemetry-exporter-prometheus",
-    "prometheus-client",
+    "opentelemetry-sdk (>=1.22.0,<2)",
+    "opentelemetry-api (>=1.22.0,<2)",
+    "opentelemetry-exporter-otlp-proto-grpc (>=1.22.0,<2)",
+    "opentelemetry-instrumentation-aiohttp-client (>=0.43b0)",
+    "opentelemetry-instrumentation-fastapi (>=0.43b0)",
+    "opentelemetry-instrumentation-httpx (>=0.43b0)",
+    "opentelemetry-instrumentation-logging (>=0.43b0)",
+    "opentelemetry-instrumentation-requests (>=0.43b0)",
+    "opentelemetry-instrumentation-system-metrics (>=0.43b0)",
+    "opentelemetry-instrumentation-urllib (>=0.43b0)",
+    "opentelemetry-exporter-prometheus (>=0.43b0)",
+    "prometheus-client (>=0.17.1,<=0.21)",
 ]
 
 [tool.poetry.group.test.dependencies]
