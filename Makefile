@@ -1,29 +1,37 @@
+VENV ?= .venv
+POETRY ?= ${VENV}/bin/poetry
+POETRY_VERSION ?= 1.8.5
+
 all: build
 
-install:
-	poetry install --all-extras
+init_env:
+	python -m venv ${VENV}
+	${VENV}/bin/pip install poetry==${POETRY_VERSION} --quiet
+
+install: init_env
+	${POETRY} install --all-extras
 
 build: install
-	poetry build
+	${POETRY} build
 
 clean:
-	rm -rf $$(poetry env info --path)
+	rm -rf $$(${POETRY} env info --path)
 	rm -rf .nox
 	rm -rf .pytest_cache
 	rm -rf dist
 	find . -type d -name __pycache__ | xargs rm -r
 
 publish: build
-	poetry publish -u __token__ -p ${PYPI_TOKEN} --skip-existing
+	${POETRY} publish -u __token__ -p ${PYPI_TOKEN} --skip-existing
 
 lint: install
-	poetry run nox -s lint
+	${POETRY} run nox -s lint
 
 format: install
-	poetry run nox -s format
+	${POETRY} run nox -s format
 
 test: install
-	poetry run nox -s test $(if $(PYTHON),--python=$(PYTHON),)
+	${POETRY} run nox -s test $(if $(PYTHON),--python=$(PYTHON),)
 
 benchmark: install
 	python -m benchmark.benchmark_merge_chunks
