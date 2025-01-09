@@ -20,6 +20,7 @@ class HTTPException(Exception):
         display_message: Optional[str] = None,
         headers: Optional[Dict[str, str]] = None,
     ) -> None:
+        super().__init__(message)
         status_code = int(status_code)
 
         self.message = message
