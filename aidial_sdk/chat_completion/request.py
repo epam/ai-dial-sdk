@@ -182,7 +182,9 @@ class AzureChatCompletionRequest(ExtraForbidModel):
         None
     )
     tools: Optional[List[Union[Tool, StaticTool]]] = None
-    tool_choice: Optional[Union[Literal["auto", "none"], ToolChoice]] = None
+    tool_choice: Optional[
+        Union[Literal["auto", "none", "required"], ToolChoice]
+    ] = None
     stream: bool = False
     temperature: Optional[Temperature] = None
     top_p: Optional[TopP] = None
