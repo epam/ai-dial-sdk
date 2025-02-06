@@ -195,9 +195,11 @@ class ResponseFormatJsonSchema(ExtraForbidModel):
     json_schema: ResponseFormatJsonSchemaObject
 
 
-ResponseFormat = (
-    ResponseFormatText | ResponseFormatJsonObject | ResponseFormatJsonSchema
-)
+ResponseFormat = Union[
+    ResponseFormatText,
+    ResponseFormatJsonObject,
+    ResponseFormatJsonSchema,
+]
 
 
 class AzureChatCompletionRequest(ExtraForbidModel):
