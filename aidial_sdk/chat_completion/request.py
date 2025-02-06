@@ -10,6 +10,7 @@ from aidial_sdk.pydantic_v1 import (
     ConstrainedFloat,
     ConstrainedInt,
     ConstrainedList,
+    Field,
     PositiveInt,
     StrictBool,
     StrictInt,
@@ -170,8 +171,33 @@ class ToolChoice(ExtraForbidModel):
     function: FunctionChoice
 
 
-class ResponseFormat(ExtraForbidModel):
-    type: Literal["text", "json_object"]
+class ResponseFormatText(ExtraForbidModel):
+    type: Literal["text"]
+
+
+class ResponseFormatJsonObject(ExtraForbidModel):
+    type: Literal["json_object"]
+
+
+class ResponseFormatJsonSchemaObject(ExtraForbidModel):
+    description: Optional[StrictStr] = None
+    name: StrictStr
+    schema_: Dict[str, Any] = Field(..., alias="schema")
+    strict: Optional[StrictBool] = False
+
+    def dict(self, *args, **kwargs):
+        kwargs["by_alias"] = True
+        return super().dict(*args, **kwargs)
+
+
+class ResponseFormatJsonSchema(ExtraForbidModel):
+    type: Literal["json_schema"]
+    json_schema: ResponseFormatJsonSchemaObject
+
+
+ResponseFormat = (
+    ResponseFormatText | ResponseFormatJsonObject | ResponseFormatJsonSchema
+)
 
 
 class AzureChatCompletionRequest(ExtraForbidModel):

@@ -14,6 +14,10 @@ from aidial_sdk.chat_completion.request import (
     MessageContentTextPart,
     Request,
     ResponseFormat,
+    ResponseFormatJsonObject,
+    ResponseFormatJsonSchema,
+    ResponseFormatJsonSchemaObject,
+    ResponseFormatText,
     Role,
 )
 from aidial_sdk.chat_completion.request import Stage as RequestStage
