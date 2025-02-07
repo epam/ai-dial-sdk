@@ -1,3 +1,4 @@
+ARGS ?=
 VENV_DIR ?= .venv
 POETRY ?= $(VENV_DIR)/bin/poetry
 POETRY_VERSION ?= 1.8.5
@@ -31,7 +32,7 @@ format: install
 	$(POETRY) run nox -s format
 
 test: install
-	$(POETRY) run nox -s test $(if $(PYTHON),--python=$(PYTHON),)
+	$(POETRY) run -- nox -s test $(if $(PYTHON),--python=$(PYTHON),) -- $(ARGS)
 
 benchmark: install
 	python -m benchmark.benchmark_merge_chunks

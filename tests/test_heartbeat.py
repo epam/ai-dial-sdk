@@ -77,6 +77,7 @@ class TestCase(BaseModel):
     expected: List[Union[str, dict]]
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize(
     "test_case",
     [

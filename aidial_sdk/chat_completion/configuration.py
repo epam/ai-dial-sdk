@@ -1,4 +1,4 @@
-from typing import Any, Dict, Generic, List, Literal, Optional, TypeVar
+from typing import Any, Dict, Generic, List, Literal, Optional, Type, TypeVar
 
 from attr import dataclass
 
@@ -36,12 +36,12 @@ class Configuration(BaseModel):
         extra = "forbid"
 
         @staticmethod
-        def schema_extra(schema, model: type["Configuration"]):
+        def schema_extra(schema, model: Type["Configuration"]):
             model._handle_top_level_extensions(schema)
             model._handle_buttons_extension(schema)
 
     @root_validator()
-    def _validate_button_value(cls, values: dict[str, Any]) -> dict[str, Any]:
+    def _validate_button_value(cls, values: Dict[str, Any]) -> Dict[str, Any]:
         for field_name, field in cls.__fields__.items():
             buttons = field.field_info.extra.get("buttons")
             if buttons and field_name in values:
