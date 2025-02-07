@@ -1,5 +1,7 @@
 from typing import List, Optional
 
+import pytest
+
 from aidial_sdk.chat_completion import Button, Configuration
 from aidial_sdk.pydantic_v1 import Field, ValidationError
 
@@ -117,16 +119,14 @@ def test_configuration_parsing_fail():
         "int_button_field": 11,
     }
 
-    try:
+    with pytest.raises(ValidationError) as e:
         StaticConfiguration.parse_obj(conf)
-    except ValidationError as e:
-        assert e.errors() == [
-            {
-                "loc": ("int_button_field",),
-                "msg": "unexpected value; permitted: 10, 20",
-                "type": "value_error.const",
-                "ctx": {"given": 11, "permitted": (10, 20)},
-            }
-        ]
-    else:
-        assert False, "Expected ValidationError"
+
+    assert e.value.errors() == [
+        {
+            "loc": ("int_button_field",),
+            "msg": "unexpected value; permitted: 10, 20",
+            "type": "value_error.const",
+            "ctx": {"given": 11, "permitted": (10, 20)},
+        }
+    ]
