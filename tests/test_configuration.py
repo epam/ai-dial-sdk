@@ -5,7 +5,7 @@ from aidial_sdk.pydantic_v1 import Field, ValidationError
 
 
 class StaticConfiguration(Configuration):
-    "My model"
+    "Static application configuration"
 
     _dial_chatMessageInputDisabled = True
 
@@ -42,7 +42,7 @@ def test_configuration_schema():
     actual_schema = StaticConfiguration.schema()
     assert actual_schema == {
         "title": "StaticConfiguration",
-        "description": "My model",
+        "description": "Static application configuration",
         "type": "object",
         "properties": {
             "int_field": {
@@ -122,9 +122,11 @@ def test_configuration_parsing_fail():
     except ValidationError as e:
         assert e.errors() == [
             {
-                "loc": ("__root__",),  # FIXME
+                "loc": ("int_button_field",),
                 "msg": "unexpected value; permitted: 10, 20",
                 "type": "value_error.const",
                 "ctx": {"given": 11, "permitted": (10, 20)},
             }
         ]
+    else:
+        assert False, "Expected ValidationError"
