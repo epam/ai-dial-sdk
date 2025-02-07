@@ -5,7 +5,7 @@ from pydantic.v1.fields import FieldInfo
 from pydantic.v1.main import ModelMetaclass
 from pydantic.v1.validators import make_literal_validator
 
-from aidial_sdk.pydantic_v1 import BaseModel, validator
+from aidial_sdk.pydantic_v1 import BaseModel, Field, validator
 
 _T = TypeVar("_T")
 
@@ -30,14 +30,19 @@ class Button(Generic[_T]):
         }
 
 
-class _ConfigurationMetaclass(ModelMetaclass):
+class ConfigurationMetaclass(ModelMetaclass):
     def __new__(mcs, name, bases, namespace: dict, **kwargs):
+        # Inject buttons validators
+
         validators = {}
         for field_name, field_info in namespace.items():
             if not isinstance(field_info, FieldInfo):
                 continue
 
-            buttons = field_info.extra.get("buttons") or []
+            buttons = field_info.extra.get("buttons")
+            if not buttons:
+                continue
+
             assert all(isinstance(button, Button) for button in buttons)
 
             consts = tuple(button.const for button in buttons)
@@ -56,29 +61,49 @@ class _ConfigurationMetaclass(ModelMetaclass):
 
         namespace.update(validators)
 
-        return super().__new__(mcs, name, bases, namespace, **kwargs)
+        cls = super().__new__(mcs, name, bases, namespace, **kwargs)
 
+        # Inject schema post processing
 
-class Configuration(BaseModel, metaclass=_ConfigurationMetaclass):
-    class Config:
-        extra = "forbid"
+        if (config := getattr(cls, "Config", None)) is None:
 
-        @staticmethod
-        def schema_extra(schema, model: Type["Configuration"]):
-            model._handle_top_level_extensions(schema)
-            model._handle_buttons_extension(schema)
+            class Config:
+                pass
 
-    @classmethod
-    def _handle_top_level_extensions(cls, schema: Dict[str, Any]) -> None:
+            config = cls.Config = Config
+
+        config.extra = "forbid"  # type: ignore
+
+        old_schema_extra = getattr(config, "schema_extra", None)
+
+        def new_schema_extra(
+            schema: Dict[str, Any], model: Type[BaseModel]
+        ) -> None:
+            if old_schema_extra:
+                old_schema_extra(schema, model)
+
+            ConfigurationMetaclass._handle_top_level_extensions(model, schema)
+            ConfigurationMetaclass._handle_buttons_extension(model, schema)
+
+        config.schema_extra = staticmethod(new_schema_extra)  # type: ignore
+
+        return cls
+
+    @staticmethod
+    def _handle_top_level_extensions(
+        model: Type[BaseModel], schema: Dict[str, Any]
+    ) -> None:
         if (
             disable_input := getattr(
-                cls, "_dial_chatMessageInputDisabled", None
+                model, "_dial_chatMessageInputDisabled", None
             )
         ) is not None:
             schema["dial:chatMessageInputDisabled"] = disable_input is True
 
-    @classmethod
-    def _handle_buttons_extension(cls, schema: Dict[str, Any]) -> None:
+    @staticmethod
+    def _handle_buttons_extension(
+        model: Type[BaseModel], schema: Dict[str, Any]
+    ) -> None:
         for prop in schema.get("properties", {}).values():
             if buttons := prop.pop("buttons", None):
                 button_schemas: List[dict] = []
@@ -87,3 +112,16 @@ class Configuration(BaseModel, metaclass=_ConfigurationMetaclass):
                     button_schemas.append(button.schema())
                 prop["dial:widget"] = "buttons"
                 prop["oneOf"] = button_schemas
+
+
+def create_configuration_class(
+    *,
+    model: Type[BaseModel],
+    buttons: List[Button] = [],
+    disable_chat_input: bool = False,
+) -> Type[BaseModel]:
+    class _Configuration(model, metaclass=ConfigurationMetaclass):
+        _dial_chatMessageInputDisabled = disable_chat_input
+        buttons_field: int = Field(buttons=buttons)
+
+    return _Configuration
