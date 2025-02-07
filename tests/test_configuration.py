@@ -122,7 +122,7 @@ def test_configuration_parsing_fail():
     except ValidationError as e:
         assert e.errors() == [
             {
-                "loc": ("__root__",),
+                "loc": ("__root__",),  # FIXME
                 "msg": "unexpected value; permitted: 10, 20",
                 "type": "value_error.const",
                 "ctx": {"given": 11, "permitted": (10, 20)},

@@ -46,11 +46,9 @@ class Configuration(BaseModel):
             buttons = field.field_info.extra.get("buttons")
             if buttons and field_name in values:
                 value = values[field_name]
-                literal_type = Literal[
-                    tuple(button.const for button in buttons)
-                ]
-                literal_validator = make_literal_validator(literal_type)
-                literal_validator(value)
+                type = Literal[tuple(button.const for button in buttons)]
+                validator = make_literal_validator(type)
+                validator(value)
 
         return values
 
