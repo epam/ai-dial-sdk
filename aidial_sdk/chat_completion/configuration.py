@@ -1,12 +1,9 @@
+from dataclasses import dataclass
 from typing import Any, Dict, Generic, List, Literal, Optional, Type, TypeVar
 
-from attr import dataclass
+from pydantic.v1.validators import make_literal_validator
 
-from aidial_sdk.pydantic_v1 import (
-    BaseModel,
-    make_literal_validator,
-    root_validator,
-)
+from aidial_sdk.pydantic_v1 import BaseModel, root_validator
 
 _T = TypeVar("_T")
 
