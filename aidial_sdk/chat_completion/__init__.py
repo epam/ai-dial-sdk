@@ -1,5 +1,6 @@
 from aidial_sdk.chat_completion.base import ChatCompletion
 from aidial_sdk.chat_completion.choice import Choice
+from aidial_sdk.chat_completion.configuration import Button, Configuration
 from aidial_sdk.chat_completion.enums import FinishReason, Status
 from aidial_sdk.chat_completion.request import (
     Addon,
