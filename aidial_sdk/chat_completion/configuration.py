@@ -82,36 +82,32 @@ class ConfigurationMetaclass(ModelMetaclass):
             if old_schema_extra:
                 old_schema_extra(schema, model)
 
-            ConfigurationMetaclass._handle_top_level_extensions(model, schema)
-            ConfigurationMetaclass._handle_buttons_extension(model, schema)
+            _handle_top_level_extensions(model, schema)
+            _handle_buttons_extension(schema)
 
         config.schema_extra = staticmethod(new_schema_extra)  # type: ignore
 
         return cls
 
-    @staticmethod
-    def _handle_top_level_extensions(
-        model: Type[BaseModel], schema: Dict[str, Any]
-    ) -> None:
-        if (
-            disable_input := getattr(
-                model, "_dial_chatMessageInputDisabled", None
-            )
-        ) is not None:
-            schema["dial:chatMessageInputDisabled"] = disable_input is True
 
-    @staticmethod
-    def _handle_buttons_extension(
-        model: Type[BaseModel], schema: Dict[str, Any]
-    ) -> None:
-        for prop in schema.get("properties", {}).values():
-            if buttons := prop.pop("buttons", None):
-                button_schemas: List[dict] = []
-                for button in buttons:
-                    assert isinstance(button, Button)
-                    button_schemas.append(button.schema())
-                prop["dial:widget"] = "buttons"
-                prop["oneOf"] = button_schemas
+def _handle_top_level_extensions(
+    model: Type[BaseModel], schema: Dict[str, Any]
+) -> None:
+    if (
+        disable_input := getattr(model, "_dial_chatMessageInputDisabled", None)
+    ) is not None:
+        schema["dial:chatMessageInputDisabled"] = disable_input is True
+
+
+def _handle_buttons_extension(schema: Dict[str, Any]) -> None:
+    for prop in schema.get("properties", {}).values():
+        if buttons := prop.pop("buttons", None):
+            button_schemas: List[dict] = []
+            for button in buttons:
+                assert isinstance(button, Button)
+                button_schemas.append(button.schema())
+            prop["dial:widget"] = "buttons"
+            prop["oneOf"] = button_schemas
 
 
 def create_configuration_class(
