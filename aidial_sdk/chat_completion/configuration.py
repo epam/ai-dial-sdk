@@ -44,12 +44,15 @@ class _ConfigurationMetaclass(ModelMetaclass):
             literal_type = Literal[consts]
             literal_validator = make_literal_validator(literal_type)
 
-            def _validate(value, values, config, field):
-                return literal_validator(value)
+            def _make_check_value(literal_validator):
+                def check_value(value, values, config, field):
+                    return literal_validator(value)
+
+                return check_value
 
             validators[f"_validate_{field_name}"] = validator(
                 field_name, allow_reuse=True
-            )(_validate)
+            )(_make_check_value(literal_validator))
 
         namespace.update(validators)
 

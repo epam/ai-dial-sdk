@@ -6,7 +6,7 @@ from aidial_sdk.chat_completion import Button, Configuration
 from aidial_sdk.pydantic_v1 import Field, ValidationError
 
 
-class StaticConfiguration(Configuration):
+class StaticConfiguration1(Configuration):
     "Static application configuration"
 
     _dial_chatMessageInputDisabled = True
@@ -40,8 +40,24 @@ class StaticConfiguration(Configuration):
     )
 
 
+class StaticConfiguration2(Configuration):
+    int_button_field: int = Field(
+        buttons=[
+            Button(const=10, title="Title1"),
+            Button(const=20, title="Title2"),
+        ],
+    )
+
+    str_button_field: str = Field(
+        buttons=[
+            Button(const="a", title="Title3"),
+            Button(const="b", title="Title4"),
+        ],
+    )
+
+
 def test_configuration_schema():
-    actual_schema = StaticConfiguration.schema()
+    actual_schema = StaticConfiguration1.schema()
     assert actual_schema == {
         "title": "StaticConfiguration",
         "description": "Static application configuration",
@@ -103,7 +119,7 @@ def test_configuration_parsing_success():
         "int_button_field": 10,
     }
 
-    assert StaticConfiguration.parse_obj(conf) == StaticConfiguration(
+    assert StaticConfiguration1.parse_obj(conf) == StaticConfiguration1(
         int_field=10,
         str_field="Test",
         list_field=["a", "b", "c"],
@@ -111,7 +127,7 @@ def test_configuration_parsing_success():
     )
 
 
-def test_configuration_parsing_fail():
+def test_configuration_parsing_one_button_fail():
     conf = {
         "int_field": 10,
         "str_field": "Test",
@@ -120,7 +136,7 @@ def test_configuration_parsing_fail():
     }
 
     with pytest.raises(ValidationError) as e:
-        StaticConfiguration.parse_obj(conf)
+        StaticConfiguration1.parse_obj(conf)
 
     assert e.value.errors() == [
         {
@@ -129,4 +145,26 @@ def test_configuration_parsing_fail():
             "type": "value_error.const",
             "ctx": {"given": 11, "permitted": (10, 20)},
         }
+    ]
+
+
+def test_configuration_parsing_two_buttons_fails():
+    conf = {"int_button_field": 11, "str_button_field": "z"}
+
+    with pytest.raises(ValidationError) as e:
+        StaticConfiguration2.parse_obj(conf)
+
+    assert e.value.errors() == [
+        {
+            "ctx": {"given": 11, "permitted": (10, 20)},
+            "loc": ("int_button_field",),
+            "msg": "unexpected value; permitted: 10, 20",
+            "type": "value_error.const",
+        },
+        {
+            "ctx": {"given": "z", "permitted": ("a", "b")},
+            "loc": ("str_button_field",),
+            "msg": "unexpected value; permitted: 'a', 'b'",
+            "type": "value_error.const",
+        },
     ]
