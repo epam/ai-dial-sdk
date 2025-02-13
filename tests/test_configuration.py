@@ -4,13 +4,14 @@ import pytest
 
 from aidial_sdk.chat_completion import Button
 from aidial_sdk.chat_completion.configuration import (
-    ConfigurationMetaclass,
-    create_configuration_class,
+    ButtonField,
+    DialFormMetaclass,
+    dial_form,
 )
 from aidial_sdk.pydantic_v1 import BaseModel, Field, ValidationError
 
 
-class StaticConfiguration1(BaseModel, metaclass=ConfigurationMetaclass):
+class StaticConfiguration_OneButton(BaseModel, metaclass=DialFormMetaclass):
     "Static application configuration"
 
     _dial_chatMessageInputDisabled = True
@@ -44,7 +45,7 @@ class StaticConfiguration1(BaseModel, metaclass=ConfigurationMetaclass):
     )
 
 
-class StaticConfiguration2(BaseModel, metaclass=ConfigurationMetaclass):
+class StaticConfiguration_TwoButtons(BaseModel, metaclass=DialFormMetaclass):
     int_button_field: int = Field(
         buttons=[
             Button(const=10, title="Title1"),
@@ -60,10 +61,22 @@ class StaticConfiguration2(BaseModel, metaclass=ConfigurationMetaclass):
     )
 
 
+class StaticConfiguration_OptionalButton(
+    BaseModel, metaclass=DialFormMetaclass
+):
+    int_button_field: Optional[int] = Field(
+        default=None,
+        buttons=[
+            Button(const=10, title="Title1"),
+            Button(const=20, title="Title2"),
+        ],
+    )
+
+
 def test_configuration_schema():
-    actual_schema = StaticConfiguration1.schema()
+    actual_schema = StaticConfiguration_OneButton.schema()
     assert actual_schema == {
-        "title": "StaticConfiguration1",
+        "title": "StaticConfiguration_OneButton",
         "description": "Static application configuration",
         "type": "object",
         "properties": {
@@ -123,7 +136,9 @@ def test_configuration_parsing_success():
         "int_button_field": 10,
     }
 
-    assert StaticConfiguration1.parse_obj(conf) == StaticConfiguration1(
+    assert StaticConfiguration_OneButton.parse_obj(
+        conf
+    ) == StaticConfiguration_OneButton(
         int_field=10,
         str_field="Test",
         list_field=["a", "b", "c"],
@@ -140,7 +155,7 @@ def test_configuration_parsing_one_button_fail():
     }
 
     with pytest.raises(ValidationError) as e:
-        StaticConfiguration1.parse_obj(conf)
+        StaticConfiguration_OneButton.parse_obj(conf)
 
     assert e.value.errors() == [
         {
@@ -152,11 +167,11 @@ def test_configuration_parsing_one_button_fail():
     ]
 
 
-def test_configuration_parsing_two_buttons_fails():
+def test_configuration_parsing_two_buttons_fail():
     conf = {"int_button_field": 11, "str_button_field": "z"}
 
     with pytest.raises(ValidationError) as e:
-        StaticConfiguration2.parse_obj(conf)
+        StaticConfiguration_TwoButtons.parse_obj(conf)
 
     assert e.value.errors() == [
         {
@@ -174,20 +189,33 @@ def test_configuration_parsing_two_buttons_fails():
     ]
 
 
-class SimpleConfiguration(BaseModel):
-    int_field: int
-    str_field: str
+def test_configuration_parsing_two_buttons_success():
+    conf = {"int_button_field": 10, "str_button_field": "a"}
+    conf_parsed = StaticConfiguration_TwoButtons.parse_obj(conf)
+
+    assert conf_parsed.int_button_field == 10
+    assert conf_parsed.str_button_field == "a"
 
 
-def test_dynamic_configuration():
-    conf = create_configuration_class(
-        model=SimpleConfiguration,
-        buttons=[
-            Button(const=10, title="Title1"),
-            Button(const=20, title="Title2"),
-        ],
+def test_dynamic_configuration_existing_field():
+
+    class Conf(BaseModel):
+        int_field: int
+        str_field: str
+        buttons_field: int
+
+    conf = dial_form(
         disable_chat_input=True,
-    )
+        button_fields=[
+            ButtonField(
+                "buttons_field",
+                [
+                    Button(const=10, title="Title1"),
+                    Button(const=20, title="Title2"),
+                ],
+            )
+        ],
+    )(Conf)
 
     actual_schema = conf.schema()
 
@@ -234,6 +262,217 @@ def test_dynamic_configuration():
             "str_field",
             "buttons_field",
         ],
-        "title": "_Configuration",
+        "title": "_Conf",
+        "type": "object",
+    }
+
+
+def test_dynamic_configuration_new_field():
+
+    class Conf(BaseModel):
+        int_field: int
+        str_field: str
+
+    conf = dial_form(
+        disable_chat_input=True,
+        button_fields=[
+            ButtonField(
+                "buttons_field",
+                [
+                    Button(const=10, title="Title1"),
+                    Button(const=20, title="Title2"),
+                ],
+            )
+        ],
+    )(Conf)
+
+    actual_schema = conf.schema()
+
+    assert actual_schema == {
+        "additionalProperties": False,
+        "dial:chatMessageInputDisabled": True,
+        "properties": {
+            "buttons_field": {
+                "dial:widget": "buttons",
+                "oneOf": [
+                    {
+                        "const": 10,
+                        "dial:widgetOptions": {
+                            "confirmationMessage": None,
+                            "populateText": None,
+                            "submit": False,
+                        },
+                        "title": "Title1",
+                    },
+                    {
+                        "const": 20,
+                        "dial:widgetOptions": {
+                            "confirmationMessage": None,
+                            "populateText": None,
+                            "submit": False,
+                        },
+                        "title": "Title2",
+                    },
+                ],
+                "title": "Buttons Field",
+                "type": "integer",
+            },
+            "int_field": {
+                "title": "Int Field",
+                "type": "integer",
+            },
+            "str_field": {
+                "title": "Str Field",
+                "type": "string",
+            },
+        },
+        "required": [
+            "int_field",
+            "str_field",
+            "buttons_field",
+        ],
+        "title": "_Conf",
+        "type": "object",
+    }
+
+
+def test_dynamic_configuration_conflicting_types():
+
+    class Conf(BaseModel):
+        int_field: int
+        str_field: str
+        buttons_field: str
+
+    with pytest.raises(ValueError) as e:
+        dial_form(
+            disable_chat_input=True,
+            button_fields=[
+                ButtonField(
+                    "buttons_field",
+                    [
+                        Button(const=10, title="Title1"),
+                        Button(const=20, title="Title2"),
+                    ],
+                )
+            ],
+        )(Conf)
+
+    assert (
+        str(e.value)
+        == "Field Conf.buttons_field has type 'str' but buttons are of type 'int'."
+    )
+
+
+def test_dynamic_configuration_redefinition():
+
+    class Conf(BaseModel):
+        pass
+
+    with pytest.raises(ValueError) as e:
+        dial_form(
+            disable_chat_input=True,
+            button_fields=[
+                ButtonField(
+                    "buttons_field",
+                    [Button(const=10, title="Title")],
+                ),
+                ButtonField(
+                    "buttons_field",
+                    [Button(const=20, title="Title")],
+                ),
+            ],
+        )(Conf)
+
+    assert str(e.value) == "Field Conf.buttons_field is already defined."
+
+
+def test_dynamic_configuration_two_buttons():
+
+    class Conf(BaseModel):
+        str_button_field: str
+        int_button_field: int
+
+    conf = dial_form(
+        disable_chat_input=True,
+        button_fields=[
+            ButtonField(
+                "int_button_field",
+                [
+                    Button(const=10, title="Title1"),
+                    Button(const=20, title="Title2"),
+                ],
+            ),
+            ButtonField(
+                "str_button_field",
+                [
+                    Button(const="30", title="Title3"),
+                    Button(const="40", title="Title4"),
+                ],
+            ),
+        ],
+    )(Conf)
+
+    actual_schema = conf.schema()
+
+    assert actual_schema == {
+        "additionalProperties": False,
+        "dial:chatMessageInputDisabled": True,
+        "properties": {
+            "int_button_field": {
+                "dial:widget": "buttons",
+                "oneOf": [
+                    {
+                        "const": 10,
+                        "dial:widgetOptions": {
+                            "confirmationMessage": None,
+                            "populateText": None,
+                            "submit": False,
+                        },
+                        "title": "Title1",
+                    },
+                    {
+                        "const": 20,
+                        "dial:widgetOptions": {
+                            "confirmationMessage": None,
+                            "populateText": None,
+                            "submit": False,
+                        },
+                        "title": "Title2",
+                    },
+                ],
+                "title": "Int Button Field",
+                "type": "integer",
+            },
+            "str_button_field": {
+                "dial:widget": "buttons",
+                "oneOf": [
+                    {
+                        "const": "30",
+                        "dial:widgetOptions": {
+                            "confirmationMessage": None,
+                            "populateText": None,
+                            "submit": False,
+                        },
+                        "title": "Title3",
+                    },
+                    {
+                        "const": "40",
+                        "dial:widgetOptions": {
+                            "confirmationMessage": None,
+                            "populateText": None,
+                            "submit": False,
+                        },
+                        "title": "Title4",
+                    },
+                ],
+                "title": "Str Button Field",
+                "type": "string",
+            },
+        },
+        "required": [
+            "str_button_field",
+            "int_button_field",
+        ],
+        "title": "_Conf",
         "type": "object",
     }

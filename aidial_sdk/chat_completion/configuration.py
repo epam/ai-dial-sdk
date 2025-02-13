@@ -1,5 +1,15 @@
 from dataclasses import dataclass
-from typing import Any, Dict, Generic, List, Literal, Optional, Type, TypeVar
+from typing import (
+    Any,
+    Callable,
+    Dict,
+    Generic,
+    List,
+    Literal,
+    Optional,
+    Type,
+    TypeVar,
+)
 
 from pydantic.v1.fields import FieldInfo
 from pydantic.v1.validators import make_literal_validator
@@ -29,7 +39,13 @@ class Button(Generic[_T]):
         }
 
 
-class ConfigurationMetaclass(ModelMetaclass):
+@dataclass
+class ButtonField(Generic[_T]):
+    name: str
+    options: List[Button[_T]]
+
+
+class DialFormMetaclass(ModelMetaclass):
     def __new__(mcs, name, bases, namespace: dict, **kwargs):
         # Inject buttons validators
 
@@ -109,14 +125,46 @@ def _handle_buttons_extension(schema: Dict[str, Any]) -> None:
             prop["oneOf"] = button_schemas
 
 
-def create_configuration_class(
-    *,
-    model: Type[BaseModel],
-    buttons: List[Button] = [],
-    disable_chat_input: bool = False,
-) -> Type[BaseModel]:
-    class _Configuration(model, metaclass=ConfigurationMetaclass):
-        _dial_chatMessageInputDisabled = disable_chat_input
-        buttons_field: int = Field(buttons=buttons)
+_Model = TypeVar("_Model", bound=BaseModel)
 
-    return _Configuration
+
+def dial_form(
+    *,
+    disable_chat_input: bool = False,
+    button_fields: Optional[List[ButtonField]] = None,
+) -> Callable[[Type[_Model]], Type[_Model]]:
+    def _create_class(model: Type[_Model]) -> Type[_Model]:
+        namespace: Dict[str, Any] = {
+            "_dial_chatMessageInputDisabled": disable_chat_input,
+        }
+        annotations: Dict[str, Any] = {}
+
+        for button_field in button_fields or []:
+            name = button_field.name
+            buttons = button_field.options
+
+            if name in namespace:
+                raise ValueError(
+                    f"Field {model.__name__}.{name} is already defined."
+                )
+
+            namespace[name] = Field(..., buttons=buttons)
+
+            button_type = type(buttons[0].const)
+            if field_type := model.__annotations__.get(name):
+                annotations[name] = field_type
+                if field_type != button_type:
+                    raise ValueError(
+                        f"Field {model.__name__}.{name} has type {field_type.__name__!r} "
+                        f"but buttons are of type {button_type.__name__!r}."
+                    )
+            else:
+                annotations[name] = button_type
+
+        if annotations:
+            namespace["__annotations__"] = annotations
+
+        cls_name = f"_{model.__name__}"
+        return DialFormMetaclass(cls_name, (model,), namespace)  # type: ignore
+
+    return _create_class
