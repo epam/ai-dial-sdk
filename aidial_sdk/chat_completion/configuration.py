@@ -9,6 +9,7 @@ from typing import (
     Optional,
     Type,
     TypeVar,
+    get_args,
 )
 
 from pydantic.v1.fields import FieldInfo
@@ -128,6 +129,14 @@ def _handle_buttons_extension(schema: Dict[str, Any]) -> None:
 _Model = TypeVar("_Model", bound=BaseModel)
 
 
+def _get_base_type(tp: Type[_T]) -> Type[_T]:
+    """Returns T if given Optional[T], otherwise returns the type unchanged."""
+    args = get_args(tp)
+    if len(args) == 2 and type(None) in args:
+        return next(arg for arg in args if arg is not type(None))
+    return tp
+
+
 def dial_form(
     *,
     disable_chat_input: bool = False,
@@ -153,10 +162,11 @@ def dial_form(
             button_type = type(buttons[0].const)
             if field_type := model.__annotations__.get(name):
                 annotations[name] = field_type
-                if field_type != button_type:
+                field_type_base = _get_base_type(field_type)
+                if field_type_base != button_type:
                     raise ValueError(
-                        f"Field {model.__name__}.{name} has type {field_type.__name__!r} "
-                        f"but buttons are of type {button_type.__name__!r}."
+                        f"Field {model.__name__}.{name} has type {field_type_base} "
+                        f"but buttons are of type {button_type}."
                     )
             else:
                 annotations[name] = button_type

@@ -404,8 +404,36 @@ def test_dynamic_configuration_conflicting_types():
 
     assert (
         str(e.value)
-        == "Field Conf.buttons_field has type 'str' but buttons are of type 'int'."
+        == "Field Conf.buttons_field has type <class 'str'> but buttons are of type <class 'int'>."
     )
+
+
+def test_dynamic_configuration_optional_type_parsing_success():
+
+    class Conf(BaseModel):
+        int_field: int
+        str_field: str
+        buttons_field: Optional[int]
+
+    conf = dial_form(
+        disable_chat_input=True,
+        button_fields=[
+            ButtonField(
+                "buttons_field",
+                [
+                    Button(const=10, title="Title1"),
+                    Button(const=20, title="Title2"),
+                ],
+            )
+        ],
+    )(Conf)
+
+    conf_value = {"int_field": 10, "str_field": "Test", "buttons_field": 10}
+    parsed_conf = conf.parse_obj(conf_value)
+
+    assert parsed_conf.int_field == 10
+    assert parsed_conf.str_field == "Test"
+    assert parsed_conf.buttons_field == 10
 
 
 def test_dynamic_configuration_redefinition():
