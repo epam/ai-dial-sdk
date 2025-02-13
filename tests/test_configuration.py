@@ -466,7 +466,7 @@ def test_dynamic_configuration_decorator_optional_type_parsing_success():
 def test_dynamic_configuration_redefinition():
 
     class Conf(BaseModel):
-        pass
+        field: int
 
     with pytest.raises(ValueError) as e:
         dial_form(
