@@ -73,7 +73,52 @@ class StaticConfiguration_OptionalButton(
     )
 
 
-def test_configuration_schema():
+def test_configuration_optional_button_schema():
+    actual_schema = StaticConfiguration_OptionalButton.schema()
+    assert actual_schema == {
+        "title": "StaticConfiguration_OptionalButton",
+        "type": "object",
+        "properties": {
+            "int_button_field": {
+                "title": "Int Button Field",
+                "type": "integer",
+                "dial:widget": "buttons",
+                "oneOf": [
+                    {
+                        "const": 10,
+                        "title": "Title1",
+                        "dial:widgetOptions": {
+                            "confirmationMessage": None,
+                            "populateText": None,
+                            "submit": False,
+                        },
+                    },
+                    {
+                        "const": 20,
+                        "title": "Title2",
+                        "dial:widgetOptions": {
+                            "confirmationMessage": None,
+                            "populateText": None,
+                            "submit": False,
+                        },
+                    },
+                ],
+            },
+        },
+        "additionalProperties": False,
+    }
+
+
+def test_configuration_optional_button_parsing_success():
+    conf = {}
+
+    assert (
+        StaticConfiguration_OptionalButton.parse_obj(conf)
+        == StaticConfiguration_OptionalButton()
+    )
+
+
+def test_configuration_one_button_schema():
     actual_schema = StaticConfiguration_OneButton.schema()
     assert actual_schema == {
         "title": "StaticConfiguration_OneButton",
