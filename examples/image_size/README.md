@@ -1,4 +1,4 @@
-## Overview
+# Overview
 
 An example of a simple image-to-text DIAL application.
 
