@@ -19,7 +19,7 @@ from aidial_sdk.deployment.configuration import (
     ConfigurationResponse,
 )
 from aidial_sdk.pydantic_v1 import BaseModel, Field
-from examples.configurable_app.game import GameState, Move, Player
+from examples.tic_tac_toe.game import GameState, Move, Player
 
 
 # The start configuration sets up the configuration for the whole conversation.
