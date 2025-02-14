@@ -125,6 +125,12 @@ def _handle_buttons_extension(schema: Dict[str, Any]) -> None:
             prop["dial:widget"] = "buttons"
             prop["oneOf"] = button_schemas
 
+            # NOTE: The meta schema of the DIAL forms only supports
+            # 'number' type, so we convert 'integer' to 'number'.
+            # Could be removed once this restriction is lifted.
+            if prop["type"] == "integer":
+                prop["type"] = "number"
+
 
 _Model = TypeVar("_Model", bound=BaseModel)
 

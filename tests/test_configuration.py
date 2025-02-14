@@ -75,7 +75,7 @@ def test_configuration_optional_button_schema():
         "properties": {
             "int_button_field": {
                 "title": "Int Button Field",
-                "type": "integer",
+                "type": "number",
                 "dial:widget": "buttons",
                 "oneOf": [
                     {
@@ -133,7 +133,7 @@ def test_configuration_one_button_schema():
             "int_button_field": {
                 "title": "Integer Button field",
                 "description": "Pick a button",
-                "type": "integer",
+                "type": "number",
                 "dial:widget": "buttons",
                 "oneOf": [
                     {
@@ -285,7 +285,7 @@ def test_dynamic_configuration_existing_field():
                     },
                 ],
                 "title": "Buttons Field",
-                "type": "integer",
+                "type": "number",
             },
             "int_field": {
                 "title": "Int Field",
@@ -354,7 +354,7 @@ def test_dynamic_configuration_new_field():
                     },
                 ],
                 "title": "Buttons Field",
-                "type": "integer",
+                "type": "number",
             },
             "int_field": {
                 "title": "Int Field",
@@ -535,7 +535,7 @@ def test_dynamic_configuration_two_buttons():
                     },
                 ],
                 "title": "Int Button Field",
-                "type": "integer",
+                "type": "number",
             },
             "str_button_field": {
                 "dial:widget": "buttons",

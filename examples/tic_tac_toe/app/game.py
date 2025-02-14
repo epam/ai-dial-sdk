@@ -2,7 +2,16 @@ from typing import List, Literal, Optional, Union
 
 from aidial_sdk.pydantic_v1 import BaseModel
 
-Player = Literal["X", "O"]
+# 1 for X
+# 2 for O
+Player = Literal[1, 2]
+
+X_PLAYER: Player = 1
+O_PLAYER: Player = 2
+
+
+def _print_player(player: Player) -> str:
+    return "X" if player == X_PLAYER else "O"
 
 
 class Move(BaseModel):
@@ -52,16 +61,16 @@ class GameState(BaseModel):
 
     @property
     def x_moves(self) -> int:
-        return sum(row.count("X") for row in self.cells)
+        return sum(row.count(X_PLAYER) for row in self.cells)
 
     @property
     def o_moves(self) -> int:
-        return sum(row.count("O") for row in self.cells)
+        return sum(row.count(O_PLAYER) for row in self.cells)
 
     @property
     def player(self) -> Player:
         """Returns the player who should make the next move"""
-        return "X" if self.x_moves == self.o_moves else "O"
+        return X_PLAYER if self.x_moves == self.o_moves else O_PLAYER
 
     @property
     def finished(self) -> bool:
@@ -114,6 +123,6 @@ class GameState(BaseModel):
         for i, row in reversed(list(enumerate(self.cells))):
             ret += f"|{i + 1}|"
             for cell in row:
-                ret += f"{' ' if cell is None else cell}|"
+                ret += f"{' ' if cell is None else _print_player(cell)}|"
             ret += "\n"
         return ret

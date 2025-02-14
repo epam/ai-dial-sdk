@@ -21,7 +21,7 @@ from aidial_sdk.deployment.configuration import (
 )
 from aidial_sdk.pydantic_v1 import BaseModel, Field
 
-from .game import GameState, Move, Player
+from .game import O_PLAYER, X_PLAYER, GameState, Move, Player
 from .request import (
     get_configuration,
     get_message_form_value,
@@ -47,16 +47,16 @@ class InitConfiguration(BaseModel, metaclass=FormMetaclass):
         # * confirmationMessage (str): The message that will be displayed to the user before submitting the form in a confirmation dialog.
         buttons=[
             Button(
-                const="X",
+                const=X_PLAYER,
                 submit=True,
-                title="𝕏",
-                confirmationMessage="Are you sure you want to play as 𝕏? It goes first.",
+                title="X",
+                confirmationMessage="Are you sure you want to play as X? It goes first.",
             ),
             Button(
-                const="O",
+                const=O_PLAYER,
                 submit=True,
-                title="Ⓞ",
-                confirmationMessage="Are you sure you want to play as Ⓞ? It goes second.",
+                title="O",
+                confirmationMessage="Are you sure you want to play as O? It goes second.",
             ),
         ],
     )
@@ -92,7 +92,7 @@ class TicTacToeApplication(ChatCompletion):
         user_move: Optional[Move],
     ) -> MoveOutcome:
         user_player = init_conf.player
-        bot_player = "X" if user_player == "O" else "O"
+        bot_player = X_PLAYER if user_player == O_PLAYER else O_PLAYER
 
         if user_move is not None:
             if state.finished:
@@ -114,7 +114,7 @@ class TicTacToeApplication(ChatCompletion):
             if state.status == "Draw":
                 return MoveOutcome(bot_response="It's a draw! 😐", state=state)
 
-        if user_move is None and user_player == "X":
+        if user_move is None and user_player == X_PLAYER:
             # X player always goes first, so
             # if the game just started and the user plays as X,
             # then skip the move by the bot.

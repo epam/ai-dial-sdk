@@ -18,24 +18,24 @@ def test_ttt_configuration():
             "player": {
                 "title": "Player",
                 "description": "Select tic-tac-toe player",
-                "enum": ["X", "O"],
-                "type": "string",
+                "enum": [1, 2],
+                "type": "number",
                 "dial:widget": "buttons",
                 "oneOf": [
                     {
-                        "const": "X",
-                        "title": "𝕏",
+                        "const": 1,
+                        "title": "X",
                         "dial:widgetOptions": {
-                            "confirmationMessage": "Are you sure you want to play as 𝕏? It goes first.",
+                            "confirmationMessage": "Are you sure you want to play as X? It goes first.",
                             "populateText": None,
                             "submit": True,
                         },
                     },
                     {
-                        "const": "O",
-                        "title": "Ⓞ",
+                        "const": 2,
+                        "title": "O",
                         "dial:widgetOptions": {
-                            "confirmationMessage": "Are you sure you want to play as Ⓞ? It goes second.",
+                            "confirmationMessage": "Are you sure you want to play as O? It goes second.",
                             "populateText": None,
                             "submit": True,
                         },
@@ -51,7 +51,7 @@ def test_ttt_configuration():
 def test_ttt_first_move_x():
     client = create_test_client(app, name="app")
 
-    init_conf = {"player": "X"}
+    init_conf = {"player": 1}
 
     response = client.post(
         "chat/completions",
@@ -96,7 +96,7 @@ def test_ttt_first_move_o():
 
     client = create_test_client(app, name="app")
 
-    init_conf = {"player": "O"}
+    init_conf = {"player": 2}
 
     response = client.post(
         "chat/completions",
@@ -129,7 +129,7 @@ I moved to B1. Now it's your turn.
     )
     assert state == {
         "cells": [
-            [None, "X", None],
+            [None, 1, None],
             [None, None, None],
             [None, None, None],
         ]
@@ -141,7 +141,7 @@ def test_ttt_second_move_o():
 
     client = create_test_client(app, name="app")
 
-    init_conf = {"player": "O"}
+    init_conf = {"player": 2}
 
     messages: List[dict] = [
         {
@@ -197,8 +197,8 @@ I moved to A1. Now it's your turn.
     )
     assert state == {
         "cells": [
-            ["X", "X", None],
-            [None, "O", None],
+            [1, 1, None],
+            [None, 2, None],
             [None, None, None],
         ]
     }
