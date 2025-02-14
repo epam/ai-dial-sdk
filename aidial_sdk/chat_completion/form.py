@@ -116,7 +116,7 @@ def _handle_top_level_extensions(
 
 
 def _handle_buttons_extension(schema: Dict[str, Any]) -> None:
-    for prop in schema.get("properties", {}).values():
+    for prop_name, prop in schema.get("properties", {}).items():
         if buttons := prop.pop("buttons", None):
             button_schemas: List[dict] = []
             for button in buttons:
@@ -130,6 +130,13 @@ def _handle_buttons_extension(schema: Dict[str, Any]) -> None:
             # Could be removed once this restriction is lifted.
             if prop["type"] == "integer":
                 prop["type"] = "number"
+
+            # NOTE: The meta schema of the DIAL forms only supports 'number' type.
+            # Could be removed once this restriction is lifted.
+            if prop["type"] != "number":
+                raise ValueError(
+                    f"Button value must be a number. However, field {schema['title']}.{prop_name} has type {prop['type']!r}."
+                )
 
 
 _Model = TypeVar("_Model", bound=BaseModel)
