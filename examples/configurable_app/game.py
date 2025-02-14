@@ -64,6 +64,11 @@ class GameState(BaseModel):
         return "O" if self.x_moves == self.o_moves else "X"
 
     @property
+    def finished(self) -> bool:
+        """Returns True if the game is finished"""
+        return self.status != "Unfinished"
+
+    @property
     def status(self) -> Union[Player, Literal["Draw", "Unfinished"]]:
         """Returns the winner of the game, None if the game is not yet finished"""
         for line in Move.col_lines() + Move.row_lines() + Move.diag_lines():
@@ -101,7 +106,7 @@ class GameState(BaseModel):
         cells[move.row][move.col] = self.player
         return GameState(cells=cells)
 
-    def print(self) -> str:
+    def print_board(self) -> str:
         """Prints the game board as a Markdown table"""
         ret = ""
         ret += "||A|B|C|\n"

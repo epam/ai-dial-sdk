@@ -63,14 +63,70 @@ class MoveForm(BaseModel):
     move: str
 
 
+class MoveOutcome(BaseModel):
+    bot_response: str
+    show_board: bool = True
+    state: GameState
+
+
 # ChatCompletion is an abstract class for applications and model adapters
-class ConfigurableApplication(ChatCompletion):
+class TicTacToeApplication(ChatCompletion):
 
     async def configuration(
         self, request: ConfigurationRequest
     ) -> ConfigurationResponse:
         # Return the schema of the initial configuration
         return ConfigurationResponse(**InitConfiguration.schema())
+
+    @staticmethod
+    def make_bot_move(
+        init_conf: InitConfiguration, state: GameState, user_move: Move | None
+    ) -> MoveOutcome:
+        user_player = init_conf.player
+        bot_player = "X" if user_player == "O" else "O"
+
+        if user_move is not None:
+            if state.finished:
+                # The game is finished, no need to continue
+                return MoveOutcome(
+                    bot_response="The game is already finished. Restart the conversation to play again.",
+                    show_board=False,
+                    state=state,
+                )
+
+            # Update the game state with the last move from the user
+            state = state.make_move(user_move)
+
+            if state.status == user_player:
+                return MoveOutcome(
+                    bot_response="You won! Congratulations! 🎉", state=state
+                )
+
+            if state.status == "Draw":
+                return MoveOutcome(bot_response="It's a draw! 😐", state=state)
+
+        if user_move is None and user_player == "X":
+            # X player always goes first, so
+            # if the game just started and the user plays as X,
+            # then skip the move by the bot.
+            return MoveOutcome(
+                bot_response="You go first. Make a move.", state=state
+            )
+        else:
+            # Otherwise, make a random move by the bot
+            moves = state.possible_moves
+            bot_move = random.choice(moves)
+            state = state.make_move(bot_move)
+            bot_response = "I moved to " + bot_move.print() + ". "
+
+            if state.status == bot_player:
+                bot_response += "I won! 🎉"
+            elif state.status == "Draw":
+                bot_response += "It's a draw! 😐"
+            else:
+                bot_response += "Now it's your turn."
+
+            return MoveOutcome(bot_response=bot_response, state=state)
 
     async def chat_completion(
         self, request: Request, response: Response
@@ -83,68 +139,63 @@ class ConfigurableApplication(ChatCompletion):
         if len(request.messages) == 1:
             # The game just started. Init empty state.
             state = GameState()
+            user_move = None
         else:
-            # Retrieving the game state from the last message state
             last_message = request.messages[-1]
 
             cc = last_message.custom_content
-            assert (
-                cc is not None
-                and cc.state is not None
-                and cc.form_value is not None
-            )
+            assert cc is not None and cc.state is not None
+
+            # Retrieving the game state from the last message state
             state = GameState.parse_obj(cc.state)
 
-            # Update the game state with the last move from the user
-            user_form = MoveForm.parse_obj(cc.form_value)
-            user_move = Move.parse(user_form.move)
-            state = state.make_move(user_move)
+            # Retrieve the user move from the last message form value if provided
+            user_move = None
+            if cc.form_value is not None:
+                user_form = MoveForm.parse_obj(cc.form_value)
+                user_move = Move.parse(user_form.move)
 
-        if len(request.messages) == 1 and init_conf.player == "X":
-            # X player always goes first, so
-            # if the game just started and the user plays as X,
-            # then skip the move by the bot.
-            bot_response = "Make a move"
-        else:
-            # Otherwise, make a random move by the bot
-            moves = state.possible_moves
-            bot_move = random.choice(moves)
-            state = state.make_move(bot_move)
-            bot_response = (
-                "I moved to " + bot_move.print() + ". Now it's your turn."
-            )
-
-        bot_response += "\n\n" + state.print()
+        # Make a move by the bot
+        move_outcome = TicTacToeApplication.make_bot_move(
+            init_conf, state, user_move
+        )
 
         # Generate response with a single choice
         with response.create_single_choice() as choice:
+            state = move_outcome.state
+            bot_response = move_outcome.bot_response
+
+            if move_outcome.show_board:
+                bot_response += "\n\n" + state.print_board()
+
             # Fill the content of the response from the bot
             choice.append_content(bot_response)
 
-            # ... along with the request for the next move
-            button_fields = [
-                ButtonField(
-                    name="move",
-                    options=[
-                        Button(
-                            title=move.print(),
-                            const=move.print(),
-                            confirmationMessage="Are you sure you want to make this move?",
-                            submit=True,
-                        )
-                        for move in state.possible_moves
-                    ],
-                )
-            ]
+            if not state.finished:
+                # Added the buttons if the game hasn't finished yet
+                button_fields = [
+                    ButtonField(
+                        name="move",
+                        options=[
+                            Button(
+                                title=move.print(),
+                                const=move.print(),
+                                confirmationMessage="Are you sure you want to make this move?",
+                                submit=True,
+                            )
+                            for move in state.possible_moves
+                        ],
+                    )
+                ]
 
-            # Use the form decorator to add buttons to the form.
-            # The form doesn't allow for an arbitrary user input,
-            # but only actions via the buttons.
-            form_cls = form(
-                disable_chat_input=True,
-                button_fields=button_fields,
-            )(MoveForm)
-            choice.set_form_schema(form_cls.schema())
+                # Use the form decorator to add buttons to the form.
+                # The form doesn't allow for an arbitrary user input,
+                # but only actions via the buttons.
+                form_cls = form(
+                    disable_chat_input=True,
+                    button_fields=button_fields,
+                )(MoveForm)
+                choice.set_form_schema(form_cls.schema())
 
             # Save the game state in the bot message
             choice.set_state(state.dict())
@@ -152,7 +203,7 @@ class ConfigurableApplication(ChatCompletion):
 
 # DIALApp extends FastAPI to provide a user-friendly interface for routing requests to your applications
 app = DIALApp()
-app.add_chat_completion("app", ConfigurableApplication())
+app.add_chat_completion("app", TicTacToeApplication())
 
 # Run built app
 if __name__ == "__main__":
