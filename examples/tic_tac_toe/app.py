@@ -3,6 +3,7 @@ A DIAL application that is configurable by the user.
 """
 
 import random
+from typing import Optional
 
 import uvicorn
 
@@ -85,7 +86,9 @@ class TicTacToeApplication(ChatCompletion):
 
     @staticmethod
     def make_bot_move(
-        init_conf: InitConfiguration, state: GameState, user_move: Move | None
+        init_conf: InitConfiguration,
+        state: GameState,
+        user_move: Optional[Move],
     ) -> MoveOutcome:
         user_player = init_conf.player
         bot_player = "X" if user_player == "O" else "O"
