@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 from fastapi import FastAPI
 from opentelemetry._logs import set_logger_provider
@@ -33,7 +34,7 @@ from aidial_sdk.telemetry.types import TelemetryConfig
 
 
 def init_telemetry(
-    app: FastAPI | None,
+    app: Optional[FastAPI],
     config: TelemetryConfig,
 ):
     resource = Resource.create(
