@@ -19,16 +19,11 @@ class Move(BaseModel):
     col: int
 
     @classmethod
-    def parse(cls, move: str) -> "Move":
-        row_str = move[1]
-        assert row_str in ["1", "2", "3"]
-        row = int(row_str) - 1
+    def from_button_value(cls, move: int) -> "Move":
+        return Move(row=(move % 10) - 1, col=(move // 10) - 1)
 
-        col_str = move[0]
-        assert col_str in ["A", "B", "C"]
-        col = {"A": 0, "B": 1, "C": 2}[col_str]
-
-        return Move(row=row, col=col)
+    def to_button_value(self) -> int:
+        return (self.row + 1) + 10 * (self.col + 1)
 
     def print(self) -> str:
         col = {0: "A", 1: "B", 2: "C"}[self.col]

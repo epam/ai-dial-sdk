@@ -166,7 +166,7 @@ def test_ttt_second_move_o():
         {
             "role": "user",
             "content": "",
-            "custom_content": {"form_value": {"move": "B2"}},
+            "custom_content": {"form_value": {"move": 22}},
         }
     )
 

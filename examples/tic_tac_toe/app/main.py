@@ -43,7 +43,7 @@ class InitConfiguration(BaseModel, metaclass=FormMetaclass):
         # buttons field accepts a list of Button objects with the following properties:
         # * submit (bool): Whether the button should submit the whole form on click.
         # * title (str): The caption text displayed on the button.
-        # * const (str): The value that will be submitted if the button is clicked.
+        # * const (int|float): The value that will be submitted if the button is clicked.
         # * confirmationMessage (str): The message that will be displayed to the user before submitting the form in a confirmation dialog.
         buttons=[
             Button(
@@ -67,7 +67,7 @@ class InitConfiguration(BaseModel, metaclass=FormMetaclass):
 # Note that the form doesn't have any buttons, since the moves are determined dynamically.
 # Later on we will add buttons to the model using a class decorator.
 class MoveForm(BaseModel):
-    move: str
+    move: int
 
 
 class MoveOutcome(BaseModel):
@@ -151,7 +151,7 @@ class TicTacToeApplication(ChatCompletion):
             # Retrieve the user move from the last user message
             if form_value := get_message_form_value(request.messages[-1]):
                 user_form = MoveForm.parse_obj(form_value)
-                user_move = Move.parse(user_form.move)
+                user_move = Move.from_button_value(user_form.move)
 
             # Retrieve the game state from the last bot message
             state_dict = get_message_state(request.messages[-2])
@@ -182,7 +182,7 @@ class TicTacToeApplication(ChatCompletion):
                         options=[
                             Button(
                                 title=move.print(),
-                                const=move.print(),
+                                const=move.to_button_value(),
                                 confirmationMessage="Are you sure you want to make this move?",
                                 submit=True,
                             )
