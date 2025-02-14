@@ -20,8 +20,9 @@ from aidial_sdk.deployment.configuration import (
     ConfigurationResponse,
 )
 from aidial_sdk.pydantic_v1 import BaseModel, Field
-from examples.tic_tac_toe.game import GameState, Move, Player
-from examples.tic_tac_toe.request import (
+
+from .game import GameState, Move, Player
+from .request import (
     get_configuration,
     get_message_form_value,
     get_message_state,

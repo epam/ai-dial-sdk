@@ -1,7 +1,7 @@
 import random
 from typing import List
 
-from examples.tic_tac_toe.app import app
+from examples.tic_tac_toe.app.main import app
 from tests.utils.client import create_test_client
 
 
