@@ -61,7 +61,7 @@ class GameState(BaseModel):
     @property
     def player(self) -> Player:
         """Returns the player who should make the next move"""
-        return "O" if self.x_moves == self.o_moves else "X"
+        return "X" if self.x_moves == self.o_moves else "O"
 
     @property
     def finished(self) -> bool:

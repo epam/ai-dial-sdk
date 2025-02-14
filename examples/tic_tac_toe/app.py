@@ -20,6 +20,11 @@ from aidial_sdk.deployment.configuration import (
 )
 from aidial_sdk.pydantic_v1 import BaseModel, Field
 from examples.tic_tac_toe.game import GameState, Move, Player
+from examples.tic_tac_toe.request import (
+    get_configuration,
+    get_message_form_value,
+    get_message_state,
+)
 
 
 # The start configuration sets up the configuration for the whole conversation.
@@ -132,28 +137,22 @@ class TicTacToeApplication(ChatCompletion):
         self, request: Request, response: Response
     ) -> None:
         # Retrieve the configuration from the request and parse it
-        cf = request.custom_fields
-        assert cf is not None and cf.configuration
-        init_conf = InitConfiguration.parse_obj(cf.configuration)
+        init_conf = InitConfiguration.parse_obj(get_configuration(request))
 
         if len(request.messages) == 1:
             # The game just started. Init empty state.
             state = GameState()
             user_move = None
         else:
-            last_message = request.messages[-1]
-
-            cc = last_message.custom_content
-            assert cc is not None and cc.state is not None
-
-            # Retrieving the game state from the last message state
-            state = GameState.parse_obj(cc.state)
-
-            # Retrieve the user move from the last message form value if provided
-            user_move = None
-            if cc.form_value is not None:
-                user_form = MoveForm.parse_obj(cc.form_value)
+            # Retrieve the user move from the last user message
+            if form_value := get_message_form_value(request.messages[-1]):
+                user_form = MoveForm.parse_obj(form_value)
                 user_move = Move.parse(user_form.move)
+
+            # Retrieve the game state from the last bot message
+            state_dict = get_message_state(request.messages[-2])
+            assert state_dict is not None
+            state = GameState.parse_obj(state_dict)
 
         # Make a move by the bot
         move_outcome = TicTacToeApplication.make_bot_move(
