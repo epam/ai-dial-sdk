@@ -46,7 +46,7 @@ class ButtonField(Generic[_T]):
     options: List[Button[_T]]
 
 
-class DialFormMetaclass(ModelMetaclass):
+class FormMetaclass(ModelMetaclass):
     def __new__(mcs, name, bases, namespace: dict, **kwargs):
         # Inject buttons validators
 
@@ -137,7 +137,7 @@ def _get_base_type(tp: Type[_T]) -> Type[_T]:
     return tp
 
 
-def dial_form(
+def form(
     *,
     disable_chat_input: bool = False,
     button_fields: Optional[List[ButtonField]] = None,
@@ -175,6 +175,6 @@ def dial_form(
             namespace["__annotations__"] = annotations
 
         cls_name = f"_{model.__name__}"
-        return DialFormMetaclass(cls_name, (model,), namespace)  # type: ignore
+        return FormMetaclass(cls_name, (model,), namespace)  # type: ignore
 
     return _create_class

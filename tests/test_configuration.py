@@ -3,15 +3,11 @@ from typing import List, Optional
 import pytest
 
 from aidial_sdk.chat_completion import Button
-from aidial_sdk.chat_completion.configuration import (
-    ButtonField,
-    DialFormMetaclass,
-    dial_form,
-)
+from aidial_sdk.chat_completion.form import ButtonField, FormMetaclass, form
 from aidial_sdk.pydantic_v1 import BaseModel, Field, ValidationError
 
 
-class StaticConfiguration_OneButton(BaseModel, metaclass=DialFormMetaclass):
+class StaticConfiguration_OneButton(BaseModel, metaclass=FormMetaclass):
     "Static application configuration"
 
     _dial_chatMessageInputDisabled = True
@@ -45,7 +41,7 @@ class StaticConfiguration_OneButton(BaseModel, metaclass=DialFormMetaclass):
     )
 
 
-class StaticConfiguration_TwoButtons(BaseModel, metaclass=DialFormMetaclass):
+class StaticConfiguration_TwoButtons(BaseModel, metaclass=FormMetaclass):
     int_button_field: int = Field(
         buttons=[
             Button(const=10, title="Title1"),
@@ -61,9 +57,7 @@ class StaticConfiguration_TwoButtons(BaseModel, metaclass=DialFormMetaclass):
     )
 
 
-class StaticConfiguration_OptionalButton(
-    BaseModel, metaclass=DialFormMetaclass
-):
+class StaticConfiguration_OptionalButton(BaseModel, metaclass=FormMetaclass):
     int_button_field: Optional[int] = Field(
         default=None,
         buttons=[
@@ -249,7 +243,7 @@ def test_dynamic_configuration_existing_field():
         str_field: str
         buttons_field: int
 
-    conf = dial_form(
+    conf = form(
         disable_chat_input=True,
         button_fields=[
             ButtonField(
@@ -318,7 +312,7 @@ def test_dynamic_configuration_new_field():
         int_field: int
         str_field: str
 
-    conf = dial_form(
+    conf = form(
         disable_chat_input=True,
         button_fields=[
             ButtonField(
@@ -389,7 +383,7 @@ def test_dynamic_configuration_conflicting_types():
         buttons_field: str
 
     with pytest.raises(ValueError) as e:
-        dial_form(
+        form(
             disable_chat_input=True,
             button_fields=[
                 ButtonField(
@@ -415,7 +409,7 @@ def test_dynamic_configuration_optional_type_parsing_success():
         str_field: str
         buttons_field: Optional[int]
 
-    conf = dial_form(
+    conf = form(
         disable_chat_input=True,
         button_fields=[
             ButtonField(
@@ -438,7 +432,7 @@ def test_dynamic_configuration_optional_type_parsing_success():
 
 def test_dynamic_configuration_decorator_optional_type_parsing_success():
 
-    @dial_form(
+    @form(
         disable_chat_input=True,
         button_fields=[
             ButtonField(
@@ -469,7 +463,7 @@ def test_dynamic_configuration_redefinition():
         field: int
 
     with pytest.raises(ValueError) as e:
-        dial_form(
+        form(
             disable_chat_input=True,
             button_fields=[
                 ButtonField(
@@ -492,7 +486,7 @@ def test_dynamic_configuration_two_buttons():
         str_button_field: str
         int_button_field: int
 
-    conf = dial_form(
+    conf = form(
         disable_chat_input=True,
         button_fields=[
             ButtonField(
