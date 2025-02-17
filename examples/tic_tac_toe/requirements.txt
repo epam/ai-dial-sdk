@@ -1,4 +1,2 @@
-git+https://github.com/epam/ai-dial-sdk.git@feat/improve-configuration-validation#egg=aidial-sdk
+aidial-sdk>=0.19
 uvicorn==0.30.1
-wrapt
-fastapi
