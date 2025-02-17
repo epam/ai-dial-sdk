@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 from fastapi import FastAPI
 from opentelemetry._logs import set_logger_provider
@@ -33,7 +34,7 @@ from aidial_sdk.telemetry.types import TelemetryConfig
 
 
 def init_telemetry(
-    app: FastAPI,
+    app: Optional[FastAPI],
     config: TelemetryConfig,
 ):
     resource = Resource.create(
@@ -120,6 +121,6 @@ def init_telemetry(
         if config.metrics.prometheus_export:
             start_http_server(port=config.metrics.port)
 
-    if config.tracing is not None or config.metrics is not None:
+    if app and (config.tracing is not None or config.metrics is not None):
         # FastAPI instrumentor reports both metrics and traces
         FastAPIInstrumentor.instrument_app(app)
