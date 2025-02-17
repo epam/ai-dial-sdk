@@ -50,7 +50,7 @@ class Move(BaseModel):
         ]
 
 
-class GameState(BaseModel):
+class Board(BaseModel):
     cells: List[List[Optional[Player]]] = [[None] * 3] * 3
     """Current state of the game board"""
 
@@ -103,14 +103,14 @@ class GameState(BaseModel):
         """Returns the player who made the move"""
         return self.cells[move.row][move.col]
 
-    def make_move(self, move: Move) -> "GameState":
-        """Returns a new game state after making the move"""
+    def make_move(self, move: Move) -> "Board":
+        """Returns a new board after making the move"""
         assert self.get(move) is None
         cells = [row.copy() for row in self.cells]
         cells[move.row][move.col] = self.player
-        return GameState(cells=cells)
+        return Board(cells=cells)
 
-    def print_board(self) -> str:
+    def to_markdown(self) -> str:
         """Prints the game board as a Markdown table"""
         ret = ""
         ret += "||A|B|C|\n"

@@ -21,7 +21,7 @@ from aidial_sdk.deployment.configuration import (
 )
 from aidial_sdk.pydantic_v1 import BaseModel, Field
 
-from .game import O_PLAYER, X_PLAYER, GameState, Move, Player
+from .game import O_PLAYER, X_PLAYER, Board, Move, Player
 from .request import (
     get_configuration,
     get_message_form_value,
@@ -73,7 +73,7 @@ class MoveForm(BaseModel):
 class MoveOutcome(BaseModel):
     bot_response: str
     show_board: bool = True
-    state: GameState
+    board: Board
 
 
 # ChatCompletion is an abstract class for applications and model adapters
@@ -88,54 +88,54 @@ class TicTacToeApplication(ChatCompletion):
     @staticmethod
     def make_bot_move(
         init_conf: InitConfiguration,
-        state: GameState,
+        board: Board,
         user_move: Optional[Move],
     ) -> MoveOutcome:
         user_player = init_conf.player
         bot_player = X_PLAYER if user_player == O_PLAYER else O_PLAYER
 
         if user_move is not None:
-            if state.finished:
+            if board.finished:
                 # The game is finished, no need to continue
                 return MoveOutcome(
                     bot_response="The game is already finished. Restart the conversation to play again.",
                     show_board=False,
-                    state=state,
+                    board=board,
                 )
 
-            # Update the game state with the last move from the user
-            state = state.make_move(user_move)
+            # Update the game board with the last move from the user
+            board = board.make_move(user_move)
 
-            if state.status == user_player:
+            if board.status == user_player:
                 return MoveOutcome(
-                    bot_response="You won! Congratulations! 🎉", state=state
+                    bot_response="You won! Congratulations! 🎉", board=board
                 )
 
-            if state.status == "Draw":
-                return MoveOutcome(bot_response="It's a draw! 😐", state=state)
+            if board.status == "Draw":
+                return MoveOutcome(bot_response="It's a draw! 😐", board=board)
 
         if user_move is None and user_player == X_PLAYER:
             # X player always goes first, so
             # if the game just started and the user plays as X,
             # then skip the move by the bot.
             return MoveOutcome(
-                bot_response="You go first. Make a move.", state=state
+                bot_response="You go first. Make a move.", board=board
             )
         else:
             # Otherwise, make a random move by the bot
-            moves = state.possible_moves
+            moves = board.possible_moves
             bot_move = random.choice(moves)
-            state = state.make_move(bot_move)
+            board = board.make_move(bot_move)
             bot_response = "I moved to " + bot_move.print() + ". "
 
-            if state.status == bot_player:
+            if board.status == bot_player:
                 bot_response += "I won! 🎉"
-            elif state.status == "Draw":
+            elif board.status == "Draw":
                 bot_response += "It's a draw! 😐"
             else:
                 bot_response += "Now it's your turn."
 
-            return MoveOutcome(bot_response=bot_response, state=state)
+            return MoveOutcome(bot_response=bot_response, board=board)
 
     async def chat_completion(
         self, request: Request, response: Response
@@ -144,8 +144,8 @@ class TicTacToeApplication(ChatCompletion):
         init_conf = InitConfiguration.parse_obj(get_configuration(request))
 
         if len(request.messages) == 1:
-            # The game just started. Init empty state.
-            state = GameState()
+            # The game just started. Init empty board.
+            board = Board()
             user_move = None
         else:
             # Retrieve the user move from the last user message
@@ -153,28 +153,28 @@ class TicTacToeApplication(ChatCompletion):
                 user_form = MoveForm.parse_obj(form_value)
                 user_move = Move.from_button_value(user_form.move)
 
-            # Retrieve the game state from the last bot message
+            # Retrieve the game board from the last bot message
             state_dict = get_message_state(request.messages[-2])
             assert state_dict is not None
-            state = GameState.parse_obj(state_dict)
+            board = Board.parse_obj(state_dict)
 
         # Make a move by the bot
         move_outcome = TicTacToeApplication.make_bot_move(
-            init_conf, state, user_move
+            init_conf, board, user_move
         )
 
         # Generate response with a single choice
         with response.create_single_choice() as choice:
-            state = move_outcome.state
+            board = move_outcome.board
             bot_response = move_outcome.bot_response
 
             if move_outcome.show_board:
-                bot_response += "\n\n" + state.print_board()
+                bot_response += "\n\n" + board.to_markdown()
 
             # Fill the content of the response from the bot
             choice.append_content(bot_response)
 
-            if not state.finished:
+            if not board.finished:
                 # Added the buttons if the game hasn't finished yet
                 button_fields = [
                     ButtonField(
@@ -186,7 +186,7 @@ class TicTacToeApplication(ChatCompletion):
                                 confirmationMessage="Are you sure you want to make this move?",
                                 submit=True,
                             )
-                            for move in state.possible_moves
+                            for move in board.possible_moves
                         ],
                     )
                 ]
@@ -200,8 +200,8 @@ class TicTacToeApplication(ChatCompletion):
                 )(MoveForm)
                 choice.set_form_schema(form_cls.schema())
 
-            # Save the game state in the bot message
-            choice.set_state(state.dict())
+            # Save the game board in the bot message
+            choice.set_state(board.dict())
 
 
 # DIALApp extends FastAPI to provide a user-friendly interface for routing requests to your applications
