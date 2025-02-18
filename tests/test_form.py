@@ -244,15 +244,13 @@ def test_dynamic_configuration_existing_field():
         buttons_field: int
 
     conf = form(
-        disable_chat_input=True,
-        button_fields={
-            "buttons_field": Field(
-                buttons=[
-                    Button(const=10, title="Title1"),
-                    Button(const=20, title="Title2"),
-                ]
-            ),
-        },
+        _dial_chatMessageInputDisabled=True,
+        buttons_field=Field(
+            buttons=[
+                Button(const=10, title="Title1"),
+                Button(const=20, title="Title2"),
+            ]
+        ),
     )(Conf)
 
     actual_schema = conf.schema()
@@ -312,15 +310,13 @@ def test_dynamic_configuration_new_field():
         str_field: str
 
     conf = form(
-        disable_chat_input=True,
-        button_fields={
-            "buttons_field": Field(
-                buttons=[
-                    Button(const=10, title="Title1"),
-                    Button(const=20, title="Title2"),
-                ]
-            )
-        },
+        _dial_chatMessageInputDisabled=True,
+        buttons_field=Field(
+            buttons=[
+                Button(const=10, title="Title1"),
+                Button(const=20, title="Title2"),
+            ]
+        ),
     )(Conf)
 
     actual_schema = conf.schema()
@@ -382,15 +378,13 @@ def test_dynamic_configuration_conflicting_types():
 
     with pytest.raises(ValueError) as e:
         form(
-            disable_chat_input=True,
-            button_fields={
-                "buttons_field": Field(
-                    buttons=[
-                        Button(const=10, title="Title1"),
-                        Button(const=20, title="Title2"),
-                    ],
-                )
-            },
+            _dial_chatMessageInputDisabled=True,
+            buttons_field=Field(
+                buttons=[
+                    Button(const=10, title="Title1"),
+                    Button(const=20, title="Title2"),
+                ],
+            ),
         )(Conf)
 
     assert (
@@ -407,15 +401,13 @@ def test_dynamic_configuration_optional_type_parsing_success():
         buttons_field: Optional[int]
 
     conf = form(
-        disable_chat_input=True,
-        button_fields={
-            "buttons_field": Field(
-                buttons=[
-                    Button(const=10, title="Title1"),
-                    Button(const=20, title="Title2"),
-                ]
-            )
-        },
+        _dial_chatMessageInputDisabled=True,
+        buttons_field=Field(
+            buttons=[
+                Button(const=10, title="Title1"),
+                Button(const=20, title="Title2"),
+            ]
+        ),
     )(Conf)
 
     conf_value = {"int_field": 10, "str_field": "Test", "buttons_field": 10}
@@ -429,15 +421,13 @@ def test_dynamic_configuration_optional_type_parsing_success():
 def test_dynamic_configuration_decorator_optional_type_parsing_success():
 
     @form(
-        disable_chat_input=True,
-        button_fields={
-            "buttons_field": Field(
-                buttons=[
-                    Button(const=10, title="Title1"),
-                    Button(const=20, title="Title2"),
-                ]
-            )
-        },
+        _dial_chatMessageInputDisabled=True,
+        buttons_field=Field(
+            buttons=[
+                Button(const=10, title="Title1"),
+                Button(const=20, title="Title2"),
+            ]
+        ),
     )
     class Conf(BaseModel):
         int_field: int
@@ -459,23 +449,21 @@ def test_dynamic_configuration_two_buttons():
         float_button_field: float
 
     conf = form(
-        disable_chat_input=True,
-        button_fields={
-            "int_button_field": Field(
-                description="Number of floors",
-                buttons=[
-                    Button(const=10, title="Title1"),
-                    Button(const=20, title="Title2"),
-                ],
-            ),
-            "float_button_field": Field(
-                description="Temperature",
-                buttons=[
-                    Button(const=30.1, title="Title3"),
-                    Button(const=40.1, title="Title4"),
-                ],
-            ),
-        },
+        _dial_chatMessageInputDisabled=True,
+        int_button_field=Field(
+            description="Number of floors",
+            buttons=[
+                Button(const=10, title="Title1"),
+                Button(const=20, title="Title2"),
+            ],
+        ),
+        float_button_field=Field(
+            description="Temperature",
+            buttons=[
+                Button(const=30.1, title="Title3"),
+                Button(const=40.1, title="Title4"),
+            ],
+        ),
     )(Conf)
 
     actual_schema = conf.schema()
@@ -572,7 +560,7 @@ def test_configuration_missing_buttons():
         class _Conf(BaseModel, metaclass=FormMetaclass):
             button_field: int
 
-        _Conf2 = form(button_fields={"button_field": Field(default=43)})(_Conf)
+        _Conf2 = form(button_field=Field(default=43))(_Conf)
         _Conf2.schema()
 
     assert (

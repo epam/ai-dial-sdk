@@ -188,8 +188,8 @@ class TicTacToeApplication(ChatCompletion):
                 # The form doesn't allow for an arbitrary user input,
                 # but only actions via the buttons.
                 form_cls = form(
-                    disable_chat_input=True,
-                    button_fields={"move": move_button},
+                    _dial_chatMessageInputDisabled=True,
+                    move=move_button,
                 )(MoveForm)
                 choice.set_form_schema(form_cls.schema())
 

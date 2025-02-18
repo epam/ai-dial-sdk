@@ -147,16 +147,16 @@ def _get_base_type(tp: Type[_T]) -> Type[_T]:
 
 def form(
     *,
-    disable_chat_input: bool = False,
-    button_fields: Optional[Dict[str, Union[FieldInfo, Any]]] = None,
+    _dial_chatMessageInputDisabled: bool = False,
+    **kwargs: Dict[str, Union[FieldInfo, Any]],
 ) -> Callable[[Type[_Model]], Type[_Model]]:
     def _create_class(model: Type[_Model]) -> Type[_Model]:
         namespace: Dict[str, Any] = {
-            "_dial_chatMessageInputDisabled": disable_chat_input,
+            "_dial_chatMessageInputDisabled": _dial_chatMessageInputDisabled,
         }
         annotations: Dict[str, Any] = {}
 
-        for name, field_info in (button_fields or {}).items():
+        for name, field_info in kwargs.items():
             buttons: List[Button] = field_info.extra.get("buttons")  # type: ignore
             if not buttons:
                 raise ValueError(
