@@ -3,7 +3,7 @@ from typing import List, Optional
 import pytest
 
 from aidial_sdk.chat_completion import Button
-from aidial_sdk.chat_completion.form import ButtonField, FormMetaclass, form
+from aidial_sdk.chat_completion.form import FormMetaclass, form
 from aidial_sdk.pydantic_v1 import BaseModel, Field, ValidationError
 
 
@@ -245,15 +245,14 @@ def test_dynamic_configuration_existing_field():
 
     conf = form(
         disable_chat_input=True,
-        button_fields=[
-            ButtonField(
-                "buttons_field",
-                [
+        button_fields={
+            "buttons_field": Field(
+                buttons=[
                     Button(const=10, title="Title1"),
                     Button(const=20, title="Title2"),
-                ],
-            )
-        ],
+                ]
+            ),
+        },
     )(Conf)
 
     actual_schema = conf.schema()
@@ -314,15 +313,14 @@ def test_dynamic_configuration_new_field():
 
     conf = form(
         disable_chat_input=True,
-        button_fields=[
-            ButtonField(
-                "buttons_field",
-                [
+        button_fields={
+            "buttons_field": Field(
+                buttons=[
                     Button(const=10, title="Title1"),
                     Button(const=20, title="Title2"),
-                ],
+                ]
             )
-        ],
+        },
     )(Conf)
 
     actual_schema = conf.schema()
@@ -385,15 +383,14 @@ def test_dynamic_configuration_conflicting_types():
     with pytest.raises(ValueError) as e:
         form(
             disable_chat_input=True,
-            button_fields=[
-                ButtonField(
-                    "buttons_field",
-                    [
+            button_fields={
+                "buttons_field": Field(
+                    buttons=[
                         Button(const=10, title="Title1"),
                         Button(const=20, title="Title2"),
                     ],
                 )
-            ],
+            },
         )(Conf)
 
     assert (
@@ -411,15 +408,14 @@ def test_dynamic_configuration_optional_type_parsing_success():
 
     conf = form(
         disable_chat_input=True,
-        button_fields=[
-            ButtonField(
-                "buttons_field",
-                [
+        button_fields={
+            "buttons_field": Field(
+                buttons=[
                     Button(const=10, title="Title1"),
                     Button(const=20, title="Title2"),
-                ],
+                ]
             )
-        ],
+        },
     )(Conf)
 
     conf_value = {"int_field": 10, "str_field": "Test", "buttons_field": 10}
@@ -434,15 +430,14 @@ def test_dynamic_configuration_decorator_optional_type_parsing_success():
 
     @form(
         disable_chat_input=True,
-        button_fields=[
-            ButtonField(
-                "buttons_field",
-                [
+        button_fields={
+            "buttons_field": Field(
+                buttons=[
                     Button(const=10, title="Title1"),
                     Button(const=20, title="Title2"),
-                ],
+                ]
             )
-        ],
+        },
     )
     class Conf(BaseModel):
         int_field: int
@@ -457,29 +452,6 @@ def test_dynamic_configuration_decorator_optional_type_parsing_success():
     assert parsed_conf.buttons_field == 10
 
 
-def test_dynamic_configuration_redefinition():
-
-    class Conf(BaseModel):
-        field: int
-
-    with pytest.raises(ValueError) as e:
-        form(
-            disable_chat_input=True,
-            button_fields=[
-                ButtonField(
-                    "buttons_field",
-                    [Button(const=10, title="Title")],
-                ),
-                ButtonField(
-                    "buttons_field",
-                    [Button(const=20, title="Title")],
-                ),
-            ],
-        )(Conf)
-
-    assert str(e.value) == "Field Conf.buttons_field is already defined."
-
-
 def test_dynamic_configuration_two_buttons():
 
     class Conf(BaseModel):
@@ -488,22 +460,22 @@ def test_dynamic_configuration_two_buttons():
 
     conf = form(
         disable_chat_input=True,
-        button_fields=[
-            ButtonField(
-                "int_button_field",
-                [
+        button_fields={
+            "int_button_field": Field(
+                description="Number of floors",
+                buttons=[
                     Button(const=10, title="Title1"),
                     Button(const=20, title="Title2"),
                 ],
             ),
-            ButtonField(
-                "float_button_field",
-                [
+            "float_button_field": Field(
+                description="Temperature",
+                buttons=[
                     Button(const=30.1, title="Title3"),
                     Button(const=40.1, title="Title4"),
                 ],
             ),
-        ],
+        },
     )(Conf)
 
     actual_schema = conf.schema()
@@ -514,6 +486,7 @@ def test_dynamic_configuration_two_buttons():
         "properties": {
             "int_button_field": {
                 "dial:widget": "buttons",
+                "description": "Number of floors",
                 "oneOf": [
                     {
                         "const": 10,
@@ -539,6 +512,7 @@ def test_dynamic_configuration_two_buttons():
             },
             "float_button_field": {
                 "dial:widget": "buttons",
+                "description": "Temperature",
                 "oneOf": [
                     {
                         "const": 30.1,
@@ -589,4 +563,19 @@ def test_configuration_invalid_button_type():
     assert (
         str(e.value)
         == "Button value must be a number. However, field _Conf.button_field has type 'string'."
+    )
+
+
+def test_configuration_missing_buttons():
+    with pytest.raises(ValueError) as e:
+
+        class _Conf(BaseModel, metaclass=FormMetaclass):
+            button_field: int
+
+        _Conf2 = form(button_fields={"button_field": Field(default=43)})(_Conf)
+        _Conf2.schema()
+
+    assert (
+        str(e.value)
+        == "Field descriptor of _Conf.button_field is missing 'buttons' attribute."
     )

@@ -9,13 +9,14 @@ from typing import (
     Optional,
     Type,
     TypeVar,
+    Union,
     get_args,
 )
 
 from pydantic.v1.fields import FieldInfo
 from pydantic.v1.validators import make_literal_validator
 
-from aidial_sdk.pydantic_v1 import BaseModel, Field, ModelMetaclass, validator
+from aidial_sdk.pydantic_v1 import BaseModel, ModelMetaclass, validator
 
 _T = TypeVar("_T")
 
@@ -38,12 +39,6 @@ class Button(Generic[_T]):
                 "submit": self.submit,
             },
         }
-
-
-@dataclass
-class ButtonField(Generic[_T]):
-    name: str
-    options: List[Button[_T]]
 
 
 class FormMetaclass(ModelMetaclass):
@@ -153,7 +148,7 @@ def _get_base_type(tp: Type[_T]) -> Type[_T]:
 def form(
     *,
     disable_chat_input: bool = False,
-    button_fields: Optional[List[ButtonField]] = None,
+    button_fields: Optional[Dict[str, Union[FieldInfo, Any]]] = None,
 ) -> Callable[[Type[_Model]], Type[_Model]]:
     def _create_class(model: Type[_Model]) -> Type[_Model]:
         namespace: Dict[str, Any] = {
@@ -161,16 +156,14 @@ def form(
         }
         annotations: Dict[str, Any] = {}
 
-        for button_field in button_fields or []:
-            name = button_field.name
-            buttons = button_field.options
-
-            if name in namespace:
+        for name, field_info in (button_fields or {}).items():
+            buttons: List[Button] = field_info.extra.get("buttons")  # type: ignore
+            if not buttons:
                 raise ValueError(
-                    f"Field {model.__name__}.{name} is already defined."
+                    f"Field descriptor of {model.__name__}.{name} is missing 'buttons' attribute."
                 )
 
-            namespace[name] = Field(..., buttons=buttons)
+            namespace[name] = field_info
 
             button_type = type(buttons[0].const)
             if field_type := model.__annotations__.get(name):

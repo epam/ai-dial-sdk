@@ -9,12 +9,7 @@ import uvicorn
 
 from aidial_sdk import DIALApp
 from aidial_sdk.chat_completion import ChatCompletion, Request, Response
-from aidial_sdk.chat_completion.form import (
-    Button,
-    ButtonField,
-    FormMetaclass,
-    form,
-)
+from aidial_sdk.chat_completion.form import Button, FormMetaclass, form
 from aidial_sdk.deployment.configuration import (
     ConfigurationRequest,
     ConfigurationResponse,
@@ -176,27 +171,25 @@ class TicTacToeApplication(ChatCompletion):
 
             if not board.finished:
                 # Added the buttons if the game hasn't finished yet
-                button_fields = [
-                    ButtonField(
-                        name="move",
-                        options=[
-                            Button(
-                                title=move.print(),
-                                const=move.to_button_value(),
-                                confirmationMessage="Are you sure you want to make this move?",
-                                submit=True,
-                            )
-                            for move in board.possible_moves
-                        ],
-                    )
-                ]
+                move_button = Field(
+                    description="Available moves",
+                    buttons=[
+                        Button(
+                            title=move.print(),
+                            const=move.to_button_value(),
+                            confirmationMessage="Are you sure you want to make this move?",
+                            submit=True,
+                        )
+                        for move in board.possible_moves
+                    ],
+                )
 
                 # Use the form decorator to add buttons to the form.
                 # The form doesn't allow for an arbitrary user input,
                 # but only actions via the buttons.
                 form_cls = form(
                     disable_chat_input=True,
-                    button_fields=button_fields,
+                    button_fields={"move": move_button},
                 )(MoveForm)
                 choice.set_form_schema(form_cls.schema())
 
