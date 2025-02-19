@@ -24,22 +24,23 @@ from .request import (
 )
 
 
-# The start configuration sets up the configuration for the whole conversation.
-# In this case, the user can select the player for the tic-tac-toe game.
-#   - The configuration class must inherit from Pydantic `BaseModel`.
-#   - `DialFormMetaclass` is a required metaclass that enables `buttons` field in the Field descriptor.
+# The initial configuration sets up the tic-tac-toe game.
+# The user can select the player: either X or O.
+# The configuration class must inherit from Pydantic `BaseModel`.
+# `FormMetaclass` is a required metaclass that enables `buttons` field in the Field descriptor as well as `Config` extensions.
 class InitConfiguration(BaseModel, metaclass=FormMetaclass):
-    # The flag disable the chat message input field.
-    # By doing so we force the user to interact with the buttons.
-    _dial_chatMessageInputDisabled = True
+    # The flag disables the chat message input field.
+    # This forces the user to interact with the buttons.
+    class Config:
+        chat_message_input_disabled = True
 
     player: Player = Field(
         description="Select tic-tac-toe player",
-        # buttons field accepts a list of Button objects with the following properties:
+        # The 'buttons' parameter of the field descriptor accepts a list of Button objects with the following properties:
         # * submit (bool): Whether the button should submit the whole form on click.
         # * title (str): The caption text displayed on the button.
-        # * const (int|float): The value that will be submitted if the button is clicked.
-        # * confirmationMessage (str): The message that will be displayed to the user before submitting the form in a confirmation dialog.
+        # * const (int|float): The value that will be submitted when the button is clicked.
+        # * confirmationMessage (str): The message that will be displayed to the user before submitting the form in a Yes/No confirmation dialog.
         buttons=[
             Button(
                 const=X_PLAYER,
@@ -57,11 +58,15 @@ class InitConfiguration(BaseModel, metaclass=FormMetaclass):
     )
 
 
-# The move form defines the action of the user in the conversation.
-# In particular the move one is making in the tic-tac-toe game encoded as a string: A1, B3 etc.
+# The form defines the move the user in making during the tic-tac-toe game.
+# The bot suggest a list of available moves to the user.
+# The user pick one of the move by its index in the list and returns this data structure to the application.
 # Note that the form doesn't have any buttons, since the moves are determined dynamically.
-# Later on we will add buttons to the model using a class decorator.
+# The buttons are added to the model dynamically using the class decorator "form".
 class MoveForm(BaseModel):
+    class Config:
+        chat_message_input_disabled = True
+
     move: int
 
 
@@ -80,13 +85,74 @@ class TicTacToeApplication(ChatCompletion):
         # Return the schema of the initial configuration
         return ConfigurationResponse(**InitConfiguration.schema())
 
+    async def chat_completion(
+        self, request: Request, response: Response
+    ) -> None:
+        # Retrieve the configuration from the request and parse it
+        init_conf = InitConfiguration.parse_obj(get_configuration(request))
+        user_player = init_conf.player
+
+        if len(request.messages) == 1:
+            # The game just started. Init empty board.
+            board = Board()
+            user_move = None
+        else:
+            # Retrieve the user move from the last user message
+            if form_value := get_message_form_value(request.messages[-1]):
+                user_form = MoveForm.parse_obj(form_value)
+                user_move = Move.from_button_value(user_form.move)
+
+            # Retrieve the game board from the last bot message
+            state_dict = get_message_state(request.messages[-2])
+            assert state_dict is not None
+            board = Board.parse_obj(state_dict)
+
+        # Make a move by the bot
+        move_outcome = TicTacToeApplication.make_bot_move(
+            board, user_player, user_move
+        )
+
+        # Generate response with a single choice
+        with response.create_single_choice() as choice:
+            board = move_outcome.board
+            bot_response = move_outcome.bot_response
+
+            if move_outcome.show_board:
+                bot_response += "\n\n" + board.to_markdown()
+
+            # Fill the content of the response from the bot
+            choice.append_content(bot_response)
+
+            if not board.finished:
+                # Add the buttons if the game hasn't finished yet
+                move_button = Field(
+                    description="Available moves",
+                    buttons=[
+                        Button(
+                            title=move.print(),
+                            const=move.to_button_value(),
+                            confirmationMessage="Are you sure you want to make this move?",
+                            submit=True,
+                        )
+                        for move in board.possible_moves
+                    ],
+                )
+
+                # Use the form decorator to add buttons to the form.
+                # The form doesn't allow for an arbitrary user input,
+                # but only actions via the buttons.
+                _MoveForm = form(move=move_button)(MoveForm)
+                choice.set_form_schema(_MoveForm.schema())
+
+            # Save the game board in the bot message
+            choice.set_state(board.dict())
+
     @staticmethod
     def make_bot_move(
-        init_conf: InitConfiguration,
-        board: Board,
-        user_move: Optional[Move],
+        board: Board, user_player: Player, user_move: Optional[Move]
     ) -> MoveOutcome:
-        user_player = init_conf.player
+        """Helper function that advances the game board according to the bot and user moves."""
+
         bot_player = X_PLAYER if user_player == O_PLAYER else O_PLAYER
 
         if user_move is not None:
@@ -131,70 +197,6 @@ class TicTacToeApplication(ChatCompletion):
                 bot_response += "Now it's your turn."
 
             return MoveOutcome(bot_response=bot_response, board=board)
-
-    async def chat_completion(
-        self, request: Request, response: Response
-    ) -> None:
-        # Retrieve the configuration from the request and parse it
-        init_conf = InitConfiguration.parse_obj(get_configuration(request))
-
-        if len(request.messages) == 1:
-            # The game just started. Init empty board.
-            board = Board()
-            user_move = None
-        else:
-            # Retrieve the user move from the last user message
-            if form_value := get_message_form_value(request.messages[-1]):
-                user_form = MoveForm.parse_obj(form_value)
-                user_move = Move.from_button_value(user_form.move)
-
-            # Retrieve the game board from the last bot message
-            state_dict = get_message_state(request.messages[-2])
-            assert state_dict is not None
-            board = Board.parse_obj(state_dict)
-
-        # Make a move by the bot
-        move_outcome = TicTacToeApplication.make_bot_move(
-            init_conf, board, user_move
-        )
-
-        # Generate response with a single choice
-        with response.create_single_choice() as choice:
-            board = move_outcome.board
-            bot_response = move_outcome.bot_response
-
-            if move_outcome.show_board:
-                bot_response += "\n\n" + board.to_markdown()
-
-            # Fill the content of the response from the bot
-            choice.append_content(bot_response)
-
-            if not board.finished:
-                # Added the buttons if the game hasn't finished yet
-                move_button = Field(
-                    description="Available moves",
-                    buttons=[
-                        Button(
-                            title=move.print(),
-                            const=move.to_button_value(),
-                            confirmationMessage="Are you sure you want to make this move?",
-                            submit=True,
-                        )
-                        for move in board.possible_moves
-                    ],
-                )
-
-                # Use the form decorator to add buttons to the form.
-                # The form doesn't allow for an arbitrary user input,
-                # but only actions via the buttons.
-                form_cls = form(
-                    _dial_chatMessageInputDisabled=True,
-                    move=move_button,
-                )(MoveForm)
-                choice.set_form_schema(form_cls.schema())
-
-            # Save the game board in the bot message
-            choice.set_state(board.dict())
 
 
 # DIALApp extends FastAPI to provide a user-friendly interface for routing requests to your applications

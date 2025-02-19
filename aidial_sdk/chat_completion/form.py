@@ -93,7 +93,7 @@ class FormMetaclass(ModelMetaclass):
             if old_schema_extra:
                 old_schema_extra(schema, model)
 
-            _handle_top_level_extensions(model, schema)
+            _handle_config_extensions(config, schema)
             _handle_buttons_extension(schema)
 
         config.schema_extra = staticmethod(new_schema_extra)  # type: ignore
@@ -101,11 +101,9 @@ class FormMetaclass(ModelMetaclass):
         return cls
 
 
-def _handle_top_level_extensions(
-    model: Type[BaseModel], schema: Dict[str, Any]
-) -> None:
+def _handle_config_extensions(config: Any, schema: Dict[str, Any]) -> None:
     if (
-        disable_input := getattr(model, "_dial_chatMessageInputDisabled", None)
+        disable_input := getattr(config, "chat_message_input_disabled", None)
     ) is not None:
         schema["dial:chatMessageInputDisabled"] = disable_input is True
 
@@ -147,31 +145,38 @@ def _get_base_type(tp: Type[_T]) -> Type[_T]:
 
 def form(
     *,
-    _dial_chatMessageInputDisabled: bool = False,
+    chat_message_input_disabled: bool | None = None,
     **kwargs: Dict[str, Union[FieldInfo, Any]],
 ) -> Callable[[Type[_Model]], Type[_Model]]:
-    def _create_class(model: Type[_Model]) -> Type[_Model]:
-        namespace: Dict[str, Any] = {
-            "_dial_chatMessageInputDisabled": _dial_chatMessageInputDisabled,
-        }
+    def _create_class(cls: Type[_Model]) -> Type[_Model]:
+        namespace: Dict[str, Any] = {}
         annotations: Dict[str, Any] = {}
 
+        # Injecting config extensions
+        if chat_message_input_disabled is not None:
+            conf_fields = {
+                "chat_message_input_disabled": chat_message_input_disabled
+            }
+            conf_cls = getattr(cls, "Config", object)
+            namespace["Config"] = type("Config", (conf_cls,), conf_fields)
+
+        # Injecting button extensions
         for name, field_info in kwargs.items():
             buttons: List[Button] = field_info.extra.get("buttons")  # type: ignore
             if not buttons:
                 raise ValueError(
-                    f"Field descriptor of {model.__name__}.{name} is missing 'buttons' attribute."
+                    f"Field descriptor of {cls.__name__}.{name} is missing 'buttons' attribute."
                 )
 
             namespace[name] = field_info
 
             button_type = type(buttons[0].const)
-            if field_type := model.__annotations__.get(name):
+            if field_type := cls.__annotations__.get(name):
                 annotations[name] = field_type
                 field_type_base = _get_base_type(field_type)
                 if field_type_base != button_type:
                     raise ValueError(
-                        f"Field {model.__name__}.{name} has type {field_type_base} "
+                        f"Field {cls.__name__}.{name} has type {field_type_base} "
                         f"but buttons are of type {button_type}."
                     )
             else:
@@ -180,7 +185,7 @@ def form(
         if annotations:
             namespace["__annotations__"] = annotations
 
-        cls_name = f"_{model.__name__}"
-        return FormMetaclass(cls_name, (model,), namespace)  # type: ignore
+        cls_name = f"_{cls.__name__}"
+        return FormMetaclass(cls_name, (cls,), namespace)  # type: ignore
 
     return _create_class

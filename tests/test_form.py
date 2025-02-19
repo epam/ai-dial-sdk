@@ -10,7 +10,8 @@ from aidial_sdk.pydantic_v1 import BaseModel, Field, ValidationError
 class StaticConfiguration_OneButton(BaseModel, metaclass=FormMetaclass):
     "Static application configuration"
 
-    _dial_chatMessageInputDisabled = True
+    class Config:
+        chat_message_input_disabled = True
 
     int_field: Optional[int] = Field(
         default=None, description="Int field description"
@@ -236,15 +237,64 @@ def test_configuration_parsing_two_buttons_success():
     assert conf_parsed.str_button_field == "a"
 
 
-def test_dynamic_configuration_existing_field():
+def test_dynamic_configuration_input_disabled_static():
+    class Conf(BaseModel):
+        class Config:
+            chat_message_input_disabled = True
 
+    conf = form()(Conf)
+
+    assert conf.schema()["dial:chatMessageInputDisabled"] is True
+
+
+def test_dynamic_configuration_input_disabled_dynamic():
+    class Conf(BaseModel):
+        class Config:
+            extra = "forbid"
+
+    conf = form(chat_message_input_disabled=True)(Conf)
+
+    assert conf.schema()["dial:chatMessageInputDisabled"] is True
+
+
+def test_dynamic_configuration_input_disabled_omitted():
+    class Conf(BaseModel):
+        class Config:
+            extra = "forbid"
+
+    conf = form()(Conf)
+
+    assert conf.schema().get("dial:chatMessageInputDisabled") is None
+
+
+def test_dynamic_configuration_input_disabled_overwrite1():
+    class Conf(BaseModel):
+        class Config:
+            chat_message_input_disabled = False
+
+    conf = form(chat_message_input_disabled=True)(Conf)
+
+    assert conf.schema()["dial:chatMessageInputDisabled"] is True
+
+
+def test_dynamic_configuration_input_disabled_overwrite2():
+    class Conf(BaseModel):
+        class Config:
+            chat_message_input_disabled = True
+
+    conf = form(chat_message_input_disabled=False)(Conf)
+
+    assert conf.schema()["dial:chatMessageInputDisabled"] is False
+
+
+def test_dynamic_configuration_existing_field():
     class Conf(BaseModel):
         int_field: int
         str_field: str
         buttons_field: int
 
     conf = form(
-        _dial_chatMessageInputDisabled=True,
+        chat_message_input_disabled=True,
         buttons_field=Field(
             buttons=[
                 Button(const=10, title="Title1"),
@@ -304,13 +354,12 @@ def test_dynamic_configuration_existing_field():
 
 
 def test_dynamic_configuration_new_field():
-
     class Conf(BaseModel):
         int_field: int
         str_field: str
 
     conf = form(
-        _dial_chatMessageInputDisabled=True,
+        chat_message_input_disabled=True,
         buttons_field=Field(
             buttons=[
                 Button(const=10, title="Title1"),
@@ -370,7 +419,6 @@ def test_dynamic_configuration_new_field():
 
 
 def test_dynamic_configuration_conflicting_types():
-
     class Conf(BaseModel):
         int_field: int
         str_field: str
@@ -378,7 +426,7 @@ def test_dynamic_configuration_conflicting_types():
 
     with pytest.raises(ValueError) as e:
         form(
-            _dial_chatMessageInputDisabled=True,
+            chat_message_input_disabled=True,
             buttons_field=Field(
                 buttons=[
                     Button(const=10, title="Title1"),
@@ -394,14 +442,13 @@ def test_dynamic_configuration_conflicting_types():
 
 
 def test_dynamic_configuration_optional_type_parsing_success():
-
     class Conf(BaseModel):
         int_field: int
         str_field: str
         buttons_field: Optional[int]
 
     conf = form(
-        _dial_chatMessageInputDisabled=True,
+        chat_message_input_disabled=True,
         buttons_field=Field(
             buttons=[
                 Button(const=10, title="Title1"),
@@ -419,9 +466,8 @@ def test_dynamic_configuration_optional_type_parsing_success():
 
 
 def test_dynamic_configuration_decorator_optional_type_parsing_success():
-
     @form(
-        _dial_chatMessageInputDisabled=True,
+        chat_message_input_disabled=True,
         buttons_field=Field(
             buttons=[
                 Button(const=10, title="Title1"),
@@ -443,13 +489,12 @@ def test_dynamic_configuration_decorator_optional_type_parsing_success():
 
 
 def test_dynamic_configuration_two_buttons():
-
     class Conf(BaseModel):
         int_button_field: int
         float_button_field: float
 
     conf = form(
-        _dial_chatMessageInputDisabled=True,
+        chat_message_input_disabled=True,
         int_button_field=Field(
             description="Number of floors",
             buttons=[
@@ -535,7 +580,6 @@ def test_dynamic_configuration_two_buttons():
 
 
 def test_configuration_invalid_button_type():
-
     with pytest.raises(ValueError) as e:
 
         class _Conf(BaseModel, metaclass=FormMetaclass):
