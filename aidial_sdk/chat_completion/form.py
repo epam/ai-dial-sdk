@@ -145,7 +145,7 @@ def _get_base_type(tp: Type[_T]) -> Type[_T]:
 
 def form(
     *,
-    chat_message_input_disabled: bool | None = None,
+    chat_message_input_disabled: Optional[bool] = None,
     **kwargs: Dict[str, Union[FieldInfo, Any]],
 ) -> Callable[[Type[_Model]], Type[_Model]]:
     def _create_class(cls: Type[_Model]) -> Type[_Model]:
