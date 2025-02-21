@@ -10,10 +10,6 @@ import uvicorn
 from aidial_sdk import DIALApp
 from aidial_sdk.chat_completion import ChatCompletion, Request, Response
 from aidial_sdk.chat_completion.form import Button, FormMetaclass, form
-from aidial_sdk.deployment.configuration import (
-    ConfigurationRequest,
-    ConfigurationResponse,
-)
 from aidial_sdk.pydantic_v1 import BaseModel, Field
 
 from .game import O_PLAYER, X_PLAYER, Board, Move, Player
@@ -79,11 +75,9 @@ class MoveOutcome(BaseModel):
 # ChatCompletion is an abstract class for applications and model adapters
 class TicTacToeApplication(ChatCompletion):
 
-    async def configuration(
-        self, request: ConfigurationRequest
-    ) -> ConfigurationResponse:
+    async def configuration(self, request):
         # Return the schema of the initial configuration
-        return ConfigurationResponse(**InitConfiguration.schema())
+        return InitConfiguration.schema()
 
     async def chat_completion(
         self, request: Request, response: Response
@@ -139,9 +133,9 @@ class TicTacToeApplication(ChatCompletion):
                 )
 
                 # Use the form decorator to add buttons to the form.
-                # The form doesn't allow for an arbitrary user input,
-                # but only actions via the buttons.
                 _MoveForm = form(move=move_button)(MoveForm)
+
+                # Save the form schema in the bot message
                 choice.set_form_schema(_MoveForm.schema())
 
             # Save the game board in the bot message

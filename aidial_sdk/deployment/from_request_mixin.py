@@ -3,10 +3,9 @@ from json import JSONDecodeError
 from typing import Any, Mapping, Optional, Type, TypeVar
 
 import fastapi
-from pydantic import Field
 
 from aidial_sdk.exceptions import HTTPException as DIALException
-from aidial_sdk.pydantic_v1 import SecretStr, StrictStr, root_validator
+from aidial_sdk.pydantic_v1 import Field, SecretStr, StrictStr, root_validator
 from aidial_sdk.utils.pydantic import ExtraForbidModel
 
 T = TypeVar("T", bound="FromRequestMixin")
