@@ -1,15 +1,14 @@
 from enum import Enum
 from typing import Any, Dict, List, Literal, Mapping, Optional, Union
 
-from typing_extensions import assert_never
+from typing_extensions import Annotated, assert_never
 
+import aidial_sdk.pydantic_v1 as pydantic
 from aidial_sdk.chat_completion.enums import Status
 from aidial_sdk.deployment.from_request_mixin import FromRequestDeploymentMixin
 from aidial_sdk.exceptions import InvalidRequestError
 from aidial_sdk.pydantic_v1 import (
-    ConstrainedFloat,
-    ConstrainedInt,
-    ConstrainedList,
+    PYDANTIC_V2,
     Field,
     PositiveInt,
     StrictBool,
@@ -121,29 +120,11 @@ class Function(ExtraForbidModel):
     parameters: Optional[Dict] = None
 
 
-class Temperature(ConstrainedFloat):
-    ge = 0
-    le = 2
-
-
-class TopP(ConstrainedFloat):
-    ge = 0
-    le = 1
-
-
-class N(ConstrainedInt):
-    ge = 1
-    le = 128
-
-
-class Stop(ConstrainedList):
-    max_items: int = 4
-    __args__ = tuple([StrictStr])
-
-
-class Penalty(ConstrainedFloat):
-    ge = -2
-    le = 2
+Temperature = Annotated[float, Field(ge=0, le=2)]
+TopP = Annotated[float, Field(ge=0, le=1)]
+N = Annotated[int, Field(ge=1, le=128)]
+Stop = Annotated[List[StrictStr], Field(max_length=4)]
+Penalty = Annotated[float, Field(ge=-2, le=2)]
 
 
 class Tool(ExtraForbidModel):
@@ -185,9 +166,22 @@ class ResponseFormatJsonSchemaObject(ExtraForbidModel):
     schema_: Dict[str, Any] = Field(..., alias="schema")
     strict: Optional[StrictBool] = False
 
-    def dict(self, *args, **kwargs):
-        kwargs["by_alias"] = True
-        return super().dict(*args, **kwargs)
+    if PYDANTIC_V2:
+
+        @pydantic.model_serializer(mode="wrap")
+        def serializer(
+            self, nxt: pydantic.SerializerFunctionWrapHandler
+        ) -> Dict[str, Any]:
+            ret = nxt(self)
+            ret["schema"] = ret["schema_"]
+            del ret["schema_"]
+            return ret
+
+    else:
+
+        def dict(self, *args, **kwargs):
+            kwargs["by_alias"] = True
+            return super().dict(*args, **kwargs)
 
 
 class ResponseFormatJsonSchema(ExtraForbidModel):

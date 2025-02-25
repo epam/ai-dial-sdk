@@ -1,4 +1,4 @@
-from aidial_sdk.pydantic_v1 import BaseModel
+from aidial_sdk.pydantic_v1 import PYDANTIC_V2, BaseModel
 
 
 class Error(BaseModel):
@@ -20,11 +20,17 @@ def invalid_request_error(path: str, message: str) -> Error:
 
 
 def missing_fields_error(path: str) -> Error:
-    return invalid_request_error(path, "field required")
+    if PYDANTIC_V2:
+        return invalid_request_error(path, "Field required")
+    else:
+        return invalid_request_error(path, "field required")
 
 
 def extra_fields_error(path: str) -> Error:
-    return invalid_request_error(path, "extra fields not permitted")
+    if PYDANTIC_V2:
+        return invalid_request_error(path, "Extra inputs are not permitted")
+    else:
+        return invalid_request_error(path, "extra fields not permitted")
 
 
 route_not_found_error: Error = Error(code=404, error={"detail": "Not Found"})

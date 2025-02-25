@@ -3,6 +3,7 @@ from typing import List
 import pytest
 
 from aidial_sdk import DIALApp
+from aidial_sdk.pydantic_v1 import PYDANTIC_V2
 from tests.applications.echo import EchoApplication
 from tests.applications.noop import NoopApplication
 from tests.utils.endpoint_test import TestCase, run_endpoint_test
@@ -77,7 +78,12 @@ testcases: List[TestCase] = [
         deployment,
         "tokenize",
         TOKENIZE_REQUEST_FAIL,
-        missing_fields_error("inputs.0.value"),
+        (
+            # NOTE: https://github.com/pydantic/pydantic/issues/7261
+            missing_fields_error("inputs.0.TokenizeInputRequest.value")
+            if PYDANTIC_V2
+            else missing_fields_error("inputs.0.value")
+        ),
     ),
 ]
 

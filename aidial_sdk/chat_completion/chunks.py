@@ -350,7 +350,7 @@ class Attachment(BaseModel):
     reference_url: Optional[str]
     reference_type: Optional[str]
 
-    @root_validator
+    @root_validator(pre=True)
     def check_data_or_url(cls, values):
         data, url = values.get("data"), values.get("url")
 
