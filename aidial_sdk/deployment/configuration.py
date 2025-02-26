@@ -14,19 +14,17 @@ class ConfigurationRequest(FromRequestDeploymentMixin):
         return {}
 
     @classmethod
-    async def from_request(cls, request: Request, deployment_id: str):
-        inst = await super().from_request(request, deployment_id)
-        props_header = request.headers.get("X-APPLICATION-PROPERTIES")
+    async def from_request(cls, request: Request, deployment_id: str, **kwargs: Any):
         try:
-            if props_header:
-                inst.application_properties = loads(props_header)
+            props_header = request.headers.get("X-APPLICATION-PROPERTIES")
+            return await super().from_request(request, deployment_id,
+                                              application_properties = loads(props_header), **kwargs)
         except JSONDecodeError as e:
             raise DIALException(
                 status_code=400,
                 type="invalid_request_error",
                 message=f"The application properties header isn't valid JSON: {e.msg}",
             )
-        return inst
 
 
 class ConfigurationResponse(BaseModel):

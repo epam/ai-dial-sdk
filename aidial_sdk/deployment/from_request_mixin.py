@@ -16,7 +16,7 @@ class FromRequestMixin(ABC, ExtraForbidModel):
     @classmethod
     @abstractmethod
     async def from_request(
-        cls: Type[T], request: fastapi.Request, deployment_id: str
+        cls: Type[T], request: fastapi.Request, deployment_id: str, **kwargs: Any
     ) -> T:
         pass
 
@@ -28,8 +28,8 @@ class FromRequestMixin(ABC, ExtraForbidModel):
 
 class FromRequestBasicMixin(FromRequestMixin):
     @classmethod
-    async def from_request(cls, request: fastapi.Request, deployment_id: str):
-        return cls(**(await cls.get_request_body(request)))
+    async def from_request(cls, request: fastapi.Request, deployment_id: str, **kwargs: Any):
+        return cls(**(await cls.get_request_body(request)), **kwargs)
 
     @staticmethod
     async def get_request_body(request: fastapi.Request) -> dict:
@@ -76,7 +76,7 @@ class FromRequestDeploymentMixin(FromRequestMixin):
         return self.jwt_secret.get_secret_value() if self.jwt_secret else None
 
     @classmethod
-    async def from_request(cls, request: fastapi.Request, deployment_id: str):
+    async def from_request(cls, request: fastapi.Request, deployment_id: str, **kwargs: Any):
         headers = request.headers.mutablecopy()
 
         api_key = headers.get("Api-Key")
@@ -99,6 +99,7 @@ class FromRequestDeploymentMixin(FromRequestMixin):
             api_version=request.query_params.get("api-version"),
             headers=headers,
             original_request=request,
+            **kwargs,
         )
 
     @staticmethod
