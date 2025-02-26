@@ -6,10 +6,12 @@ import pydantic
 from typing_extensions import Literal, override
 
 from ._compat import PYDANTIC_V2
-from ._types import IncEx
+
 from ._utils import json_safe
 
 __all__ = ["BaseModel"]
+
+IncEx = set[int] | set[str] | dict[int, Any] | dict[str, Any] | None
 
 
 class BaseModel(pydantic.BaseModel):
@@ -86,8 +88,8 @@ class BaseModel(pydantic.BaseModel):
                     "serialize_as_any is only supported in Pydantic v2"
                 )
             dumped = super().dict(  # pyright: ignore[reportDeprecated]
-                include=include,  # type: ignore
-                exclude=exclude,  # type: ignore
+                include=include,
+                exclude=exclude,
                 by_alias=by_alias,
                 exclude_unset=exclude_unset,
                 exclude_defaults=exclude_defaults,
@@ -128,8 +130,8 @@ class BaseModel(pydantic.BaseModel):
                 )
             return super().json(  # type: ignore[reportDeprecated]
                 indent=indent,
-                include=include,  # type: ignore
-                exclude=exclude,  # type: ignore
+                include=include,
+                exclude=exclude,
                 by_alias=by_alias,
                 exclude_unset=exclude_unset,
                 exclude_defaults=exclude_defaults,

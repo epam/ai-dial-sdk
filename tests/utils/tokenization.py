@@ -1,6 +1,6 @@
 from typing import Callable, Optional, Set
 
-from aidial_sdk._pydantic._compat import model_copy
+from tests.utils.pydantic import model_copy
 from aidial_sdk.chat_completion.request import (
     ChatCompletionRequest,
     Message,

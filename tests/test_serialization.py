@@ -2,11 +2,10 @@ import json
 
 from aidial_sdk._pydantic._compat import (
     model_dump,
-    model_parse,
-    model_parse_json,
 )
 from aidial_sdk.chat_completion import Message, ResponseFormatJsonSchema, Role
 from aidial_sdk.chat_completion.request import ResponseFormatJsonSchemaObject
+from tests.utils.pydantic import model_parse, model_parse_json
 
 
 def test_message_ser():
