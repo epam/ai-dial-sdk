@@ -1,6 +1,5 @@
 from typing import Callable, Optional, Set
 
-from tests.utils.pydantic import model_copy
 from aidial_sdk.chat_completion.request import (
     ChatCompletionRequest,
     Message,
@@ -20,6 +19,7 @@ from aidial_sdk.deployment.truncate_prompt import (
     TruncatePromptResult,
     TruncatePromptSuccess,
 )
+from tests.utils.pydantic import model_copy
 
 
 def word_count_string(string: str) -> int:

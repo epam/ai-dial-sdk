@@ -1,6 +1,6 @@
 import os
 
-from aidial_sdk._pydantic._models import BaseModel
+from aidial_sdk._pydantic import BaseModel
 
 DIAL_SDK_LOG = os.environ.get("DIAL_SDK_LOG", "WARNING").upper()
 

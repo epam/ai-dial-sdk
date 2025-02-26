@@ -1,6 +1,6 @@
 from typing import List, Literal, Union
 
-from aidial_sdk._pydantic._models import BaseModel
+from aidial_sdk._pydantic import BaseModel
 from aidial_sdk.chat_completion.request import ChatCompletionRequest
 from aidial_sdk.deployment.from_request_mixin import FromRequestDeploymentMixin
 

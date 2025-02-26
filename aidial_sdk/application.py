@@ -13,7 +13,6 @@ from aidial_sdk._errors import (
     fastapi_exception_handler,
     pydantic_validation_exception_handler,
 )
-from aidial_sdk._pydantic._compat import model_dump
 from aidial_sdk.chat_completion.base import ChatCompletion
 from aidial_sdk.chat_completion.request import Request as ChatCompletionRequest
 from aidial_sdk.chat_completion.response import (
@@ -196,7 +195,7 @@ class DIALApp(FastAPI):
             log_debug(f"request[{endpoint}]: {request}")
 
             response = await endpoint_impl(request)
-            response_json = model_dump(response)
+            response_json = response.model_dump()
             log_debug(f"response[{endpoint}]: {response_json}")
 
             return JSONResponse(content=response_json)

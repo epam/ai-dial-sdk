@@ -5,7 +5,7 @@ from typing import Any, Mapping, Optional, Type, TypeVar
 import fastapi
 from pydantic import Field, SecretStr, StrictStr
 
-from aidial_sdk._pydantic._compat import PYDANTIC_V2, ConfigDict
+from aidial_sdk._pydantic import PYDANTIC_V2, ConfigDict
 from aidial_sdk.exceptions import HTTPException as DIALException
 from aidial_sdk.utils.pydantic import ExtraForbidModel
 

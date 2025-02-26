@@ -1,17 +1,14 @@
 from __future__ import annotations
 
-from typing import Any, cast
+from typing import Any, Dict, Set, cast
 
 import pydantic
 from typing_extensions import Literal, override
 
 from ._compat import PYDANTIC_V2
-
 from ._utils import json_safe
 
-__all__ = ["BaseModel"]
-
-IncEx = set[int] | set[str] | dict[int, Any] | dict[str, Any] | None
+_IncEx = Set[int] | Set[str] | Dict[int, Any] | Dict[str, Any] | None
 
 
 class BaseModel(pydantic.BaseModel):
@@ -64,17 +61,17 @@ class BaseModel(pydantic.BaseModel):
             self,
             *,
             mode: Literal["json", "python"] | str = "python",
-            include: IncEx | None = None,
-            exclude: IncEx | None = None,
+            include: _IncEx | None = None,
+            exclude: _IncEx | None = None,
             by_alias: bool = False,
             exclude_unset: bool = False,
             exclude_defaults: bool = False,
             exclude_none: bool = False,
             round_trip: bool = False,
             warnings: bool | Literal["none", "warn", "error"] = True,
-            context: dict[str, Any] | None = None,
+            context: Dict[str, Any] | None = None,
             serialize_as_any: bool = False,
-        ) -> dict[str, Any]:
+        ) -> Dict[str, Any]:
             if mode not in {"json", "python"}:
                 raise ValueError("mode must be either 'json' or 'python'")
             if round_trip is not False:
@@ -97,7 +94,7 @@ class BaseModel(pydantic.BaseModel):
             )
 
             return (
-                cast(dict[str, Any], json_safe(dumped))
+                cast(Dict[str, Any], json_safe(dumped))
                 if mode == "json"
                 else dumped
             )
@@ -107,15 +104,15 @@ class BaseModel(pydantic.BaseModel):
             self,
             *,
             indent: int | None = None,
-            include: IncEx | None = None,
-            exclude: IncEx | None = None,
+            include: _IncEx | None = None,
+            exclude: _IncEx | None = None,
             by_alias: bool = False,
             exclude_unset: bool = False,
             exclude_defaults: bool = False,
             exclude_none: bool = False,
             round_trip: bool = False,
             warnings: bool | Literal["none", "warn", "error"] = True,
-            context: dict[str, Any] | None = None,
+            context: Dict[str, Any] | None = None,
             serialize_as_any: bool = False,
         ) -> str:
             if round_trip is not False:

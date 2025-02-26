@@ -2,9 +2,9 @@ from itertools import zip_longest
 
 import pytest
 
-from aidial_sdk._pydantic._compat import model_dump
 from aidial_sdk.chat_completion.request import Request, StaticTool, Tool
 from tests.utils.chat_completion_validation import validate_chat_completion
+from tests.utils.pydantic import model_dump
 
 TEST_CASES = [
     {
