@@ -609,5 +609,35 @@ def test_configuration_missing_buttons():
 
     assert (
         str(e.value)
-        == "Field descriptor of _Conf.button_field is missing 'buttons' attribute."
+        == "Field descriptor of _Conf.button_field is missing 'buttons' parameter."
+    )
+
+
+def test_configuration_invalid_buttons_type():
+    with pytest.raises(ValueError) as e:
+
+        class _Conf(BaseModel, metaclass=FormMetaclass):
+            button_field: int
+
+        _Conf2 = form(button_field=Field(default=43, buttons="test"))(_Conf)
+        _Conf2.schema()
+
+    assert (
+        str(e.value)
+        == "'buttons' parameter of the field descriptor for _Conf.button_field must be a list, but got str."
+    )
+
+
+def test_configuration_invalid_buttons_elem_type():
+    with pytest.raises(ValueError) as e:
+
+        class _Conf(BaseModel, metaclass=FormMetaclass):
+            button_field: int
+
+        _Conf2 = form(button_field=Field(default=43, buttons=["test"]))(_Conf)
+        _Conf2.schema()
+
+    assert (
+        str(e.value)
+        == "'buttons' parameter of the field descriptor for _Conf.button_field must be a list of Button objects."
     )

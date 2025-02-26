@@ -119,7 +119,7 @@ class TicTacToeApplication(ChatCompletion):
 
             if not board.finished:
                 # Add the buttons if the game hasn't finished yet
-                move_button = Field(
+                move_selector = Field(
                     description="Available moves",
                     buttons=[
                         Button(
@@ -133,7 +133,7 @@ class TicTacToeApplication(ChatCompletion):
                 )
 
                 # Use the form decorator to add buttons to the form.
-                _MoveForm = form(move=move_button)(MoveForm)
+                _MoveForm = form(move=move_selector)(MoveForm)
 
                 # Save the form schema in the bot message
                 choice.set_form_schema(_MoveForm.schema())

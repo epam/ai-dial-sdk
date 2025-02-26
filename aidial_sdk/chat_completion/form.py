@@ -50,11 +50,11 @@ class FormMetaclass(ModelMetaclass):
             if not isinstance(field_info, FieldInfo):
                 continue
 
-            buttons = field_info.extra.get("buttons")
-            if not buttons:
+            buttons_extra = field_info.extra.get("buttons")
+            if not buttons_extra:
                 continue
 
-            assert all(isinstance(button, Button) for button in buttons)
+            buttons = _get_buttons(f"{name}.{field_name}", buttons_extra)
 
             consts = tuple(button.const for button in buttons)
             literal_type = Literal[consts]
@@ -135,14 +135,6 @@ def _handle_buttons_extension(schema: Dict[str, Any]) -> None:
 _Model = TypeVar("_Model", bound=BaseModel)
 
 
-def _get_base_type(tp: Type[_T]) -> Type[_T]:
-    """Returns T if given Optional[T], otherwise returns the type unchanged."""
-    args = get_args(tp)
-    if len(args) == 2 and type(None) in args:
-        return next(arg for arg in args if arg is not type(None))
-    return tp
-
-
 def form(
     *,
     chat_message_input_disabled: Optional[bool] = None,
@@ -162,11 +154,14 @@ def form(
 
         # Injecting button extensions
         for name, field_info in kwargs.items():
-            buttons: List[Button] = field_info.extra.get("buttons")  # type: ignore
-            if not buttons:
+            buttons_extra = field_info.extra.get("buttons")  # type: ignore
+            field_name = f"{cls.__name__}.{name}"
+
+            if not buttons_extra:
                 raise ValueError(
-                    f"Field descriptor of {cls.__name__}.{name} is missing 'buttons' attribute."
+                    f"Field descriptor of {field_name} is missing 'buttons' parameter."
                 )
+            buttons = _get_buttons(field_name, buttons_extra)
 
             namespace[name] = field_info
 
@@ -176,7 +171,7 @@ def form(
                 field_type_base = _get_base_type(field_type)
                 if field_type_base != button_type:
                     raise ValueError(
-                        f"Field {cls.__name__}.{name} has type {field_type_base} "
+                        f"Field {field_name} has type {field_type_base} "
                         f"but buttons are of type {button_type}."
                     )
             else:
@@ -189,3 +184,25 @@ def form(
         return FormMetaclass(cls_name, (cls,), namespace)  # type: ignore
 
     return _create_class
+
+
+def _get_base_type(tp: Type[_T]) -> Type[_T]:
+    """Returns T if given Optional[T], otherwise returns the type unchanged."""
+    args = get_args(tp)
+    if len(args) == 2 and type(None) in args:
+        return next(arg for arg in args if arg is not type(None))
+    return tp
+
+
+def _get_buttons(field_name: str, buttons: Any) -> List[Button]:
+    if not isinstance(buttons, list):
+        raise ValueError(
+            f"'buttons' parameter of the field descriptor for {field_name} must be a list, but got {type(buttons).__name__}."
+        )
+
+    if not all(isinstance(button, Button) for button in buttons):
+        raise ValueError(
+            f"'buttons' parameter of the field descriptor for {field_name} must be a list of Button objects."
+        )
+
+    return buttons
