@@ -20,7 +20,6 @@ class ConfigurationRequest(FromRequestDeploymentMixin):
         try:
             if props_header:
                 inst.application_properties = loads(props_header)
-                del inst.headers["X-APPLICATION-PROPERTIES"]
         except JSONDecodeError as e:
             raise DIALException(
                 status_code=400,
