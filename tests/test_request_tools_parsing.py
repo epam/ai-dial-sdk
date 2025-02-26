@@ -2,6 +2,7 @@ from itertools import zip_longest
 
 import pytest
 
+from aidial_sdk._pydantic._compat import model_dump
 from aidial_sdk.chat_completion.request import Request, StaticTool, Tool
 from tests.utils.chat_completion_validation import validate_chat_completion
 
@@ -95,14 +96,11 @@ TEST_CASES = [
 ]
 
 
-@pytest.mark.parametrize(
-    "mock_data",
-    TEST_CASES,
-)
+@pytest.mark.parametrize("mock_data", TEST_CASES)
 def test_tools_parsing(mock_data):
 
     def _request_validator(r: Request):
-        assert r.dict(exclude_none=True) == mock_data
+        assert model_dump(r, exclude_none=True) == mock_data
         assert r.tools
         for mock_tool, tool in zip_longest(
             mock_data["tools"], r.tools, fillvalue={}

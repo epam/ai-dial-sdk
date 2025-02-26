@@ -1,5 +1,6 @@
 from typing import Callable, Optional, Set
 
+from aidial_sdk._pydantic._compat import model_copy
 from aidial_sdk.chat_completion.request import (
     ChatCompletionRequest,
     Message,
@@ -66,7 +67,7 @@ def default_truncate_prompt(
             for idx, message in enumerate(request.messages)
             if idx in indices
         ]
-        sub_request = request.copy(update={"messages": messages})
+        sub_request = model_copy(request, update={"messages": messages})
         return count_request_tokens(sub_request)
 
     all_indices = set(range(0, len(request.messages)))

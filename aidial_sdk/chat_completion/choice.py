@@ -2,6 +2,8 @@ import json
 from types import TracebackType
 from typing import Any, Optional, Type, overload
 
+from pydantic import ValidationError
+
 from aidial_sdk.chat_completion._types import ChunkQueue
 from aidial_sdk.chat_completion.choice_base import ChoiceBase
 from aidial_sdk.chat_completion.chunks import (
@@ -18,7 +20,6 @@ from aidial_sdk.chat_completion.function_call import FunctionCall
 from aidial_sdk.chat_completion.function_tool_call import FunctionToolCall
 from aidial_sdk.chat_completion.request import Attachment
 from aidial_sdk.chat_completion.stage import Stage
-from aidial_sdk.pydantic_v1 import ValidationError
 from aidial_sdk.utils._attachment import create_attachment
 from aidial_sdk.utils._content_stream import ContentStream
 from aidial_sdk.utils.errors import runtime_error
@@ -144,7 +145,7 @@ class Choice(ChoiceBase):
             attachment_chunk = AttachmentChunk(
                 choice_index=self._index,
                 attachment_index=self._last_attachment_index,
-                **create_attachment(*args, **kwargs).dict(),
+                **create_attachment(*args, **kwargs).model_dump(),
             )
         except ValidationError as e:
             raise runtime_error(e.errors()[0]["msg"])

@@ -3,10 +3,10 @@ from json import JSONDecodeError
 from typing import Any, Mapping, Optional, Type, TypeVar
 
 import fastapi
-from pydantic import Field
+from pydantic import Field, SecretStr, StrictStr
 
+from aidial_sdk._pydantic._compat import PYDANTIC_V2, ConfigDict
 from aidial_sdk.exceptions import HTTPException as DIALException
-from aidial_sdk.pydantic_v1 import SecretStr, StrictStr, root_validator
 from aidial_sdk.utils.pydantic import ExtraForbidModel
 
 T = TypeVar("T", bound="FromRequestMixin")
@@ -46,10 +46,17 @@ class FromRequestDeploymentMixin(FromRequestMixin):
 
     original_request: fastapi.Request = Field(..., exclude=True)
 
-    class Config:
-        arbitrary_types_allowed = True
+    if PYDANTIC_V2:
 
-    @root_validator(pre=True)
+        model_config = ConfigDict(arbitrary_types_allowed=True)
+    else:
+
+        class Config:
+            arbitrary_types_allowed = True
+
+    # FIXME
+    # @root_validator(pre=True)
+    @classmethod
     def create_secrets(cls, values: dict):
         if "api_key" in values:
             if "api_key_secret" not in values:

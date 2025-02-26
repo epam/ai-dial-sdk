@@ -1,12 +1,17 @@
 import json
 
+from aidial_sdk._pydantic._compat import (
+    model_dump,
+    model_parse,
+    model_parse_json,
+)
 from aidial_sdk.chat_completion import Message, ResponseFormatJsonSchema, Role
 from aidial_sdk.chat_completion.request import ResponseFormatJsonSchemaObject
 
 
 def test_message_ser():
     msg_obj = Message(role=Role.SYSTEM, content="test")
-    actual_dict = msg_obj.dict(exclude_none=True)
+    actual_dict = model_dump(msg_obj, exclude_none=True)
     expected_dict = {"role": "system", "content": "test"}
 
     assert json.loads(json.dumps(actual_dict)) == expected_dict
@@ -14,7 +19,7 @@ def test_message_ser():
 
 def test_message_deser():
     msg_dict = {"role": "system", "content": "test"}
-    actual_obj = Message.parse_raw(json.dumps(msg_dict))
+    actual_obj = model_parse_json(Message, json.dumps(msg_dict))
     expected_obj = Message(role=Role.SYSTEM, content="test")
 
     assert actual_obj == expected_obj
@@ -30,7 +35,7 @@ def test_response_format_serialization():
         ),
     )
 
-    actual_dict = format_obj.dict()
+    actual_dict = model_dump(format_obj)
 
     expected_dict = {
         "type": "json_schema",
@@ -55,7 +60,7 @@ def test_response_format_deserialization():
         },
     }
 
-    actual_obj = ResponseFormatJsonSchema.parse_obj(format_dict)
+    actual_obj = model_parse(ResponseFormatJsonSchema, format_dict)
 
     expected_obj = ResponseFormatJsonSchema(
         type="json_schema",

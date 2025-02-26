@@ -1,9 +1,9 @@
+import dataclasses
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional, TypedDict
 
 from aidial_sdk.chat_completion.enums import FinishReason, Status
 from aidial_sdk.exceptions import HTTPException as DIALException
-from aidial_sdk.pydantic_v1 import BaseModel, root_validator
 from aidial_sdk.utils.json import remove_nones
 
 
@@ -339,7 +339,8 @@ class NameStageChunk(BaseChunk):
         }
 
 
-class Attachment(BaseModel):
+@dataclasses.dataclass
+class Attachment:
     choice_index: int
     attachment_index: int
 
@@ -350,7 +351,9 @@ class Attachment(BaseModel):
     reference_url: Optional[str]
     reference_type: Optional[str]
 
-    @root_validator(pre=True)
+    # FIXME
+    # @root_validator(pre=True)
+    @classmethod
     def check_data_or_url(cls, values):
         data, url = values.get("data"), values.get("url")
 
@@ -361,7 +364,7 @@ class Attachment(BaseModel):
 
         return values
 
-    def attachment_dict(self, index: int):
+    def attachment_dict(self, index: int) -> dict:
         attachment: Dict[str, Any] = {"index": index}
 
         if self.type:
@@ -380,6 +383,7 @@ class Attachment(BaseModel):
         return attachment
 
 
+@dataclasses.dataclass
 class AttachmentChunk(Attachment, BaseChunk):
     def to_dict(self):
         return {
@@ -400,6 +404,7 @@ class AttachmentChunk(Attachment, BaseChunk):
         }
 
 
+@dataclasses.dataclass
 class AttachmentStageChunk(Attachment, BaseChunk):
     stage_index: int
 

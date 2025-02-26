@@ -1,20 +1,14 @@
 from enum import Enum
 from typing import Any, Dict, List, Literal, Mapping, Optional, Union
 
+import pydantic
+from pydantic import Field, PositiveInt, StrictBool, StrictInt, StrictStr
 from typing_extensions import Annotated, assert_never
 
-import aidial_sdk.pydantic_v1 as pydantic
+from aidial_sdk._pydantic._compat import PYDANTIC_V2
 from aidial_sdk.chat_completion.enums import Status
 from aidial_sdk.deployment.from_request_mixin import FromRequestDeploymentMixin
 from aidial_sdk.exceptions import InvalidRequestError
-from aidial_sdk.pydantic_v1 import (
-    PYDANTIC_V2,
-    Field,
-    PositiveInt,
-    StrictBool,
-    StrictInt,
-    StrictStr,
-)
 from aidial_sdk.utils.pydantic import ExtraForbidModel
 
 

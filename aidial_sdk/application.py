@@ -6,12 +6,14 @@ from typing import Any, Callable, Coroutine, Literal, Optional, Type, TypeVar
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
+from pydantic import ValidationError
 
 from aidial_sdk._errors import (
     dial_exception_handler,
     fastapi_exception_handler,
     pydantic_validation_exception_handler,
 )
+from aidial_sdk._pydantic._compat import model_dump
 from aidial_sdk.chat_completion.base import ChatCompletion
 from aidial_sdk.chat_completion.request import Request as ChatCompletionRequest
 from aidial_sdk.chat_completion.response import (
@@ -26,7 +28,6 @@ from aidial_sdk.embeddings.base import Embeddings
 from aidial_sdk.embeddings.request import Request as EmbeddingsRequest
 from aidial_sdk.exceptions import HTTPException as DIALException
 from aidial_sdk.header_propagator import HeaderPropagator
-from aidial_sdk.pydantic_v1 import ValidationError
 from aidial_sdk.telemetry.types import TelemetryConfig
 from aidial_sdk.utils._reflection import get_method_implementation
 from aidial_sdk.utils.log_config import LogConfig
@@ -37,7 +38,7 @@ from aidial_sdk.utils.streaming import (
     to_streaming_response,
 )
 
-logging.config.dictConfig(LogConfig().dict())
+logging.config.dictConfig(LogConfig().model_dump())
 
 RequestType = TypeVar("RequestType", bound=FromRequestMixin)
 
@@ -195,7 +196,7 @@ class DIALApp(FastAPI):
             log_debug(f"request[{endpoint}]: {request}")
 
             response = await endpoint_impl(request)
-            response_json = response.dict()
+            response_json = model_dump(response)
             log_debug(f"response[{endpoint}]: {response_json}")
 
             return JSONResponse(content=response_json)
@@ -261,7 +262,7 @@ class DIALApp(FastAPI):
                 original_request, deployment_id
             )
             response = await impl.embeddings(request)
-            response_json = response.dict()
+            response_json = response.model_dump()
             return JSONResponse(content=response_json)
 
         return _handler

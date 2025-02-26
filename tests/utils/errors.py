@@ -1,4 +1,6 @@
-from aidial_sdk.pydantic_v1 import PYDANTIC_V2, BaseModel
+from pydantic import BaseModel
+
+from aidial_sdk._pydantic._compat import PYDANTIC_V2
 
 
 class Error(BaseModel):

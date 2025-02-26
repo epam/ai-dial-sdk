@@ -1,9 +1,9 @@
 from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse
+from pydantic import ValidationError
 
 from aidial_sdk.exceptions import HTTPException as DIALException
 from aidial_sdk.exceptions import InvalidRequestError
-from aidial_sdk.pydantic_v1 import ValidationError
 
 
 def pydantic_validation_exception_handler(
