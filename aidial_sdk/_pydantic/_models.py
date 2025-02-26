@@ -1,12 +1,12 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Optional, Set, Union, cast
+from datetime import date, datetime
+from typing import Any, Dict, Iterable, Mapping, Optional, Set, Union, cast
 
 import pydantic
 from typing_extensions import Literal, override
 
 from ._compat import PYDANTIC_V2
-from ._utils import json_safe
 
 _IncEx = Union[Set[int], Set[str], Dict[int, Any], Dict[str, Any], None]
 
@@ -94,7 +94,7 @@ class BaseModel(pydantic.BaseModel):
             )
 
             return (
-                cast(Dict[str, Any], json_safe(dumped))
+                cast(Dict[str, Any], _json_safe(dumped))
                 if mode == "json"
                 else dumped
             )
@@ -134,3 +134,23 @@ class BaseModel(pydantic.BaseModel):
                 exclude_defaults=exclude_defaults,
                 exclude_none=exclude_none,
             )
+
+
+def _json_safe(data: object) -> object:
+    """Translates a mapping / sequence recursively in the same fashion
+    as `pydantic` v2's `model_dump(mode="json")`.
+    """
+    if isinstance(data, Mapping):
+        return {
+            _json_safe(key): _json_safe(value) for key, value in data.items()
+        }
+
+    if isinstance(data, Iterable) and not isinstance(
+        data, (str, bytes, bytearray)
+    ):
+        return [_json_safe(item) for item in data]
+
+    if isinstance(data, (datetime, date)):
+        return data.isoformat()
+
+    return data
