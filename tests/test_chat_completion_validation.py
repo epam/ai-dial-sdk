@@ -3,6 +3,7 @@ from typing import List
 import pytest
 
 from aidial_sdk import DIALApp
+from aidial_sdk._pydantic._compat import PYDANTIC_V2
 from aidial_sdk.chat_completion import ChatCompletion, Request, Response
 from tests.utils.endpoint_test import TestCase, run_endpoint_test
 from tests.utils.errors import internal_server_error, invalid_request_error
@@ -56,8 +57,10 @@ testcases: List[TestCase] = [
         "chat/completions",
         INVALID_ATTACHMENT_BOTH,
         invalid_request_error(
-            "messages.0.custom_content.attachments.0",
-            "Value error, Attachment must have either 'data' or 'url', but it has both",
+            "messages.0.custom_content.attachments.0"
+            + ("" if PYDANTIC_V2 else ".__root__"),
+            ("Value error, " if PYDANTIC_V2 else "")
+            + "Attachment must have either 'data' or 'url', but it has both",
         ),
     ),
     TestCase(
@@ -66,8 +69,10 @@ testcases: List[TestCase] = [
         "chat/completions",
         INVALID_ATTACHMENT_NEITHER,
         invalid_request_error(
-            "messages.0.custom_content.attachments.0",
-            "Value error, Attachment must have either 'data' or 'url', but it's missing both",
+            "messages.0.custom_content.attachments.0"
+            + ("" if PYDANTIC_V2 else ".__root__"),
+            ("Value error, " if PYDANTIC_V2 else "")
+            + "Attachment must have either 'data' or 'url', but it's missing both",
         ),
     ),
 ]
