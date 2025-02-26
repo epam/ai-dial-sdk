@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Dict, Set, cast
+from typing import Any, Dict, Optional, Set, Union, cast
 
 import pydantic
 from typing_extensions import Literal, override
@@ -8,7 +8,7 @@ from typing_extensions import Literal, override
 from ._compat import PYDANTIC_V2
 from ._utils import json_safe
 
-_IncEx = Set[int] | Set[str] | Dict[int, Any] | Dict[str, Any] | None
+_IncEx = Union[Set[int], Set[str], Dict[int, Any], Dict[str, Any], None]
 
 
 class BaseModel(pydantic.BaseModel):
@@ -34,7 +34,7 @@ class BaseModel(pydantic.BaseModel):
     def to_json(
         self,
         *,
-        indent: int | None = 2,
+        indent: Optional[int] = 2,
         use_api_names: bool = True,
         exclude_unset: bool = True,
         exclude_defaults: bool = False,
@@ -60,16 +60,16 @@ class BaseModel(pydantic.BaseModel):
         def model_dump(
             self,
             *,
-            mode: Literal["json", "python"] | str = "python",
-            include: _IncEx | None = None,
-            exclude: _IncEx | None = None,
+            mode: Union[Literal["json", "python"], str] = "python",
+            include: _IncEx = None,
+            exclude: _IncEx = None,
             by_alias: bool = False,
             exclude_unset: bool = False,
             exclude_defaults: bool = False,
             exclude_none: bool = False,
             round_trip: bool = False,
-            warnings: bool | Literal["none", "warn", "error"] = True,
-            context: Dict[str, Any] | None = None,
+            warnings: Union[bool, Literal["none", "warn", "error"]] = True,
+            context: Optional[Dict[str, Any]] = None,
             serialize_as_any: bool = False,
         ) -> Dict[str, Any]:
             if mode not in {"json", "python"}:
@@ -103,16 +103,16 @@ class BaseModel(pydantic.BaseModel):
         def model_dump_json(
             self,
             *,
-            indent: int | None = None,
-            include: _IncEx | None = None,
-            exclude: _IncEx | None = None,
+            indent: Optional[int] = None,
+            include: _IncEx = None,
+            exclude: _IncEx = None,
             by_alias: bool = False,
             exclude_unset: bool = False,
             exclude_defaults: bool = False,
             exclude_none: bool = False,
             round_trip: bool = False,
-            warnings: bool | Literal["none", "warn", "error"] = True,
-            context: Dict[str, Any] | None = None,
+            warnings: Union[bool, Literal["none", "warn", "error"]] = True,
+            context: Optional[Dict[str, Any]] = None,
             serialize_as_any: bool = False,
         ) -> str:
             if round_trip is not False:

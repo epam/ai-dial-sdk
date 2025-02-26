@@ -19,7 +19,7 @@ from aidial_sdk.deployment.truncate_prompt import (
     TruncatePromptResult,
     TruncatePromptSuccess,
 )
-from tests.utils.pydantic import model_copy
+from tests.utils._pydantic import model_copy
 
 
 def word_count_string(string: str) -> int:

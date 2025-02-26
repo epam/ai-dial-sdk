@@ -3,8 +3,8 @@ from itertools import zip_longest
 import pytest
 
 from aidial_sdk.chat_completion.request import Request, StaticTool, Tool
+from tests.utils._pydantic import model_dump
 from tests.utils.chat_completion_validation import validate_chat_completion
-from tests.utils.pydantic import model_dump
 
 TEST_CASES = [
     {

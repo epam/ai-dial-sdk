@@ -1,7 +1,7 @@
 from pydantic import BaseModel as NativeBaseModel
 
 from aidial_sdk._pydantic import BaseModel as DialBaseModel
-from tests.utils.pydantic import model_dump
+from tests.utils._pydantic import model_dump
 
 
 class DialSubStruct(DialBaseModel):
