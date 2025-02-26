@@ -76,6 +76,7 @@ filterwarnings = [
 
 [tool.pyright]
 typeCheckingMode = "basic"
+reportDeprecated = "error"
 reportUnusedVariable = "error"
 reportIncompatibleMethodOverride = "error"
 exclude = [

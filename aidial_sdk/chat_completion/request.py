@@ -175,7 +175,7 @@ class ResponseFormatJsonSchemaObject(ExtraForbidModel):
 
         def dict(self, *args, **kwargs):
             kwargs["by_alias"] = True
-            return super().dict(*args, **kwargs)
+            return super().dict(*args, **kwargs)  # type: ignore
 
 
 class ResponseFormatJsonSchema(ExtraForbidModel):
