@@ -44,4 +44,4 @@ def test(session: nox.Session, pydantic: str, httpx: str) -> None:
         f"pydantic=={pydantic}",
         f"httpx=={httpx}",
     )
-    session.run("pytest")
+    session.run("pytest", *session.posargs)
