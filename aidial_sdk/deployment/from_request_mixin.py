@@ -5,7 +5,7 @@ from typing import Any, Mapping, Optional, Type, TypeVar
 import fastapi
 from pydantic import Field, SecretStr, StrictStr
 
-from aidial_sdk._pydantic import PYDANTIC_V2, ConfigDict
+from aidial_sdk._pydantic import PYDANTIC_V2, ConfigDict, model_validator
 from aidial_sdk.exceptions import HTTPException as DIALException
 from aidial_sdk.utils.pydantic import ExtraForbidModel
 
@@ -54,8 +54,7 @@ class FromRequestDeploymentMixin(FromRequestMixin):
         class Config:
             arbitrary_types_allowed = True
 
-    # FIXME
-    # @root_validator(pre=True)
+    @model_validator(mode="before")
     @classmethod
     def create_secrets(cls, values: dict):
         if "api_key" in values:

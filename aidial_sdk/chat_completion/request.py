@@ -5,7 +5,7 @@ import pydantic
 from pydantic import Field, PositiveInt, StrictBool, StrictInt, StrictStr
 from typing_extensions import Annotated, assert_never
 
-from aidial_sdk._pydantic import PYDANTIC_V2
+from aidial_sdk._pydantic import PYDANTIC_V2, model_validator
 from aidial_sdk.chat_completion.enums import Status
 from aidial_sdk.deployment.from_request_mixin import FromRequestDeploymentMixin
 from aidial_sdk.exceptions import InvalidRequestError
@@ -19,6 +19,22 @@ class Attachment(ExtraForbidModel):
     url: Optional[StrictStr] = None
     reference_type: Optional[StrictStr] = None
     reference_url: Optional[StrictStr] = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def check_data_or_url(cls, values: Any):
+        data, url = values.get("data"), values.get("url")
+
+        if data is None and url is None:
+            raise ValueError(
+                "Attachment must have either 'data' or 'url', but it's missing both"
+            )
+        if data is not None and url is not None:
+            raise ValueError(
+                "Attachment must have either 'data' or 'url', but it has both"
+            )
+
+        return values
 
 
 class Stage(ExtraForbidModel):

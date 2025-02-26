@@ -154,3 +154,10 @@ def _json_safe(data: object) -> object:
         return data.isoformat()
 
     return data
+
+
+def model_validator(*, mode: Literal["before", "after"]) -> Any:
+    if PYDANTIC_V2:
+        return pydantic.model_validator(mode=mode)
+    else:
+        return pydantic.root_validator(pre=(mode == "before"))  # type: ignore

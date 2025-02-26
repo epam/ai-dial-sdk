@@ -8,6 +8,19 @@ class Error(BaseModel):
     error: dict
 
 
+def internal_server_error(message: str) -> Error:
+    return Error(
+        code=500,
+        error={
+            "error": {
+                "code": "500",
+                "message": message,
+                "type": "runtime_error",
+            }
+        },
+    )
+
+
 def invalid_request_error(path: str, message: str) -> Error:
     return Error(
         code=400,
