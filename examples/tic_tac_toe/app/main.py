@@ -87,13 +87,13 @@ class TicTacToeApplication(ChatCompletion):
 
     async def configuration(self, request):
         # Return the schema of the initial configuration
-        return InitConfiguration.schema()
+        return InitConfiguration.model_json_schema()
 
     async def chat_completion(
         self, request: Request, response: Response
     ) -> None:
         # Retrieve the configuration from the request and parse it
-        init_conf = InitConfiguration.parse_obj(get_configuration(request))
+        init_conf = InitConfiguration.model_validate(get_configuration(request))
         user_player = init_conf.player
 
         if len(request.messages) == 1:
@@ -103,13 +103,13 @@ class TicTacToeApplication(ChatCompletion):
         else:
             # Retrieve the user move from the last user message
             if form_value := get_message_form_value(request.messages[-1]):
-                user_form = MoveForm.parse_obj(form_value)
+                user_form = MoveForm.model_validate(form_value)
                 user_move = Move.from_button_value(user_form.move)
 
             # Retrieve the game board from the last bot message
             state_dict = get_message_state(request.messages[-2])
             assert state_dict is not None
-            board = Board.parse_obj(state_dict)
+            board = Board.model_validate(state_dict)
 
         # Make a move by the bot
         move_outcome = TicTacToeApplication.make_bot_move(
@@ -146,10 +146,10 @@ class TicTacToeApplication(ChatCompletion):
                 _MoveForm = form(move=move_selector)(MoveForm)
 
                 # Save the form schema in the bot message
-                choice.set_form_schema(_MoveForm.schema())
+                choice.set_form_schema(_MoveForm.model_json_schema())
 
             # Save the game board in the bot message
-            choice.set_state(board.dict())
+            choice.set_state(board.model_dump())
 
     @staticmethod
     def make_bot_move(

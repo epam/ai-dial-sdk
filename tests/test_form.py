@@ -6,6 +6,8 @@ from aidial_sdk.chat_completion import Button
 from aidial_sdk.chat_completion.form import FormMetaclass, form
 from pydantic import BaseModel, Field, ValidationError
 
+from tests.utils._pydantic import model_json_schema, model_parse
+
 
 class StaticConfiguration_OneButton(BaseModel, metaclass=FormMetaclass):
     "Static application configuration"
@@ -69,7 +71,7 @@ class StaticConfiguration_OptionalButton(BaseModel, metaclass=FormMetaclass):
 
 
 def test_configuration_optional_button_schema():
-    actual_schema = StaticConfiguration_OptionalButton.schema()
+    actual_schema = model_json_schema(StaticConfiguration_OptionalButton)
     assert actual_schema == {
         "title": "StaticConfiguration_OptionalButton",
         "type": "object",
@@ -108,13 +110,13 @@ def test_configuration_optional_button_parsing_success():
     conf = {}
 
     assert (
-        StaticConfiguration_OptionalButton.parse_obj(conf)
+        model_parse(StaticConfiguration_OptionalButton, conf)
         == StaticConfiguration_OptionalButton()
     )
 
 
 def test_configuration_one_button_schema():
-    actual_schema = StaticConfiguration_OneButton.schema()
+    actual_schema = model_json_schema(StaticConfiguration_OneButton)
     assert actual_schema == {
         "title": "StaticConfiguration_OneButton",
         "description": "Static application configuration",
@@ -176,8 +178,8 @@ def test_configuration_parsing_success():
         "int_button_field": 10,
     }
 
-    assert StaticConfiguration_OneButton.parse_obj(
-        conf
+    assert model_parse(
+        StaticConfiguration_OneButton, conf
     ) == StaticConfiguration_OneButton(
         int_field=10,
         str_field="Test",
@@ -195,7 +197,7 @@ def test_configuration_parsing_one_button_fail():
     }
 
     with pytest.raises(ValidationError) as e:
-        StaticConfiguration_OneButton.parse_obj(conf)
+        model_parse(StaticConfiguration_OneButton, conf)
 
     assert e.value.errors() == [
         {
@@ -211,7 +213,7 @@ def test_configuration_parsing_two_buttons_fail():
     conf = {"int_button_field": 11, "str_button_field": "z"}
 
     with pytest.raises(ValidationError) as e:
-        StaticConfiguration_TwoButtons.parse_obj(conf)
+        model_parse(StaticConfiguration_TwoButtons, conf)
 
     assert e.value.errors() == [
         {
@@ -231,7 +233,7 @@ def test_configuration_parsing_two_buttons_fail():
 
 def test_configuration_parsing_two_buttons_success():
     conf = {"int_button_field": 10, "str_button_field": "a"}
-    conf_parsed = StaticConfiguration_TwoButtons.parse_obj(conf)
+    conf_parsed = model_parse(StaticConfiguration_TwoButtons, conf)
 
     assert conf_parsed.int_button_field == 10
     assert conf_parsed.str_button_field == "a"
@@ -244,7 +246,7 @@ def test_dynamic_configuration_input_disabled_static():
 
     conf = form()(Conf)
 
-    assert conf.schema()["dial:chatMessageInputDisabled"] is True
+    assert model_json_schema(conf)["dial:chatMessageInputDisabled"] is True
 
 
 def test_dynamic_configuration_input_disabled_dynamic():
@@ -254,7 +256,7 @@ def test_dynamic_configuration_input_disabled_dynamic():
 
     conf = form(chat_message_input_disabled=True)(Conf)
 
-    assert conf.schema()["dial:chatMessageInputDisabled"] is True
+    assert model_json_schema(conf)["dial:chatMessageInputDisabled"] is True
 
 
 def test_dynamic_configuration_input_disabled_omitted():
@@ -264,7 +266,7 @@ def test_dynamic_configuration_input_disabled_omitted():
 
     conf = form()(Conf)
 
-    assert conf.schema().get("dial:chatMessageInputDisabled") is None
+    assert model_json_schema(conf).get("dial:chatMessageInputDisabled") is None
 
 
 def test_dynamic_configuration_input_disabled_overwrite1():
@@ -274,7 +276,7 @@ def test_dynamic_configuration_input_disabled_overwrite1():
 
     conf = form(chat_message_input_disabled=True)(Conf)
 
-    assert conf.schema()["dial:chatMessageInputDisabled"] is True
+    assert model_json_schema(conf)["dial:chatMessageInputDisabled"] is True
 
 
 def test_dynamic_configuration_input_disabled_overwrite2():
@@ -284,7 +286,7 @@ def test_dynamic_configuration_input_disabled_overwrite2():
 
     conf = form(chat_message_input_disabled=False)(Conf)
 
-    assert conf.schema()["dial:chatMessageInputDisabled"] is False
+    assert model_json_schema(conf)["dial:chatMessageInputDisabled"] is False
 
 
 def test_dynamic_configuration_existing_field():
@@ -303,7 +305,7 @@ def test_dynamic_configuration_existing_field():
         ),
     )(Conf)
 
-    actual_schema = conf.schema()
+    actual_schema = model_json_schema(conf)
 
     assert actual_schema == {
         "additionalProperties": False,
@@ -368,7 +370,7 @@ def test_dynamic_configuration_new_field():
         ),
     )(Conf)
 
-    actual_schema = conf.schema()
+    actual_schema = model_json_schema(conf)
 
     assert actual_schema == {
         "additionalProperties": False,
@@ -458,7 +460,7 @@ def test_dynamic_configuration_optional_type_parsing_success():
     )(Conf)
 
     conf_value = {"int_field": 10, "str_field": "Test", "buttons_field": 10}
-    parsed_conf = conf.parse_obj(conf_value)
+    parsed_conf = model_parse(conf, conf_value)
 
     assert parsed_conf.int_field == 10
     assert parsed_conf.str_field == "Test"
@@ -481,7 +483,7 @@ def test_dynamic_configuration_decorator_optional_type_parsing_success():
         buttons_field: Optional[int]
 
     conf_value = {"int_field": 10, "str_field": "Test", "buttons_field": 10}
-    parsed_conf = Conf.parse_obj(conf_value)
+    parsed_conf = model_parse(Conf, conf_value)
 
     assert parsed_conf.int_field == 10
     assert parsed_conf.str_field == "Test"
@@ -511,7 +513,7 @@ def test_dynamic_configuration_two_buttons():
         ),
     )(Conf)
 
-    actual_schema = conf.schema()
+    actual_schema = model_json_schema(conf)
 
     assert actual_schema == {
         "additionalProperties": False,
@@ -590,7 +592,7 @@ def test_configuration_invalid_button_type():
                 ],
             )
 
-        _Conf.schema()
+        model_json_schema(_Conf)
 
     assert (
         str(e.value)
@@ -605,7 +607,7 @@ def test_configuration_missing_buttons():
             button_field: int
 
         _Conf2 = form(button_field=Field(default=43))(_Conf)
-        _Conf2.schema()
+        model_json_schema(_Conf2)
 
     assert (
         str(e.value)
@@ -620,7 +622,7 @@ def test_configuration_invalid_buttons_type():
             button_field: int
 
         _Conf2 = form(button_field=Field(default=43, buttons="test"))(_Conf)
-        _Conf2.schema()
+        model_json_schema(_Conf2)
 
     assert (
         str(e.value)
@@ -635,7 +637,7 @@ def test_configuration_invalid_buttons_elem_type():
             button_field: int
 
         _Conf2 = form(button_field=Field(default=43, buttons=["test"]))(_Conf)
-        _Conf2.schema()
+        model_json_schema(_Conf2)
 
     assert (
         str(e.value)

@@ -19,6 +19,12 @@ def model_parse_json(model: Type[_ModelT], data: Union[str, bytes]) -> _ModelT:
     return model.parse_raw(data)  # pyright: ignore[reportDeprecated]
 
 
+def model_json_schema(model: Type[_ModelT]) -> Dict[str, Any]:
+    if PYDANTIC_V2:
+        return model.model_json_schema()
+    return model.schema()  # pyright: ignore[reportDeprecated]
+
+
 def model_copy(
     model: _ModelT,
     *,

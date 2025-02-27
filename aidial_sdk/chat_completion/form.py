@@ -49,7 +49,13 @@ class Button(Generic[_T]):
 
 
 class FormMetaclass(ModelMetaclass):
-    def __new__(mcs, name, bases, namespace: dict, **kwargs):
+    def __new__(
+        mcs,  # pyright: ignore[reportSelfClsParameterName]
+        name,
+        bases,
+        namespace: dict,
+        **kwargs,
+    ):
         # Inject buttons validators
 
         validators = {}
