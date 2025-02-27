@@ -7,6 +7,7 @@ from typing import Any, Callable, Coroutine, Literal, Optional, Type, TypeVar
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pydantic import ValidationError
+from aidial_sdk._pydantic import BaseModel
 
 from aidial_sdk._errors import (
     dial_exception_handler,
@@ -195,7 +196,16 @@ class DIALApp(FastAPI):
             log_debug(f"request[{endpoint}]: {request}")
 
             response = await endpoint_impl(request)
-            response_json = response.model_dump()
+
+            if isinstance(response, dict):
+                response_json = response
+            elif isinstance(response, BaseModel):
+                response_json = response.model_dump()
+            else:
+                raise ValueError(
+                    f"Unexpected response type from {endpoint}: {type(response)}"
+                )
+
             log_debug(f"response[{endpoint}]: {response_json}")
 
             return JSONResponse(content=response_json)

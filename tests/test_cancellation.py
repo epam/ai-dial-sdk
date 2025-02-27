@@ -78,6 +78,7 @@ def chat_completion_create_task(counter: Counter):
     return _chat_completion
 
 
+@pytest.mark.slow
 @pytest.mark.parametrize("with_heartbeat", [True, False])
 @pytest.mark.parametrize(
     "chat_completion, expected_cancelled, expected_done",

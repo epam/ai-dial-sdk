@@ -73,6 +73,9 @@ testpaths = [
 filterwarnings = [
     "error"
 ]
+markers = [
+    "slow: marker for slow running tests",
+]
 
 [tool.pyright]
 typeCheckingMode = "basic"
