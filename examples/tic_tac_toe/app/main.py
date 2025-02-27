@@ -32,11 +32,12 @@ class InitConfiguration(BaseModel, metaclass=FormMetaclass):
 
     player: Player = Field(
         description="Select tic-tac-toe player",
-        # The 'buttons' parameter of the field descriptor accepts a list of Button objects with the following properties:
+        # The `buttons` parameter of the field descriptor accepts a list of Button objects with the following properties:
         # * submit (bool): Whether the button should submit the whole form on click.
         # * title (str): The caption text displayed on the button.
         # * const (int|float): The value that will be submitted when the button is clicked.
         # * confirmationMessage (str): The message that will be displayed to the user before submitting the form in a Yes/No confirmation dialog.
+        # * populateText (str): the text that will be populated to the chat input field when the button is clicked
         buttons=[
             Button(
                 const=X_PLAYER,
@@ -52,6 +53,15 @@ class InitConfiguration(BaseModel, metaclass=FormMetaclass):
             ),
         ],
     )
+
+    # DIAL requires that the value matching this schema is passed to the application
+    # in `custom_fields.configuration` field of the chat completion request.
+    # Therefore, fields specified as required (such as `player`) must be populated by the user,
+    # meaning the user must click one of the provided buttons.
+    #
+    # If the button click isn't necessary, the field can be marked
+    # as optional using an appropriate type hint:
+    # `player: Optional[Player] = ...` or `player: Player | None = ...`.
 
 
 # The form defines the move the user in making during the tic-tac-toe game.

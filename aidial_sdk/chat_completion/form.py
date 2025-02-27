@@ -17,7 +17,13 @@ from pydantic.v1.fields import FieldInfo
 from pydantic.v1.validators import make_literal_validator
 
 from pydantic import BaseModel, validator
-from pydantic.main import ModelMetaclass
+
+from aidial_sdk._pydantic import PYDANTIC_V2
+
+if PYDANTIC_V2:
+    from pydantic.v1.main import ModelMetaclass
+else:
+    from pydantic.main import ModelMetaclass
 
 _T = TypeVar("_T")
 
