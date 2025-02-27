@@ -49,6 +49,14 @@ def headers():
     }
 
 @pytest.fixture
+def invalid_headers():
+    return {
+        "Api-Key": API_KEY,
+        "Authorization": "Bearer test-jwt",
+        "X-APPLICATION-PROPERTIES": "invalid header"
+    }
+
+@pytest.fixture
 def body():
     return {
         "messages": [
@@ -60,21 +68,45 @@ def test_chat_completion_request(client: TestClient, headers: dict, body: dict):
     response = client.post(f"/openai/deployments/{deployment_name}/chat/completions", headers=headers, json=body)
     assert response.status_code == 200
 
-def test_configuration_request(client: TestClient, headers: dict, body: dict):
+def test_chat_completion_invalid_application_properties_headers(client: TestClient, invalid_headers: dict, body: dict):
+    response = client.post(f"/openai/deployments/{deployment_name}/chat/completions", headers=invalid_headers, json=body)
+    assert response.status_code == 400
+
+
+def test_configuration_request(client: TestClient, headers: dict):
     response = client.get(f"/openai/deployments/{deployment_name}/configuration", headers=headers)
     assert response.status_code == 200
 
-def test_rate_response_request(client: TestClient, headers: dict, body: dict):
+def test_configuration_request_invalid_application_properties_headers(client: TestClient, invalid_headers: dict):
+    response = client.get(f"/openai/deployments/{deployment_name}/configuration", headers=invalid_headers)
+    assert response.status_code == 400
+
+
+def test_rate_response_request(client: TestClient, headers: dict):
     response = client.post(f"/openai/deployments/{deployment_name}/rate", headers=headers, json={"responseId": "123", "rate": False})
     assert response.status_code == 200
 
-def test_tokenize_request(client: TestClient, headers: dict, body: dict):
+def test_rate_response_request_invalid_application_properties_headers(client: TestClient, invalid_headers: dict):
+    response = client.post(f"/openai/deployments/{deployment_name}/rate", headers=invalid_headers, json={"responseId": "123", "rate": False})
+    assert response.status_code == 400
+
+
+def test_tokenize_request(client: TestClient, headers: dict):
     response = client.post(f"/openai/deployments/{deployment_name}/tokenize", headers=headers, json={"inputs": []})
     assert response.status_code == 200
 
-def test_truncate_prompt_request(client: TestClient, headers: dict, body: dict):
-    response = client.post(f"/openai/deployments/{deployment_name}/truncate_prompt", headers=headers, json={"inputs": []})
+def test_tokenize_request_invalid_application_properties_headers(client: TestClient, invalid_headers: dict):
+    response = client.post(f"/openai/deployments/{deployment_name}/tokenize", headers=invalid_headers, json={"inputs": []})
+    assert response.status_code == 400
+
+
+def test_truncate_prompt_request(client: TestClient, headers: dict):
+    response = client.post(f"/openai/deployments/{deployment_name}/truncate_prompt", json={"inputs": []}, headers=headers)
     assert response.status_code == 200
+
+def test_truncate_prompt_request_invalid_application_properties_headers(client: TestClient, invalid_headers: dict):
+    response = client.post(f"/openai/deployments/{deployment_name}/truncate_prompt", headers=invalid_headers, json={"inputs": []})
+    assert response.status_code == 400
 
 
 
