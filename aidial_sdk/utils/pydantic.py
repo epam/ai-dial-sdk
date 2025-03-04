@@ -1,4 +1,4 @@
-from aidial_sdk._pydantic import PYDANTIC_V2, BaseModel, ConfigDict
+from aidial_sdk.pydantic import PYDANTIC_V2, BaseModel, ConfigDict
 
 
 class ExtraForbidModel(BaseModel):

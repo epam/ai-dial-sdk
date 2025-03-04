@@ -1,12 +1,10 @@
 import random
 from typing import List
 
-from aidial_sdk._pydantic._compat import PYDANTIC_V2
-from examples.tic_tac_toe.app.main import app
-from tests.utils.client import create_test_client
-
 import pytest
 
+from aidial_sdk.pydantic._compat import PYDANTIC_V2
+from tests.utils.client import create_test_client
 
 pytestmark = pytest.mark.skipif(
     not PYDANTIC_V2, reason="The example is written using Pydantic V2"
@@ -14,6 +12,8 @@ pytestmark = pytest.mark.skipif(
 
 
 def test_ttt_configuration():
+    from examples.tic_tac_toe.app.main import app
+
     client = create_test_client(app, name="app")
     response = client.get("configuration")
 
@@ -57,6 +57,8 @@ def test_ttt_configuration():
 
 
 def test_ttt_first_move_x():
+    from examples.tic_tac_toe.app.main import app
+
     client = create_test_client(app, name="app")
 
     init_conf = {"player": 1}
@@ -64,12 +66,7 @@ def test_ttt_first_move_x():
     response = client.post(
         "chat/completions",
         json={
-            "messages": [
-                {
-                    "role": "user",
-                    "content": "",
-                }
-            ],
+            "messages": [{"role": "user", "content": ""}],
             "custom_fields": {"configuration": init_conf},
         },
     )
@@ -101,6 +98,8 @@ You go first. Make a move.
 
 def test_ttt_first_move_o():
     random.seed(42)
+
+    from examples.tic_tac_toe.app.main import app
 
     client = create_test_client(app, name="app")
 
@@ -147,16 +146,13 @@ I moved to B1. Now it's your turn.
 def test_ttt_second_move_o():
     random.seed(42)
 
+    from examples.tic_tac_toe.app.main import app
+
     client = create_test_client(app, name="app")
 
     init_conf = {"player": 2}
 
-    messages: List[dict] = [
-        {
-            "role": "user",
-            "content": "",
-        }
-    ]
+    messages: List[dict] = [{"role": "user", "content": ""}]
 
     response = client.post(
         "chat/completions",

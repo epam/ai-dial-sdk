@@ -34,6 +34,9 @@ format: install
 test: install
 	$(POETRY) run -- nox -s test $(if $(PYTHON),--python=$(PYTHON),) -- $(ARGS)
 
+test_fast: install
+	$(POETRY) run -- nox -s test $(if $(PYTHON),--python=$(PYTHON),) -- -m 'not slow' $(ARGS)
+
 benchmark: install
 	python -m benchmark.benchmark_merge_chunks
 
@@ -47,5 +50,6 @@ help:
 	@echo 'lint                         - run linters'
 	@echo '-- TESTS --'
 	@echo 'test                         - run unit tests'
+	@echo 'test_fast                    - run unit tests without slow tests'
 	@echo 'test PYTHON=<python_version> - run unit tests with the specific python version'
 	@echo 'benchmark                    - run benchmarks'

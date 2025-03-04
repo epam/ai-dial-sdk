@@ -2,9 +2,13 @@ from typing import Any, Dict, Optional, Type, TypeVar, Union
 
 import pydantic as pyd
 
-from aidial_sdk._pydantic import PYDANTIC_V2
+from aidial_sdk.pydantic import PYDANTIC_V2
 
 _ModelT = TypeVar("_ModelT", bound=pyd.BaseModel)
+
+
+def Field(*args, **kwargs) -> Any:
+    return pyd.Field(*args, **kwargs)
 
 
 def model_parse(model: Type[_ModelT], data: Any) -> _ModelT:

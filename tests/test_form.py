@@ -1,12 +1,12 @@
 from typing import List, Optional
 
 import pytest
-from pydantic import BaseModel, Field, ValidationError
+from pydantic import BaseModel, ValidationError
 
-from aidial_sdk._pydantic._compat import PYDANTIC_V2
 from aidial_sdk.chat_completion import Button
 from aidial_sdk.chat_completion.form import FormMetaclass, form
-from tests.utils._pydantic import model_json_schema, model_parse
+from aidial_sdk.pydantic._compat import PYDANTIC_V2
+from tests.utils._pydantic import Field, model_json_schema, model_parse
 
 
 class StaticConfiguration_OneButton(BaseModel, metaclass=FormMetaclass):

@@ -5,10 +5,10 @@ import pydantic
 from pydantic import Field, PositiveInt, StrictBool, StrictInt, StrictStr
 from typing_extensions import Annotated, assert_never
 
-from aidial_sdk._pydantic import PYDANTIC_V2, model_validator
 from aidial_sdk.chat_completion.enums import Status
 from aidial_sdk.deployment.from_request_mixin import FromRequestDeploymentMixin
 from aidial_sdk.exceptions import InvalidRequestError
+from aidial_sdk.pydantic import PYDANTIC_V2, model_validator
 from aidial_sdk.utils.pydantic import ExtraForbidModel
 
 

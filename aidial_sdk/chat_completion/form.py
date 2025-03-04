@@ -17,7 +17,7 @@ from typing import (
 from pydantic import BaseModel
 from pydantic.v1.validators import make_literal_validator
 
-from aidial_sdk._pydantic import PYDANTIC_V2
+from aidial_sdk.pydantic import PYDANTIC_V2
 
 if TYPE_CHECKING:
     from pydantic import field_validator as validator
@@ -30,8 +30,8 @@ else:
         from pydantic.fields import FieldInfo
     else:
         from pydantic import validator
-        from pydantic.v1.fields import FieldInfo
         from pydantic.main import ModelMetaclass
+        from pydantic.v1.fields import FieldInfo
 
 _T = TypeVar("_T")
 

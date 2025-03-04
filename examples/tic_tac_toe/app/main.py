@@ -6,11 +6,12 @@ import random
 from typing import Optional
 
 import uvicorn
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
 from aidial_sdk import DIALApp
 from aidial_sdk.chat_completion import ChatCompletion, Request, Response
 from aidial_sdk.chat_completion.form import Button, FormMetaclass, form
+from aidial_sdk.pydantic.v2 import Field
 
 from .game import O_PLAYER, X_PLAYER, Board, Move, Player
 from .request import (
