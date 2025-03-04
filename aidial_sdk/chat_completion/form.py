@@ -138,19 +138,13 @@ class FormMetaclass(ModelMetaclass):
         attr_name = "json_schema_extra" if PYDANTIC_V2 else "schema_extra"
         old_schema_extra = getattr(config, attr_name, None)
 
-        def _get_model_config_dict(model: Type[BaseModel]) -> dict:
-            if PYDANTIC_V2:
-                return getattr(model, "model_config", None) or {}
-            else:
-                return (getattr(cls, "Config", None) or {}).__dict__
-
         def new_schema_extra(
             schema: Dict[str, Any], model: Type[BaseModel]
         ) -> None:
             if old_schema_extra:
                 old_schema_extra(schema, model)
 
-            _handle_config_extensions(_get_model_config_dict(model), schema)
+            _handle_config_extensions(config.__dict__, schema)
             _handle_buttons_extension(name, schema, button_fields)
 
         setattr(config, attr_name, staticmethod(new_schema_extra))
