@@ -11,7 +11,7 @@ from pydantic import BaseModel
 from aidial_sdk import DIALApp
 from aidial_sdk.chat_completion import ChatCompletion, Request, Response
 from aidial_sdk.chat_completion.form import Button, FormMetaclass, form
-from aidial_sdk.pydantic.v2 import Field
+from aidial_sdk.pydantic.v2 import ConfigDict, Field
 
 from .game import O_PLAYER, X_PLAYER, Board, Move, Player
 from .request import (
@@ -28,8 +28,7 @@ from .request import (
 class InitConfiguration(BaseModel, metaclass=FormMetaclass):
     # The flag disables the chat message input field.
     # This forces the user to interact with the buttons.
-    class Config:
-        chat_message_input_disabled = True
+    model_config = ConfigDict(chat_message_input_disabled=True)
 
     player: Player = Field(
         description="Select tic-tac-toe player",

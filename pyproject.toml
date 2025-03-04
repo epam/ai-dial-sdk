@@ -70,10 +70,9 @@ addopts = "--asyncio-mode=auto"
 testpaths = [
     "tests"
 ]
-# FIXME revert
-# filterwarnings = [
-#     "error"
-# ]
+filterwarnings = [
+    "error"
+]
 markers = [
     "slow: marker for slow running tests",
 ]

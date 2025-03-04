@@ -2,7 +2,6 @@ from typing import Any, Dict, Optional, Type, TypeVar, Union
 
 import pydantic as pyd
 
-import aidial_sdk.pydantic.v2 as pyd2
 from aidial_sdk.pydantic import PYDANTIC_V2
 
 _ModelT = TypeVar("_ModelT", bound=pyd.BaseModel)
@@ -10,6 +9,8 @@ _ModelT = TypeVar("_ModelT", bound=pyd.BaseModel)
 
 def Field(*args, **kwargs) -> Any:
     if PYDANTIC_V2:
+        import aidial_sdk.pydantic.v2 as pyd2
+
         return pyd2.Field(*args, **kwargs)
     else:
         return pyd.Field(*args, **kwargs)

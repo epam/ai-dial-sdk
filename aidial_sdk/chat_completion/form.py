@@ -1,3 +1,4 @@
+from abc import ABC, abstractmethod
 from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
@@ -34,6 +35,72 @@ else:
         from pydantic.v1.fields import FieldInfo
 
 _T = TypeVar("_T")
+
+
+class _ConfigWrapper(ABC):
+    @abstractmethod
+    def set_field(self, field: str, value: Any) -> None:
+        pass
+
+    @abstractmethod
+    def get_field(self, field: str, default: Any) -> Any:
+        pass
+
+    @abstractmethod
+    def to_dict(self) -> dict:
+        pass
+
+
+class _ConfigV1(_ConfigWrapper):
+    config_cls: type
+
+    def __init__(self, config_cls: type):
+        self.config_cls = config_cls
+
+    def set_field(self, field: str, value: Any) -> None:
+        setattr(self.config_cls, field, value)
+
+    def get_field(self, field: str, default: Any) -> Any:
+        return getattr(self.config_cls, field, default)
+
+    def to_dict(self) -> dict:
+        return dict(self.config_cls.__dict__)
+
+
+class _ConfigV2(_ConfigWrapper):
+    model_config: dict
+
+    def __init__(self, model_config: dict):
+        self.model_config = model_config
+
+    def set_field(self, field: str, value: Any) -> None:
+        self.model_config[field] = value
+
+    def get_field(self, field: str, default: Any) -> Any:
+        return self.model_config.get(field, default)
+
+    def to_dict(self) -> dict:
+        return self.model_config
+
+
+def _get_model_config(namespace: Dict[str, Any]) -> _ConfigWrapper:
+    if PYDANTIC_V2:
+        model_config = namespace["model_config"] = (
+            namespace.get("model_config") or {}
+        )
+        return _ConfigV2(model_config)
+    else:
+        if (config_cls := namespace.get("Config")) is None:
+            config_cls = type("Config", (object,), {})
+
+            if module := namespace.get("__module__"):
+                config_cls.__module__ = module
+            if qualname := namespace.get("__qualname__"):
+                config_cls.__qualname__ = f"{qualname}.{config_cls.__name__}"
+
+            namespace["Config"] = config_cls
+
+        return _ConfigV1(config_cls)
 
 
 @dataclass
@@ -119,21 +186,12 @@ class FormMetaclass(ModelMetaclass):
 
         # Inject schema post processing
 
-        if (config_cls := namespace.get("Config")) is None:
-            # FIXME: extract method
-            config_cls = type("Config", (object,), {})
+        model_config = _get_model_config(namespace)
 
-            if module := namespace.get("__module__"):
-                config_cls.__module__ = module
-            if qualname := namespace.get("__qualname__"):
-                config_cls.__qualname__ = f"{qualname}.{config_cls.__name__}"
-
-            namespace["Config"] = config_cls
-
-        config_cls.extra = "forbid"  # type: ignore
+        model_config.set_field("extra", "forbid")
 
         attr_name = "json_schema_extra" if PYDANTIC_V2 else "schema_extra"
-        old_schema_extra = getattr(config_cls, attr_name, None)
+        old_schema_extra = model_config.get_field(attr_name, None)
 
         def new_schema_extra(
             schema: Dict[str, Any], model: Type[BaseModel]
@@ -141,10 +199,10 @@ class FormMetaclass(ModelMetaclass):
             if old_schema_extra:
                 old_schema_extra(schema, model)
 
-            _handle_config_extensions(config_cls.__dict__, schema)
+            _handle_config_extensions(model_config.to_dict(), schema)
             _handle_buttons_extension(name, schema, button_fields)
 
-        setattr(config_cls, attr_name, staticmethod(new_schema_extra))
+        model_config.set_field(attr_name, staticmethod(new_schema_extra))
 
         cls = super().__new__(mcs, name, bases, namespace, **kwargs)
 
@@ -218,11 +276,14 @@ def form(
             conf_fields = {
                 "chat_message_input_disabled": chat_message_input_disabled
             }
-            conf_base_cls = getattr(cls, "Config", object)
-            config_cls = type("Config", (conf_base_cls,), conf_fields)
-            config_cls.__module__ = cls.__module__
-            config_cls.__qualname__ = f"{cls.__qualname__}.Config"
-            namespace["Config"] = config_cls
+            if PYDANTIC_V2:
+                namespace["model_config"] = conf_fields
+            else:
+                conf_base_cls = getattr(cls, "Config", object)
+                config_cls = type("Config", (conf_base_cls,), conf_fields)
+                config_cls.__module__ = cls.__module__
+                config_cls.__qualname__ = f"{cls.__qualname__}.Config"
+                namespace["Config"] = config_cls
 
         # Injecting button extensions
         for name, field_info in kwargs.items():

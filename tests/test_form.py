@@ -6,14 +6,19 @@ from pydantic import BaseModel, ValidationError
 from aidial_sdk.chat_completion import Button
 from aidial_sdk.chat_completion.form import FormMetaclass, form
 from aidial_sdk.pydantic._compat import PYDANTIC_V2
+from aidial_sdk.pydantic.v2 import ConfigDict
 from tests.utils._pydantic import Field, model_json_schema, model_parse
 
 
 class StaticConfiguration_OneButton(BaseModel, metaclass=FormMetaclass):
     "Static application configuration"
 
-    class Config:
-        chat_message_input_disabled = True
+    if PYDANTIC_V2:
+        model_config = ConfigDict(chat_message_input_disabled=True)
+    else:
+
+        class Config:
+            chat_message_input_disabled = True
 
     int_field: Optional[int] = Field(
         default=None, description="Int field description"
@@ -240,8 +245,12 @@ def test_dynamic_configuration_input_disabled_static():
     """
 
     class Conf(BaseModel):
-        class Config:
-            chat_message_input_disabled = True
+        if PYDANTIC_V2:
+            model_config = ConfigDict(chat_message_input_disabled=True)
+        else:
+
+            class Config:
+                chat_message_input_disabled = True
 
     conf = form()(Conf)
 
@@ -250,8 +259,13 @@ def test_dynamic_configuration_input_disabled_static():
 
 def test_dynamic_configuration_input_disabled_dynamic():
     class Conf(BaseModel):
-        class Config:
-            extra = "forbid"
+        if PYDANTIC_V2:
+            # FIXME: fix type ignore
+            model_config = ConfigDict(extra="forbid")  # type: ignore
+        else:
+
+            class Config:
+                extra = "forbid"
 
     conf = form(chat_message_input_disabled=True)(Conf)
 
@@ -260,8 +274,13 @@ def test_dynamic_configuration_input_disabled_dynamic():
 
 def test_dynamic_configuration_input_disabled_omitted():
     class Conf(BaseModel):
-        class Config:
-            extra = "forbid"
+        if PYDANTIC_V2:
+            # FIXME: fix type ignore
+            model_config = ConfigDict(extra="forbid")  # type: ignore
+        else:
+
+            class Config:
+                extra = "forbid"
 
     conf = form()(Conf)
 
@@ -270,8 +289,12 @@ def test_dynamic_configuration_input_disabled_omitted():
 
 def test_dynamic_configuration_input_disabled_overwrite1():
     class Conf(BaseModel):
-        class Config:
-            chat_message_input_disabled = False
+        if PYDANTIC_V2:
+            model_config = ConfigDict(chat_message_input_disabled=False)
+        else:
+
+            class Config:
+                chat_message_input_disabled = False
 
     conf = form(chat_message_input_disabled=True)(Conf)
 
@@ -280,8 +303,12 @@ def test_dynamic_configuration_input_disabled_overwrite1():
 
 def test_dynamic_configuration_input_disabled_overwrite2():
     class Conf(BaseModel):
-        class Config:
-            chat_message_input_disabled = True
+        if PYDANTIC_V2:
+            model_config = ConfigDict(chat_message_input_disabled=True)
+        else:
+
+            class Config:
+                chat_message_input_disabled = True
 
     conf = form(chat_message_input_disabled=False)(Conf)
 
