@@ -7,13 +7,13 @@ from typing import Any, Callable, Coroutine, Literal, Optional, Type, TypeVar
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 from pydantic import ValidationError
-from aidial_sdk._pydantic import BaseModel
 
 from aidial_sdk._errors import (
     dial_exception_handler,
     fastapi_exception_handler,
     pydantic_validation_exception_handler,
 )
+from aidial_sdk._pydantic import BaseModel
 from aidial_sdk.chat_completion.base import ChatCompletion
 from aidial_sdk.chat_completion.request import Request as ChatCompletionRequest
 from aidial_sdk.chat_completion.response import (

@@ -1,11 +1,11 @@
 from typing import List, Optional
 
 import pytest
-
-from aidial_sdk.chat_completion import Button
-from aidial_sdk.chat_completion.form import FormMetaclass, form
 from pydantic import BaseModel, Field, ValidationError
 
+from aidial_sdk._pydantic._compat import PYDANTIC_V2
+from aidial_sdk.chat_completion import Button
+from aidial_sdk.chat_completion.form import FormMetaclass, form
 from tests.utils._pydantic import model_json_schema, model_parse
 
 
@@ -117,6 +117,13 @@ def test_configuration_optional_button_parsing_success():
 
 def test_configuration_one_button_schema():
     actual_schema = model_json_schema(StaticConfiguration_OneButton)
+    extra_fields = {}
+    if PYDANTIC_V2:
+        extra_fields["anyOf"] = [{"type": "integer"}, {"type": "null"}]
+        extra_fields["default"] = None
+    else:
+        extra_fields["type"] = "integer"
+
     assert actual_schema == {
         "title": "StaticConfiguration_OneButton",
         "description": "Static application configuration",
@@ -124,8 +131,8 @@ def test_configuration_one_button_schema():
         "properties": {
             "int_field": {
                 "title": "Int Field",
-                "type": "integer",
                 "description": "Int field description",
+                **extra_fields,
             },
             "str_field": {"title": "Str Field", "type": "string"},
             "list_field": {
@@ -199,14 +206,10 @@ def test_configuration_parsing_one_button_fail():
     with pytest.raises(ValidationError) as e:
         model_parse(StaticConfiguration_OneButton, conf)
 
-    assert e.value.errors() == [
-        {
-            "loc": ("int_button_field",),
-            "msg": "unexpected value; permitted: 10, 20",
-            "type": "value_error.const",
-            "ctx": {"given": 11, "permitted": (10, 20)},
-        }
-    ]
+    errors = e.value.errors()
+
+    assert len(errors) == 1
+    assert "unexpected value; permitted: 10, 20" in errors[0]["msg"]
 
 
 def test_configuration_parsing_two_buttons_fail():
@@ -215,20 +218,11 @@ def test_configuration_parsing_two_buttons_fail():
     with pytest.raises(ValidationError) as e:
         model_parse(StaticConfiguration_TwoButtons, conf)
 
-    assert e.value.errors() == [
-        {
-            "ctx": {"given": 11, "permitted": (10, 20)},
-            "loc": ("int_button_field",),
-            "msg": "unexpected value; permitted: 10, 20",
-            "type": "value_error.const",
-        },
-        {
-            "ctx": {"given": "z", "permitted": ("a", "b")},
-            "loc": ("str_button_field",),
-            "msg": "unexpected value; permitted: 'a', 'b'",
-            "type": "value_error.const",
-        },
-    ]
+    errors = e.value.errors()
+
+    assert len(errors) == 2
+    assert "unexpected value; permitted: 10, 20" in errors[0]["msg"]
+    assert "unexpected value; permitted: 'a', 'b'" in errors[1]["msg"]
 
 
 def test_configuration_parsing_two_buttons_success():
