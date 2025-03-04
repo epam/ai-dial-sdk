@@ -20,7 +20,7 @@ from pydantic import BaseModel
 from pydantic.v1.validators import make_literal_validator
 
 from aidial_sdk.pydantic import PYDANTIC_V2
-from aidial_sdk.utils._pydantic import ConfigWrapper
+from aidial_sdk.utils._pydantic import ModelConfigWrapper
 
 if TYPE_CHECKING:
     from pydantic import field_validator as validator
@@ -122,30 +122,34 @@ class FormMetaclass(ModelMetaclass):
 
         # Inject schema post processing
 
-        model_config = ConfigWrapper.create(namespace)
+        model_config = ModelConfigWrapper.create(namespace)
         model_config["extra"] = "forbid"
 
-        def _on_schema(schema: Dict[str, Any]) -> None:
-            _handle_config_extensions(model_config.to_dict(), schema)
-            _handle_buttons_extension(name, schema, button_fields)
+        def _on_schema(json_schema: Dict[str, Any]) -> None:
+            _handle_config_extensions(model_config, json_schema)
+            _handle_buttons_extension(name, json_schema, button_fields)
 
         model_config.post_process_schema(_on_schema)
 
         return super().__new__(mcs, name, bases, namespace, **kwargs)
 
 
-def _handle_config_extensions(config: dict, schema: Dict[str, Any]) -> None:
-    if (disable_input := config.get("chat_message_input_disabled")) is not None:
-        schema["dial:chatMessageInputDisabled"] = disable_input is True
+def _handle_config_extensions(
+    model_config: ModelConfigWrapper, json_schema: Dict[str, Any]
+) -> None:
+    if (
+        disable_input := model_config["chat_message_input_disabled"]
+    ) is not None:
+        json_schema["dial:chatMessageInputDisabled"] = disable_input is True
 
 
 def _handle_buttons_extension(
     cls_name: str,
-    schema: Dict[str, Any],
+    json_schema: Dict[str, Any],
     button_fields: Dict[str, List[Button]],
 ) -> None:
     for field_name, buttons in button_fields.items():
-        prop = schema["properties"][field_name]
+        prop = json_schema["properties"][field_name]
         prop.pop("buttons", None)
 
         button_schemas = [button.schema() for button in buttons]
@@ -157,14 +161,14 @@ def _handle_buttons_extension(
             # Optional types are translated in Pydantic V2 to
             # {'anyOf': [{'type': 'integer'}, {'type': 'null'}], 'default': null}
             # that conflicts with the follow-up 'oneOf' definition.
-            types = {subschema["type"] for subschema in anyOf}
+            types = {schema["type"] for schema in anyOf}
             types.discard("null")
             if len(types) != 1:
                 raise ValueError(
-                    f"Field {field_name} has conflicting types {types}."
+                    f"Field {cls_name}.{field_name} has conflicting types {types}."
                 )
-            prop.pop("default", None)
             prop["type"] = types.pop()
+            prop.pop("default", None)
 
         # NOTE: The meta schema of the DIAL forms only supports
         # 'number' type, so we convert 'integer' to 'number'.

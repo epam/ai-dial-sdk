@@ -8,17 +8,13 @@ from pydantic import BaseModel
 from aidial_sdk.pydantic import PYDANTIC_V2
 
 
-class ConfigWrapper(ABC):
+class ModelConfigWrapper(ABC):
     @abstractmethod
     def _set_field(self, field: str, value: Any) -> None:
         pass
 
     @abstractmethod
     def _get_field(self, field: str, default: Any) -> Any:
-        pass
-
-    @abstractmethod
-    def to_dict(self) -> dict:
         pass
 
     @property
@@ -48,7 +44,7 @@ class ConfigWrapper(ABC):
         self[attr_name] = _schema_extra
 
     @staticmethod
-    def create(namespace: Dict[str, Any]) -> ConfigWrapper:
+    def create(namespace: Dict[str, Any]) -> ModelConfigWrapper:
         if PYDANTIC_V2:
             model_config = namespace["model_config"] = (
                 namespace.get("model_config") or {}
@@ -70,7 +66,7 @@ class ConfigWrapper(ABC):
             return _ConfigV1(config_cls)
 
 
-class _ConfigV1(ConfigWrapper):
+class _ConfigV1(ModelConfigWrapper):
     config_cls: type
 
     def __init__(self, config_cls: type):
@@ -86,11 +82,8 @@ class _ConfigV1(ConfigWrapper):
     def schema_extra_field(self) -> str:
         return "schema_extra"
 
-    def to_dict(self) -> dict:
-        return dict(self.config_cls.__dict__)
 
-
-class _ConfigV2(ConfigWrapper):
+class _ConfigV2(ModelConfigWrapper):
     model_config: dict
 
     def __init__(self, model_config: dict):
@@ -105,6 +98,3 @@ class _ConfigV2(ConfigWrapper):
     @property
     def schema_extra_field(self) -> str:
         return "json_schema_extra"
-
-    def to_dict(self) -> dict:
-        return self.model_config
