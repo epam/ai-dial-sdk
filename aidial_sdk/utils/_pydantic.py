@@ -1,11 +1,13 @@
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Dict, Type
+from typing import Any, Callable, Dict, Optional, Type, TypeVar
 
 from pydantic import BaseModel
 
 from aidial_sdk.pydantic import PYDANTIC_V2
+
+_Model = TypeVar("_Model", bound=BaseModel)
 
 
 class ModelConfigWrapper:
@@ -36,11 +38,13 @@ class ModelConfigWrapper:
         self[attr_name] = _schema_extra
 
     @classmethod
-    def create(cls, namespace: Dict[str, Any]) -> ModelConfigWrapper:
+    def create(
+        cls, base_cls: Optional[Type[_Model]], namespace: Dict[str, Any]
+    ) -> ModelConfigWrapper:
         if PYDANTIC_V2:
-            return cls(_ConfigV2.create(namespace))
+            return cls(_ConfigV2.create(base_cls, namespace))
         else:
-            return cls(_ConfigV1.create(namespace))
+            return cls(_ConfigV1.create(base_cls, namespace))
 
 
 class ModelConfigBase(ABC):
@@ -59,7 +63,9 @@ class ModelConfigBase(ABC):
 
     @classmethod
     @abstractmethod
-    def create(cls, namespace: Dict[str, Any]) -> ModelConfigBase:
+    def create(
+        cls, base_cls: Optional[Type[_Model]], namespace: Dict[str, Any]
+    ) -> ModelConfigBase:
         pass
 
 
@@ -80,9 +86,17 @@ class _ConfigV1(ModelConfigBase):
         return "schema_extra"
 
     @classmethod
-    def create(cls, namespace: Dict[str, Any]) -> ModelConfigBase:
+    def create(
+        cls, base_cls: Optional[Type[_Model]], namespace: Dict[str, Any]
+    ) -> ModelConfigBase:
         if (config_cls := namespace.get("Config")) is None:
-            config_cls = type("Config", (object,), {})
+            if base_cls:
+                conf_base_cls = getattr(cls, "Config", None)
+            else:
+                conf_base_cls = None
+
+            # FIXME: add tests to confirm that the inheritance works
+            config_cls = type("Config", (conf_base_cls or object,), {})
 
             if module := namespace.get("__module__"):
                 config_cls.__module__ = module
@@ -111,7 +125,10 @@ class _ConfigV2(ModelConfigBase):
         return "json_schema_extra"
 
     @classmethod
-    def create(cls, namespace: Dict[str, Any]) -> ModelConfigBase:
+    def create(
+        cls, base_cls: Optional[Type[_Model]], namespace: Dict[str, Any]
+    ) -> ModelConfigBase:
+        # FIXME: merge with the existing "base_cls.model_config"
         model_config = namespace["model_config"] = (
             namespace.get("model_config") or {}
         )

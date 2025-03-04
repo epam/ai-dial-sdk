@@ -122,7 +122,7 @@ class FormMetaclass(ModelMetaclass):
 
         # Inject schema post processing
 
-        model_config = ModelConfigWrapper.create(namespace)
+        model_config = ModelConfigWrapper.create(None, namespace)
         model_config["extra"] = "forbid"
 
         def _on_schema(json_schema: Dict[str, Any]) -> None:
@@ -200,17 +200,10 @@ def form(
 
         # Injecting config extensions
         if chat_message_input_disabled is not None:
-            conf_fields = {
-                "chat_message_input_disabled": chat_message_input_disabled
-            }
-            if PYDANTIC_V2:
-                namespace["model_config"] = conf_fields
-            else:
-                conf_base_cls = getattr(cls, "Config", object)
-                config_cls = type("Config", (conf_base_cls,), conf_fields)
-                config_cls.__module__ = cls.__module__
-                config_cls.__qualname__ = f"{cls.__qualname__}.Config"
-                namespace["Config"] = config_cls
+            model_config = ModelConfigWrapper.create(cls, namespace)
+            model_config["chat_message_input_disabled"] = (
+                chat_message_input_disabled
+            )
 
         # Injecting button extensions
         annotations: Dict[str, Any] = {}
@@ -239,8 +232,7 @@ def form(
             namespace[name] = field_info
             annotations[name] = field_type
 
-        if annotations:
-            namespace["__annotations__"] = annotations
+        namespace["__annotations__"] = annotations
 
         cls_name = f"_{cls.__name__}"
         return FormMetaclass(cls_name, (cls,), namespace)  # type: ignore
