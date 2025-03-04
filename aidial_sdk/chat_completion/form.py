@@ -1,4 +1,5 @@
-from abc import ABC, abstractmethod
+from __future__ import annotations
+
 from dataclasses import dataclass
 from typing import (
     TYPE_CHECKING,
@@ -19,6 +20,7 @@ from pydantic import BaseModel
 from pydantic.v1.validators import make_literal_validator
 
 from aidial_sdk.pydantic import PYDANTIC_V2
+from aidial_sdk.utils._pydantic import ConfigWrapper
 
 if TYPE_CHECKING:
     from pydantic import field_validator as validator
@@ -35,72 +37,6 @@ else:
         from pydantic.v1.fields import FieldInfo
 
 _T = TypeVar("_T")
-
-
-class _ConfigWrapper(ABC):
-    @abstractmethod
-    def set_field(self, field: str, value: Any) -> None:
-        pass
-
-    @abstractmethod
-    def get_field(self, field: str, default: Any) -> Any:
-        pass
-
-    @abstractmethod
-    def to_dict(self) -> dict:
-        pass
-
-
-class _ConfigV1(_ConfigWrapper):
-    config_cls: type
-
-    def __init__(self, config_cls: type):
-        self.config_cls = config_cls
-
-    def set_field(self, field: str, value: Any) -> None:
-        setattr(self.config_cls, field, value)
-
-    def get_field(self, field: str, default: Any) -> Any:
-        return getattr(self.config_cls, field, default)
-
-    def to_dict(self) -> dict:
-        return dict(self.config_cls.__dict__)
-
-
-class _ConfigV2(_ConfigWrapper):
-    model_config: dict
-
-    def __init__(self, model_config: dict):
-        self.model_config = model_config
-
-    def set_field(self, field: str, value: Any) -> None:
-        self.model_config[field] = value
-
-    def get_field(self, field: str, default: Any) -> Any:
-        return self.model_config.get(field, default)
-
-    def to_dict(self) -> dict:
-        return self.model_config
-
-
-def _get_model_config(namespace: Dict[str, Any]) -> _ConfigWrapper:
-    if PYDANTIC_V2:
-        model_config = namespace["model_config"] = (
-            namespace.get("model_config") or {}
-        )
-        return _ConfigV2(model_config)
-    else:
-        if (config_cls := namespace.get("Config")) is None:
-            config_cls = type("Config", (object,), {})
-
-            if module := namespace.get("__module__"):
-                config_cls.__module__ = module
-            if qualname := namespace.get("__qualname__"):
-                config_cls.__qualname__ = f"{qualname}.{config_cls.__name__}"
-
-            namespace["Config"] = config_cls
-
-        return _ConfigV1(config_cls)
 
 
 @dataclass
@@ -186,27 +122,16 @@ class FormMetaclass(ModelMetaclass):
 
         # Inject schema post processing
 
-        model_config = _get_model_config(namespace)
+        model_config = ConfigWrapper.create(namespace)
+        model_config["extra"] = "forbid"
 
-        model_config.set_field("extra", "forbid")
-
-        attr_name = "json_schema_extra" if PYDANTIC_V2 else "schema_extra"
-        old_schema_extra = model_config.get_field(attr_name, None)
-
-        def new_schema_extra(
-            schema: Dict[str, Any], model: Type[BaseModel]
-        ) -> None:
-            if old_schema_extra:
-                old_schema_extra(schema, model)
-
+        def _on_schema(schema: Dict[str, Any]) -> None:
             _handle_config_extensions(model_config.to_dict(), schema)
             _handle_buttons_extension(name, schema, button_fields)
 
-        model_config.set_field(attr_name, staticmethod(new_schema_extra))
+        model_config.post_process_schema(_on_schema)
 
-        cls = super().__new__(mcs, name, bases, namespace, **kwargs)
-
-        return cls
+        return super().__new__(mcs, name, bases, namespace, **kwargs)
 
 
 def _handle_config_extensions(config: dict, schema: Dict[str, Any]) -> None:
