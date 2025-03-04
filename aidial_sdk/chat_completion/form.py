@@ -112,31 +112,28 @@ class FormMetaclass(ModelMetaclass):
 
             extra_opts = {} if PYDANTIC_V2 else {"allow_reuse": True}
             validators[f"_validate_{field_name}"] = validator(
-                field_name, **extra_opts
+                field_name, **extra_opts  # type: ignore
             )(_make_check_value(literal_validator))
 
         namespace.update(validators)
 
         # Inject schema post processing
 
-        if (config := namespace.get("Config")) is None:
+        if (config_cls := namespace.get("Config")) is None:
             # FIXME: extract method
-            class Config:
-                pass
-
-            config = Config
+            config_cls = type("Config", (object,), {})
 
             if module := namespace.get("__module__"):
-                config.__module__ = module
+                config_cls.__module__ = module
             if qualname := namespace.get("__qualname__"):
-                config.__qualname__ = f"{qualname}.{config.__name__}"
+                config_cls.__qualname__ = f"{qualname}.{config_cls.__name__}"
 
-            namespace["Config"] = config
+            namespace["Config"] = config_cls
 
-        config.extra = "forbid"  # type: ignore
+        config_cls.extra = "forbid"  # type: ignore
 
         attr_name = "json_schema_extra" if PYDANTIC_V2 else "schema_extra"
-        old_schema_extra = getattr(config, attr_name, None)
+        old_schema_extra = getattr(config_cls, attr_name, None)
 
         def new_schema_extra(
             schema: Dict[str, Any], model: Type[BaseModel]
@@ -144,10 +141,10 @@ class FormMetaclass(ModelMetaclass):
             if old_schema_extra:
                 old_schema_extra(schema, model)
 
-            _handle_config_extensions(config.__dict__, schema)
+            _handle_config_extensions(config_cls.__dict__, schema)
             _handle_buttons_extension(name, schema, button_fields)
 
-        setattr(config, attr_name, staticmethod(new_schema_extra))
+        setattr(config_cls, attr_name, staticmethod(new_schema_extra))
 
         cls = super().__new__(mcs, name, bases, namespace, **kwargs)
 
