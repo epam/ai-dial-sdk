@@ -52,6 +52,21 @@ def Field(
     union_mode: Literal["smart", "left_to_right"] = _Unset,
     buttons: Optional[List[Button]] = _Unset
 ) -> Any:
+    if buttons is not _Unset and buttons is not None:
+        if json_schema_extra is _Unset or json_schema_extra is None:
+            json_schema_extra = {}
+
+        if not callable(json_schema_extra):
+            new_extra = {**json_schema_extra, "buttons": buttons}
+        else:
+
+            def _extra(x: Dict[str, Any]) -> None:
+                json_schema_extra({**x, "buttons": buttons})
+
+            new_extra = _extra
+    else:
+        new_extra = json_schema_extra
+
     return PydanticField(
         default=default,
         default_factory=default_factory,
@@ -64,7 +79,7 @@ def Field(
         examples=examples,
         exclude=exclude,
         discriminator=discriminator,
-        json_schema_extra=json_schema_extra,
+        json_schema_extra=new_extra,
         frozen=frozen,
         validate_default=validate_default,
         repr=repr,
@@ -83,5 +98,4 @@ def Field(
         min_length=min_length,
         max_length=max_length,
         union_mode=union_mode,
-        buttons=buttons,  # type: ignore
     )
