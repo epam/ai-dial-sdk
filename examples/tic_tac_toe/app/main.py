@@ -67,12 +67,11 @@ class InitConfiguration(BaseModel, metaclass=FormMetaclass):
 # The form defines the move the user in making during the tic-tac-toe game.
 # The bot suggest a list of available moves to the user.
 # The user pick one of the move by its index in the list and returns this data structure to the application.
-# Note that the form doesn't have any buttons, since the moves are determined dynamically.
-# The buttons are added to the model dynamically using the class decorator "form".
+# Note that the form doesn't have any buttons, since the moves are determined dynamically. Nor does it have a DIAL specific configuration, since it inherits
+# from vanilla Pydantic BaseModel that it's aware of any DIAL specific features.
+# The buttons and configuration will be added to the model dynamically
+# in the `chat_completion`` handler via the class decorator "form".
 class MoveForm(BaseModel):
-    class Config:
-        chat_message_input_disabled = True
-
     move: int
 
 
@@ -143,7 +142,9 @@ class TicTacToeApplication(ChatCompletion):
                 )
 
                 # Use the form decorator to add buttons to the form.
-                _MoveForm = form(move=move_selector)(MoveForm)
+                _MoveForm = form(
+                    chat_message_input_disabled=True, move=move_selector
+                )(MoveForm)
 
                 # Save the form schema in the bot message
                 choice.set_form_schema(_MoveForm.model_json_schema())

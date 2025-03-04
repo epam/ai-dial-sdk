@@ -1,8 +1,16 @@
 import random
 from typing import List
 
+from aidial_sdk._pydantic._compat import PYDANTIC_V2
 from examples.tic_tac_toe.app.main import app
 from tests.utils.client import create_test_client
+
+import pytest
+
+
+pytestmark = pytest.mark.skipif(
+    not PYDANTIC_V2, reason="The example is written using Pydantic V2"
+)
 
 
 def test_ttt_configuration():

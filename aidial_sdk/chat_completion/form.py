@@ -31,7 +31,7 @@ else:
     else:
         from pydantic import validator
         from pydantic.v1.fields import FieldInfo
-        from pydantic.v1.main import ModelMetaclass
+        from pydantic.main import ModelMetaclass
 
 _T = TypeVar("_T")
 
@@ -97,15 +97,23 @@ class FormMetaclass(ModelMetaclass):
             literal_validator = make_literal_validator(literal_type)
 
             def _make_check_value(literal_validator):
-                def check_value(value, *args, **kwargs):
-                    return literal_validator(value)
+                if PYDANTIC_V2:
 
-                return check_value
+                    def check_value_v2(value, *args, **kwargs):
+                        return literal_validator(value)
 
-            # Do we need allow_reuse=True here for Pydantic v1?
-            validators[f"_validate_{field_name}"] = validator(field_name)(
-                _make_check_value(literal_validator)
-            )
+                    return check_value_v2
+                else:
+
+                    def check_value_v1(value, values, config, field):
+                        return literal_validator(value)
+
+                    return check_value_v1
+
+            extra_opts = {} if PYDANTIC_V2 else {"allow_reuse": True}
+            validators[f"_validate_{field_name}"] = validator(
+                field_name, **extra_opts
+            )(_make_check_value(literal_validator))
 
         namespace.update(validators)
 
@@ -127,15 +135,14 @@ class FormMetaclass(ModelMetaclass):
 
         config.extra = "forbid"  # type: ignore
 
-        # FIXME: extract method and use `schema_extra` for Pyd v1
-        old_schema_extra = getattr(config, "json_schema_extra", None)
+        attr_name = "json_schema_extra" if PYDANTIC_V2 else "schema_extra"
+        old_schema_extra = getattr(config, attr_name, None)
 
         def _get_model_config_dict(model: Type[BaseModel]) -> dict:
-            if model_config := getattr(model, "model_config", None):
-                return model_config
-            if config := getattr(cls, "Config", None):
-                return config.__dict__
-            return {}
+            if PYDANTIC_V2:
+                return getattr(model, "model_config", None) or {}
+            else:
+                return (getattr(cls, "Config", None) or {}).__dict__
 
         def new_schema_extra(
             schema: Dict[str, Any], model: Type[BaseModel]
@@ -146,7 +153,7 @@ class FormMetaclass(ModelMetaclass):
             _handle_config_extensions(_get_model_config_dict(model), schema)
             _handle_buttons_extension(name, schema, button_fields)
 
-        config.json_schema_extra = staticmethod(new_schema_extra)  # type: ignore
+        setattr(config, attr_name, staticmethod(new_schema_extra))
 
         cls = super().__new__(mcs, name, bases, namespace, **kwargs)
 

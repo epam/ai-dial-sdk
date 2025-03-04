@@ -234,13 +234,18 @@ def test_configuration_parsing_two_buttons_success():
 
 
 def test_dynamic_configuration_input_disabled_static():
+    """
+    This test checks that DIAL specific features
+    aren't inherited from the vanilla BaseModel class.
+    """
+
     class Conf(BaseModel):
         class Config:
             chat_message_input_disabled = True
 
     conf = form()(Conf)
 
-    assert model_json_schema(conf)["dial:chatMessageInputDisabled"] is True
+    assert model_json_schema(conf).get("dial:chatMessageInputDisabled") is None
 
 
 def test_dynamic_configuration_input_disabled_dynamic():
