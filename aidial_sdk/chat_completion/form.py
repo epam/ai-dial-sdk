@@ -198,8 +198,6 @@ def form(
             "__qualname__": cls.__qualname__,
         }
 
-        annotations: Dict[str, Any] = {}
-
         # Injecting config extensions
         if chat_message_input_disabled is not None:
             conf_fields = {
@@ -215,6 +213,8 @@ def form(
                 namespace["Config"] = config_cls
 
         # Injecting button extensions
+        annotations: Dict[str, Any] = {}
+
         for name, field_info in kwargs.items():
             field_name = f"{cls.__name__}.{name}"
 
@@ -224,20 +224,20 @@ def form(
                 )
 
             buttons = _get_buttons(field_name, buttons_extra)
-
-            namespace[name] = field_info
-
             button_type = type(buttons[0].const)
+
             if field_type := cls.__annotations__.get(name):
-                annotations[name] = field_type
-                field_type_base = _get_base_type(field_type)
-                if field_type_base != button_type:
+                field_base_type = _get_base_type(field_type)
+                if field_base_type != button_type:
                     raise ValueError(
-                        f"Field {field_name} has type {field_type_base} "
+                        f"Field {field_name} has type {field_base_type} "
                         f"but buttons are of type {button_type}."
                     )
             else:
-                annotations[name] = button_type
+                field_type = button_type
+
+            namespace[name] = field_info
+            annotations[name] = field_type
 
         if annotations:
             namespace["__annotations__"] = annotations

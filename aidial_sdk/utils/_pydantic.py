@@ -8,30 +8,22 @@ from pydantic import BaseModel
 from aidial_sdk.pydantic import PYDANTIC_V2
 
 
-class ModelConfigWrapper(ABC):
-    @abstractmethod
-    def _set_field(self, field: str, value: Any) -> None:
-        pass
+class ModelConfigWrapper:
+    _model_config: ModelConfigBase
 
-    @abstractmethod
-    def _get_field(self, field: str, default: Any) -> Any:
-        pass
-
-    @property
-    @abstractmethod
-    def schema_extra_field(self) -> str:
-        pass
+    def __init__(self, model_config: ModelConfigBase):
+        self._model_config = model_config
 
     def __getitem__(self, field: str) -> Any:
-        return self._get_field(field, None)
+        return self._model_config.get_field(field, None)
 
     def __setitem__(self, field: str, value: Any) -> None:
-        self._set_field(field, value)
+        self._model_config.set_field(field, value)
 
     def post_process_schema(
         self, on_schema: Callable[[Dict[str, Any]], None]
     ) -> None:
-        attr_name = self.schema_extra_field
+        attr_name = self._model_config.schema_extra_field
         old_schema_extra = self[attr_name]
 
         def _schema_extra(
@@ -43,58 +35,84 @@ class ModelConfigWrapper(ABC):
 
         self[attr_name] = _schema_extra
 
-    @staticmethod
-    def create(namespace: Dict[str, Any]) -> ModelConfigWrapper:
+    @classmethod
+    def create(cls, namespace: Dict[str, Any]) -> ModelConfigWrapper:
         if PYDANTIC_V2:
-            model_config = namespace["model_config"] = (
-                namespace.get("model_config") or {}
-            )
-            return _ConfigV2(model_config)
+            return cls(_ConfigV2.create(namespace))
         else:
-            if (config_cls := namespace.get("Config")) is None:
-                config_cls = type("Config", (object,), {})
-
-                if module := namespace.get("__module__"):
-                    config_cls.__module__ = module
-                if qualname := namespace.get("__qualname__"):
-                    config_cls.__qualname__ = (
-                        f"{qualname}.{config_cls.__name__}"
-                    )
-
-                namespace["Config"] = config_cls
-
-            return _ConfigV1(config_cls)
+            return cls(_ConfigV1.create(namespace))
 
 
-class _ConfigV1(ModelConfigWrapper):
+class ModelConfigBase(ABC):
+    @abstractmethod
+    def set_field(self, field: str, value: Any) -> None:
+        pass
+
+    @abstractmethod
+    def get_field(self, field: str, default: Any) -> Any:
+        pass
+
+    @property
+    @abstractmethod
+    def schema_extra_field(self) -> str:
+        pass
+
+    @classmethod
+    @abstractmethod
+    def create(cls, namespace: Dict[str, Any]) -> ModelConfigBase:
+        pass
+
+
+class _ConfigV1(ModelConfigBase):
     config_cls: type
 
     def __init__(self, config_cls: type):
         self.config_cls = config_cls
 
-    def _set_field(self, field: str, value: Any) -> None:
+    def set_field(self, field: str, value: Any) -> None:
         setattr(self.config_cls, field, value)
 
-    def _get_field(self, field: str, default: Any) -> Any:
+    def get_field(self, field: str, default: Any) -> Any:
         return getattr(self.config_cls, field, default)
 
     @property
     def schema_extra_field(self) -> str:
         return "schema_extra"
 
+    @classmethod
+    def create(cls, namespace: Dict[str, Any]) -> ModelConfigBase:
+        if (config_cls := namespace.get("Config")) is None:
+            config_cls = type("Config", (object,), {})
 
-class _ConfigV2(ModelConfigWrapper):
+            if module := namespace.get("__module__"):
+                config_cls.__module__ = module
+            if qualname := namespace.get("__qualname__"):
+                config_cls.__qualname__ = f"{qualname}.{config_cls.__name__}"
+
+            namespace["Config"] = config_cls
+
+        return cls(config_cls)
+
+
+class _ConfigV2(ModelConfigBase):
     model_config: dict
 
     def __init__(self, model_config: dict):
         self.model_config = model_config
 
-    def _set_field(self, field: str, value: Any) -> None:
+    def set_field(self, field: str, value: Any) -> None:
         self.model_config[field] = value
 
-    def _get_field(self, field: str, default: Any) -> Any:
+    def get_field(self, field: str, default: Any) -> Any:
         return self.model_config.get(field, default)
 
     @property
     def schema_extra_field(self) -> str:
         return "json_schema_extra"
+
+    @classmethod
+    def create(cls, namespace: Dict[str, Any]) -> ModelConfigBase:
+        model_config = namespace["model_config"] = (
+            namespace.get("model_config") or {}
+        )
+        return cls(model_config)
