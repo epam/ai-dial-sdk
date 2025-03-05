@@ -1,26 +1,18 @@
-from typing import TYPE_CHECKING, Any, Dict, Optional, Type, TypeVar, Union
+from typing import Any, Dict, Optional, Type, TypeVar, Union
 
-from aidial_sdk.pydantic._compat import PYDANTIC_V2
+from aidial_sdk._pydantic import PYDANTIC_V2, BaseModel
+from aidial_sdk._pydantic import Field as PydField
 
-if TYPE_CHECKING:
-    import pydantic as pyd
-else:
-    if PYDANTIC_V2:
-        import pydantic as pyd
-    else:
-        import pydantic.v1 as pyd
-
-
-_ModelT = TypeVar("_ModelT", bound=pyd.BaseModel)
+_ModelT = TypeVar("_ModelT", bound=BaseModel)
 
 
 def Field(*args, **kwargs) -> Any:
     if PYDANTIC_V2:
-        import aidial_sdk.pydantic.v2 as pyd2
+        from aidial_sdk.pydantic.v2 import Field as SDKField
 
-        return pyd2.Field(*args, **kwargs)
+        return SDKField(*args, **kwargs)
     else:
-        return pyd.Field(*args, **kwargs)
+        return PydField(*args, **kwargs)
 
 
 def model_parse(model: Type[_ModelT], data: Any) -> _ModelT:
@@ -55,7 +47,7 @@ def model_copy(
 
 
 def model_dump(
-    model: pyd.BaseModel, *, exclude_none: bool = False
+    model: BaseModel, *, exclude_none: bool = False
 ) -> Dict[str, Any]:
     if PYDANTIC_V2:
         return model.model_dump(exclude_none=exclude_none)

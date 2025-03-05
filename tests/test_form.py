@@ -1,20 +1,12 @@
-from typing import TYPE_CHECKING, List, Optional
+from typing import List, Optional
 
 import pytest
 
+from aidial_sdk._pydantic import PYDANTIC_V2, BaseModel, ValidationError
 from aidial_sdk.chat_completion import Button
 from aidial_sdk.chat_completion.form import FormMetaclass, form
-from aidial_sdk.pydantic._compat import PYDANTIC_V2
 from aidial_sdk.pydantic.v2 import ConfigDict
 from tests.utils._pydantic import Field, model_json_schema, model_parse
-
-if TYPE_CHECKING:
-    from pydantic import BaseModel, ValidationError
-else:
-    if PYDANTIC_V2:
-        from pydantic import BaseModel, ValidationError
-    else:
-        from pydantic.v1 import BaseModel, ValidationError
 
 
 class StaticConfiguration_OneButton(BaseModel, metaclass=FormMetaclass):

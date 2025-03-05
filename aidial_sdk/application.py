@@ -2,35 +2,17 @@ import logging.config
 import re
 import warnings
 from logging import Filter, LogRecord
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Callable,
-    Coroutine,
-    Literal,
-    Optional,
-    Type,
-    TypeVar,
-)
+from typing import Any, Callable, Coroutine, Literal, Optional, Type, TypeVar
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
-
-from aidial_sdk.pydantic._compat import PYDANTIC_V2
-
-if TYPE_CHECKING:
-    from pydantic import ValidationError
-else:
-    if PYDANTIC_V2:
-        from pydantic import ValidationError
-    else:
-        from pydantic.v1 import ValidationError
 
 from aidial_sdk._errors import (
     dial_exception_handler,
     fastapi_exception_handler,
     pydantic_validation_exception_handler,
 )
+from aidial_sdk._pydantic import ValidationError
 from aidial_sdk.chat_completion.base import ChatCompletion
 from aidial_sdk.chat_completion.request import Request as ChatCompletionRequest
 from aidial_sdk.chat_completion.response import (

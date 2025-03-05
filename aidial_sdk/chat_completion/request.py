@@ -1,32 +1,16 @@
 from enum import Enum
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Dict,
-    List,
-    Literal,
-    Mapping,
-    Optional,
-    Union,
-)
+from typing import Any, Dict, List, Literal, Mapping, Optional, Union
 
 import pydantic
 from pydantic import PositiveInt, StrictBool, StrictInt, StrictStr
 from typing_extensions import Annotated, assert_never
 
+from aidial_sdk._pydantic import Field
 from aidial_sdk.chat_completion.enums import Status
 from aidial_sdk.deployment.from_request_mixin import FromRequestDeploymentMixin
 from aidial_sdk.exceptions import InvalidRequestError
 from aidial_sdk.pydantic._compat import PYDANTIC_V2, model_validator
 from aidial_sdk.utils.pydantic import ExtraForbidModel
-
-if TYPE_CHECKING:
-    from pydantic import Field
-else:
-    if PYDANTIC_V2:
-        from pydantic import Field
-    else:
-        from pydantic.v1 import Field
 
 
 class Attachment(ExtraForbidModel):

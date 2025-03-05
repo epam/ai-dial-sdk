@@ -1,9 +1,8 @@
 import pytest
 from pydantic import BaseModel as NativeBaseModel
 
-from aidial_sdk.pydantic._compat import USE_PYDANTIC_V2
+from aidial_sdk._pydantic import INSTALLED_PYDANTIC_V2, USE_PYDANTIC_V2
 from aidial_sdk.pydantic._compat import BaseModel as DialBaseModel
-from aidial_sdk.pydantic._version import INSTALLED_PYDANTIC_V2
 from tests.utils._pydantic import model_dump
 
 pytestmark = pytest.mark.skipif(

@@ -108,5 +108,6 @@ quiet = true
 exclude = [
     ".nox",
     ".pytest_cache",
-    "\\.venv"
+    "\\.venv",
+    "_pydantic.py"
 ]

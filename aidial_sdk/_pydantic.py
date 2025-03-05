@@ -1,0 +1,40 @@
+from typing import TYPE_CHECKING
+
+import pydantic
+
+from aidial_sdk.utils.env import env_bool
+
+INSTALLED_PYDANTIC_V2 = pydantic.VERSION.startswith("2.")
+USE_PYDANTIC_V2 = env_bool("PYDANTIC_V2", False)
+PYDANTIC_V2 = INSTALLED_PYDANTIC_V2 and USE_PYDANTIC_V2
+
+if TYPE_CHECKING:
+    from pydantic import BaseModel
+    from pydantic import ConfigDict as ConfigDict
+    from pydantic import Field, ValidationError
+    from pydantic import field_validator as validator
+    from pydantic import model_validator
+    from pydantic._internal._model_construction import ModelMetaclass
+    from pydantic.fields import FieldInfo
+else:
+
+    if PYDANTIC_V2:
+        from pydantic import BaseModel, ConfigDict, Field, ValidationError
+        from pydantic import field_validator as validator
+        from pydantic import model_validator
+        from pydantic._internal._model_construction import ModelMetaclass
+        from pydantic.fields import FieldInfo
+    else:
+        from pydantic.v1 import BaseModel, Field, validator
+
+        try:
+            from pydantic.v1.main import ModelMetaclass
+        except ImportError:
+            from pydantic.main import ModelMetaclass
+        from pydantic.v1 import ValidationError, root_validator
+        from pydantic.v1.fields import FieldInfo
+
+        def _fail(*args, **kwargs):
+            raise ImportError("ConfigDict is only supported in Pydantic v2")
+
+        ConfigDict = _fail

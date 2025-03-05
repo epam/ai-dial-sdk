@@ -1,40 +1,10 @@
 from datetime import date, datetime
-from typing import (
-    TYPE_CHECKING,
-    Any,
-    Dict,
-    Iterable,
-    Mapping,
-    Optional,
-    Set,
-    Union,
-    cast,
-)
+from typing import Any, Dict, Iterable, Mapping, Optional, Set, Union, cast
 
 from typing_extensions import Literal
 
-from aidial_sdk.pydantic._version import INSTALLED_PYDANTIC_V2
-from aidial_sdk.utils.env import env_bool
-
-USE_PYDANTIC_V2 = env_bool("PYDANTIC_V2", False)
-PYDANTIC_V2 = INSTALLED_PYDANTIC_V2 and USE_PYDANTIC_V2
-
-
-if TYPE_CHECKING:
-    import pydantic
-    from pydantic import ConfigDict as ConfigDict
-else:
-
-    if PYDANTIC_V2:
-        import pydantic
-        from pydantic import ConfigDict
-    else:
-        import pydantic.v1 as pydantic
-
-        def _fail(*args, **kwargs):
-            raise ImportError("ConfigDict is only supported in Pydantic v2")
-
-        ConfigDict = _fail
+import aidial_sdk._pydantic as pydantic
+from aidial_sdk._pydantic import PYDANTIC_V2
 
 _IncEx = Union[Set[int], Set[str], Dict[int, Any], Dict[str, Any], None]
 
