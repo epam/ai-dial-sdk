@@ -90,7 +90,7 @@ class FormMetaclass(ModelMetaclass):
 
         namespace.update(validators)
 
-        # Inject schema post processing
+        # Inject JSON schema post processing
 
         model_config = ModelConfigWrapper.create(None, namespace)
         model_config["extra"] = "forbid"
@@ -168,14 +168,14 @@ def form(
             "__qualname__": cls.__qualname__,
         }
 
-        # Injecting config extensions
+        # Inject model config extensions
         if chat_message_input_disabled is not None:
             model_config = ModelConfigWrapper.create(cls, namespace)
             model_config["chat_message_input_disabled"] = (
                 chat_message_input_disabled
             )
 
-        # Injecting button extensions
+        # Inject button extensions
         annotations: Dict[str, Any] = {}
 
         for name, field_info in kwargs.items():
