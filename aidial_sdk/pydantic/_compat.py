@@ -1,3 +1,14 @@
+"""
+The module provide the basic Pydantic BaseModel extended
+with `model_dump` method mimicking the one from Pydantic V2.
+
+All SDK models inherit from this class.
+
+It proves to be useful since
+1. `model_dump` method is used extensively in the SDK,
+2. the SDK client may call this method on SDK models even if the client uses Pydantic V1.
+"""
+
 from datetime import date, datetime
 from typing import Any, Dict, Iterable, Mapping, Optional, Set, Union, cast
 

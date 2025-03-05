@@ -1,3 +1,7 @@
+"""
+Helper classes that unify model configuration between Pydantic v1 and v2.
+"""
+
 from __future__ import annotations
 
 from abc import ABC, abstractmethod

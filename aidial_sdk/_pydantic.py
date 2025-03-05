@@ -1,3 +1,13 @@
+"""
+The entry point for all Pydantic definition that unifies v1 and v2 APIs for SDK internals.
+
+It's private, since it expected that the SDK client
+will either import `aidial_sdk.pydantic_v1` or `pydantic`.
+
+This is the only place where `pydantic` imports
+are allowed in the DIAL SDK package.
+"""
+
 from typing import TYPE_CHECKING
 
 import pydantic

@@ -1,3 +1,11 @@
+"""
+This module provides extensions of `ConfigDict` class and `Field`
+descriptor with DIAL-specific features.
+
+These extensions should be used instead of the native counterparts to avoid
+deprecation warnings and type-checking issues.
+"""
+
 from typing import Any, Callable, Dict, List, Optional, Union
 
 import pydantic as pyd2
