@@ -20,8 +20,8 @@ from typing import (
 from pydantic import BaseModel
 from pydantic.v1.validators import make_literal_validator
 
-from aidial_sdk.pydantic import PYDANTIC_V2
-from aidial_sdk.utils._pydantic import ModelConfigWrapper
+from aidial_sdk.pydantic._compat import PYDANTIC_V2
+from aidial_sdk.pydantic._model_config import ModelConfigWrapper
 
 if TYPE_CHECKING:
     from pydantic import field_validator as validator

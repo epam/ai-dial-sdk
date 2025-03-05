@@ -2,7 +2,7 @@ from typing import Any, Dict, Optional, Type, TypeVar, Union
 
 import pydantic as pyd
 
-from aidial_sdk.pydantic import PYDANTIC_V2
+from aidial_sdk.pydantic._compat import PYDANTIC_V2
 
 _ModelT = TypeVar("_ModelT", bound=pyd.BaseModel)
 

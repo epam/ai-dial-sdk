@@ -15,7 +15,7 @@ class ConfigDict(pyd2.ConfigDict):
 if not PYDANTIC_V2:
 
     def Field(*args, **kwargs) -> Any:  # type: ignore
-        raise ImportError("Field helper is only available in Pydantic 2")
+        raise ImportError("The Field helper is only supported in Pydantic v2")
 
 else:
 

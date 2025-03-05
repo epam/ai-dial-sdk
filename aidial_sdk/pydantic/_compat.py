@@ -12,6 +12,6 @@ else:
     else:
 
         def _fail(*args, **kwargs):
-            raise ImportError("ConfigDict is only available in Pydantic 2")
+            raise ImportError("ConfigDict is only supported in Pydantic v2")
 
         ConfigDict = _fail

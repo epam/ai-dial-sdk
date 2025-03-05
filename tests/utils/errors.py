@@ -2,7 +2,7 @@ from typing import Any
 
 from pydantic import BaseModel
 
-from aidial_sdk.pydantic import PYDANTIC_V2
+from aidial_sdk.pydantic._compat import PYDANTIC_V2
 
 
 class Error(BaseModel):

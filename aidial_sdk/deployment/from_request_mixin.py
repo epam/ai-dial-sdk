@@ -6,7 +6,8 @@ import fastapi
 from pydantic import Field, SecretStr, StrictStr
 
 from aidial_sdk.exceptions import HTTPException as DIALException
-from aidial_sdk.pydantic import PYDANTIC_V2, ConfigDict, model_validator
+from aidial_sdk.pydantic._compat import PYDANTIC_V2, ConfigDict
+from aidial_sdk.pydantic._models import model_validator
 from aidial_sdk.utils.pydantic import ExtraForbidModel
 
 T = TypeVar("T", bound="FromRequestMixin")
