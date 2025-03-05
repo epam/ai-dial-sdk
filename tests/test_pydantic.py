@@ -1,6 +1,6 @@
 from pydantic import BaseModel as NativeBaseModel
 
-from aidial_sdk.pydantic._models import BaseModel as DialBaseModel
+from aidial_sdk.pydantic._compat import BaseModel as DialBaseModel
 from tests.utils._pydantic import model_dump
 
 
