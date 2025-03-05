@@ -10,6 +10,7 @@ from typing import (
     List,
     Literal,
     Optional,
+    Sequence,
     Type,
     TypeVar,
     Union,
@@ -59,19 +60,6 @@ class Button(Generic[_T]):
         }
 
 
-def _extract_buttons_field(field_info: Any) -> Any:
-    if not isinstance(field_info, FieldInfo):
-        return None
-
-    if PYDANTIC_V2:
-        extra = field_info.json_schema_extra
-        if not isinstance(extra, dict):
-            return None
-        return extra.get("buttons")
-    else:
-        return field_info.extra.get("buttons")  # type: ignore
-
-
 class FormMetaclass(ModelMetaclass):
     def __new__(
         mcs,  # pyright: ignore[reportSelfClsParameterName]
@@ -82,8 +70,8 @@ class FormMetaclass(ModelMetaclass):
     ):
         # Inject buttons validators
 
-        validators = {}
         button_fields: Dict[str, List[Button]] = {}
+        validators: Dict[str, Any] = {}
 
         for field_name, field_info in namespace.items():
             if (buttons_extra := _extract_buttons_field(field_info)) is None:
@@ -95,28 +83,10 @@ class FormMetaclass(ModelMetaclass):
 
             button_fields[field_name] = buttons
 
-            consts = tuple(button.const for button in buttons)
-            literal_type = Literal[consts]
-            literal_validator = make_literal_validator(literal_type)
-
-            def _make_check_value(literal_validator):
-                if PYDANTIC_V2:
-
-                    def check_value_v2(value, *args, **kwargs):
-                        return literal_validator(value)
-
-                    return check_value_v2
-                else:
-
-                    def check_value_v1(value, values, config, field):
-                        return literal_validator(value)
-
-                    return check_value_v1
-
-            extra_opts = {} if PYDANTIC_V2 else {"allow_reuse": True}
-            validators[f"_validate_{field_name}"] = validator(
-                field_name, **extra_opts  # type: ignore
-            )(_make_check_value(literal_validator))
+            enum_values = tuple(button.const for button in buttons)
+            validators[f"_validate_{field_name}"] = _create_field_validator(
+                field_name, enum_values
+            )
 
         namespace.update(validators)
 
@@ -126,15 +96,15 @@ class FormMetaclass(ModelMetaclass):
         model_config["extra"] = "forbid"
 
         def _on_schema(json_schema: Dict[str, Any]) -> None:
-            _handle_config_extensions(model_config, json_schema)
-            _handle_buttons_extension(name, json_schema, button_fields)
+            _add_model_config_extensions(model_config, json_schema)
+            _add_button_fields(name, json_schema, button_fields)
 
         model_config.post_process_schema(_on_schema)
 
         return super().__new__(mcs, name, bases, namespace, **kwargs)
 
 
-def _handle_config_extensions(
+def _add_model_config_extensions(
     model_config: ModelConfigWrapper, json_schema: Dict[str, Any]
 ) -> None:
     if (
@@ -143,7 +113,7 @@ def _handle_config_extensions(
         json_schema["dial:chatMessageInputDisabled"] = disable_input is True
 
 
-def _handle_buttons_extension(
+def _add_button_fields(
     cls_name: str,
     json_schema: Dict[str, Any],
     button_fields: Dict[str, List[Button]],
@@ -160,7 +130,7 @@ def _handle_buttons_extension(
         if (anyOf := prop.pop("anyOf", None)) is not None:
             # Optional types are translated in Pydantic V2 to
             # {'anyOf': [{'type': 'integer'}, {'type': 'null'}], 'default': null}
-            # that conflicts with the follow-up 'oneOf' definition.
+            # which conflicts with the 'oneOf' definition.
             types = {schema["type"] for schema in anyOf}
             types.discard("null")
             if len(types) != 1:
@@ -240,12 +210,39 @@ def form(
     return _create_class
 
 
+def _create_field_validator(field_name: str, enum_values: Sequence[Any]):
+    literal_type = Literal[enum_values]
+    literal_validator = make_literal_validator(literal_type)
+
+    if PYDANTIC_V2:
+        return validator(field_name)(literal_validator)
+    else:
+
+        def _check_value(value, values, config, field):
+            return literal_validator(value)
+
+        return validator(field_name, allow_reuse=True)(_check_value)
+
+
 def _get_base_type(tp: Type[_T]) -> Type[_T]:
     """Returns T if given Optional[T], otherwise returns the type unchanged."""
     args = get_args(tp)
     if len(args) == 2 and type(None) in args:
         return next(arg for arg in args if arg is not type(None))
     return tp
+
+
+def _extract_buttons_field(field_info: Any) -> Any:
+    if not isinstance(field_info, FieldInfo):
+        return None
+
+    if PYDANTIC_V2:
+        extra = field_info.json_schema_extra
+        if not isinstance(extra, dict):
+            return None
+        return extra.get("buttons")
+    else:
+        return field_info.extra.get("buttons")  # type: ignore
 
 
 def _get_buttons(field_name: str, buttons: Any) -> List[Button]:
