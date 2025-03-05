@@ -11,17 +11,25 @@ from typing import (
     cast,
 )
 
-import pydantic
 from typing_extensions import Literal
 
-PYDANTIC_V2 = pydantic.VERSION.startswith("2.")
+from aidial_sdk.pydantic._version import INSTALLED_PYDANTIC_V2
+from aidial_sdk.utils.env import env_bool
+
+USE_PYDANTIC_V2 = env_bool("PYDANTIC_V2", False)
+PYDANTIC_V2 = INSTALLED_PYDANTIC_V2 and USE_PYDANTIC_V2
+
 
 if TYPE_CHECKING:
+    import pydantic
     from pydantic import ConfigDict as ConfigDict
 else:
+
     if PYDANTIC_V2:
+        import pydantic
         from pydantic import ConfigDict
     else:
+        import pydantic.v1 as pydantic
 
         def _fail(*args, **kwargs):
             raise ImportError("ConfigDict is only supported in Pydantic v2")

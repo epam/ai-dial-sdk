@@ -1,6 +1,17 @@
+from typing import TYPE_CHECKING
+
 from fastapi import HTTPException, Request
 from fastapi.responses import JSONResponse
-from pydantic import ValidationError
+
+from aidial_sdk.pydantic._compat import PYDANTIC_V2
+
+if TYPE_CHECKING:
+    from pydantic import ValidationError
+else:
+    if PYDANTIC_V2:
+        from pydantic import ValidationError
+    else:
+        from pydantic.v1 import ValidationError
 
 from aidial_sdk.exceptions import HTTPException as DIALException
 from aidial_sdk.exceptions import InvalidRequestError

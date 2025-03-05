@@ -1,8 +1,15 @@
-from typing import Any, Dict, Optional, Type, TypeVar, Union
-
-import pydantic as pyd
+from typing import TYPE_CHECKING, Any, Dict, Optional, Type, TypeVar, Union
 
 from aidial_sdk.pydantic._compat import PYDANTIC_V2
+
+if TYPE_CHECKING:
+    import pydantic as pyd
+else:
+    if PYDANTIC_V2:
+        import pydantic as pyd
+    else:
+        import pydantic.v1 as pyd
+
 
 _ModelT = TypeVar("_ModelT", bound=pyd.BaseModel)
 
@@ -50,7 +57,7 @@ def model_copy(
 def model_dump(
     model: pyd.BaseModel, *, exclude_none: bool = False
 ) -> Dict[str, Any]:
-    if PYDANTIC_V2 or hasattr(model, "model_dump"):
+    if PYDANTIC_V2:
         return model.model_dump(exclude_none=exclude_none)
     return model.dict(  # pyright: ignore[reportDeprecated]
         exclude_none=exclude_none
