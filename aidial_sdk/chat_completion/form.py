@@ -169,8 +169,8 @@ def form(
         }
 
         # Inject model config extensions
+        model_config = ModelConfigWrapper.create(cls, namespace)
         if chat_message_input_disabled is not None:
-            model_config = ModelConfigWrapper.create(cls, namespace)
             model_config["chat_message_input_disabled"] = (
                 chat_message_input_disabled
             )

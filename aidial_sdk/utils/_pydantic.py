@@ -90,12 +90,10 @@ class _ConfigV1(ModelConfigBase):
         cls, base_cls: Optional[Type[_Model]], namespace: Dict[str, Any]
     ) -> ModelConfigBase:
         if (config_cls := namespace.get("Config")) is None:
-            if base_cls:
-                conf_base_cls = getattr(cls, "Config", None)
-            else:
-                conf_base_cls = None
+            conf_base_cls = (
+                None if base_cls is None else getattr(base_cls, "Config", None)
+            )
 
-            # FIXME: add tests to confirm that the inheritance works
             config_cls = type("Config", (conf_base_cls or object,), {})
 
             if module := namespace.get("__module__"):
@@ -128,8 +126,15 @@ class _ConfigV2(ModelConfigBase):
     def create(
         cls, base_cls: Optional[Type[_Model]], namespace: Dict[str, Any]
     ) -> ModelConfigBase:
-        # FIXME: merge with the existing "base_cls.model_config"
-        model_config = namespace["model_config"] = (
-            namespace.get("model_config") or {}
+        base_model_config = (
+            {} if base_cls is None else getattr(base_cls, "model_config", {})
         )
+
+        curr_model_config = namespace.get("model_config") or {}
+
+        model_config = namespace["model_config"] = {
+            **base_model_config,
+            **curr_model_config,
+        }
+
         return cls(model_config)
