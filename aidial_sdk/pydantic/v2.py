@@ -1,10 +1,8 @@
-import typing
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Callable, Dict, List, Optional, Union
 
 import pydantic as pyd2
 from typing_extensions import Literal
 
-from aidial_sdk.chat_completion.form import Button
 from aidial_sdk.pydantic._compat import PYDANTIC_V2
 
 
@@ -18,17 +16,18 @@ if not PYDANTIC_V2:
         raise ImportError("The Field helper is only supported in Pydantic v2")
 
 else:
-
     from pydantic.fields import AliasChoices, AliasPath
     from pydantic.fields import Field as PydanticField
     from pydantic_core import PydanticUndefined
+
+    from aidial_sdk.chat_completion.form import Button
 
     _Unset: Any = PydanticUndefined
 
     def Field(
         default: Any = PydanticUndefined,
         *,
-        default_factory: Optional[typing.Callable[[], Any]] = _Unset,
+        default_factory: Optional[Callable[[], Any]] = _Unset,
         alias: Optional[str] = _Unset,
         alias_priority: Optional[int] = _Unset,
         validation_alias: Optional[
@@ -41,7 +40,7 @@ else:
         exclude: Optional[bool] = _Unset,
         discriminator: Optional[str] = _Unset,
         json_schema_extra: Optional[
-            (Union[Dict[str, Any], typing.Callable[[Dict[str, Any]], None]])
+            (Union[Dict[str, Any], Callable[[Dict[str, Any]], None]])
         ] = _Unset,
         frozen: Optional[bool] = _Unset,
         validate_default: Optional[bool] = _Unset,
