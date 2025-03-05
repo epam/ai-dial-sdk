@@ -1,12 +1,12 @@
+import re
 from typing import List
 
 import pytest
 
 from aidial_sdk import DIALApp
 from aidial_sdk.chat_completion import ChatCompletion, Request, Response
-from aidial_sdk.pydantic._compat import PYDANTIC_V2
 from tests.utils.endpoint_test import TestCase, run_endpoint_test
-from tests.utils.errors import internal_server_error, invalid_request_error
+from tests.utils.errors import bad_request_error, internal_server_error
 
 
 class App(ChatCompletion):
@@ -56,11 +56,10 @@ testcases: List[TestCase] = [
         deployment,
         "chat/completions",
         INVALID_ATTACHMENT_BOTH,
-        invalid_request_error(
-            "messages.0.custom_content.attachments.0"
-            + ("" if PYDANTIC_V2 else ".__root__"),
-            ("Value error, " if PYDANTIC_V2 else "")
-            + "Attachment must have either 'data' or 'url', but it has both",
+        bad_request_error(
+            re.compile(
+                r"Your request contained invalid structure on path messages.0.custom_content.attachments.0\..* Attachment must have either 'data' or 'url', but it has both"
+            )
         ),
     ),
     TestCase(
@@ -68,11 +67,10 @@ testcases: List[TestCase] = [
         deployment,
         "chat/completions",
         INVALID_ATTACHMENT_NEITHER,
-        invalid_request_error(
-            "messages.0.custom_content.attachments.0"
-            + ("" if PYDANTIC_V2 else ".__root__"),
-            ("Value error, " if PYDANTIC_V2 else "")
-            + "Attachment must have either 'data' or 'url', but it's missing both",
+        bad_request_error(
+            re.compile(
+                r"Your request contained invalid structure on path messages.0.custom_content.attachments.0\..* Attachment must have either 'data' or 'url', but it's missing both"
+            )
         ),
     ),
 ]

@@ -1,3 +1,5 @@
+from typing import Any
+
 from pydantic import BaseModel
 
 from aidial_sdk.pydantic import PYDANTIC_V2
@@ -21,16 +23,22 @@ def internal_server_error(message: str) -> Error:
     )
 
 
-def invalid_request_error(path: str, message: str) -> Error:
+def bad_request_error(message: Any) -> Error:
     return Error(
         code=400,
         error={
             "error": {
-                "message": f"Your request contained invalid structure on path {path}. {message}",
+                "message": message,
                 "type": "invalid_request_error",
                 "code": "400",
             }
         },
+    )
+
+
+def invalid_request_error(path: str, message: str) -> Error:
+    return bad_request_error(
+        f"Your request contained invalid structure on path {path}. {message}"
     )
 
 
