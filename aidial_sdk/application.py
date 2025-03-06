@@ -13,6 +13,7 @@ from aidial_sdk._errors import (
     pydantic_validation_exception_handler,
 )
 from aidial_sdk._pydantic import ValidationError
+from aidial_sdk._pydantic._compat import BaseModel
 from aidial_sdk.chat_completion.base import ChatCompletion
 from aidial_sdk.chat_completion.request import Request as ChatCompletionRequest
 from aidial_sdk.chat_completion.response import (
@@ -27,7 +28,6 @@ from aidial_sdk.embeddings.base import Embeddings
 from aidial_sdk.embeddings.request import Request as EmbeddingsRequest
 from aidial_sdk.exceptions import HTTPException as DIALException
 from aidial_sdk.header_propagator import HeaderPropagator
-from aidial_sdk.pydantic._compat import BaseModel
 from aidial_sdk.telemetry.types import TelemetryConfig
 from aidial_sdk.utils._reflection import get_method_implementation
 from aidial_sdk.utils.log_config import LogConfig

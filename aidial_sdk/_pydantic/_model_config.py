@@ -9,7 +9,7 @@ from typing import Any, Callable, Dict, Optional, Type, TypeVar
 
 from pydantic import BaseModel
 
-from aidial_sdk.pydantic._compat import PYDANTIC_V2
+from aidial_sdk._pydantic import PYDANTIC_V2
 
 _Model = TypeVar("_Model", bound=BaseModel)
 

@@ -11,7 +11,7 @@ from typing import Any, Callable, Dict, List, Optional, Union
 import pydantic as pyd2
 from typing_extensions import Literal
 
-from aidial_sdk.pydantic._compat import PYDANTIC_V2
+from aidial_sdk._pydantic import PYDANTIC_V2
 
 
 class ConfigDict(pyd2.ConfigDict):

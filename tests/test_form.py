@@ -6,7 +6,7 @@ from aidial_sdk._pydantic import PYDANTIC_V2, BaseModel, ValidationError
 from aidial_sdk.chat_completion import Button
 from aidial_sdk.chat_completion.form import FormMetaclass, form
 from aidial_sdk.pydantic.v2 import ConfigDict
-from tests.utils._pydantic import Field, model_json_schema, model_parse
+from tests.utils.pydantic import Field, model_json_schema, model_parse
 
 
 class StaticConfiguration_OneButton(BaseModel, metaclass=FormMetaclass):

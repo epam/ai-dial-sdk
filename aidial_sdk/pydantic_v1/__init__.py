@@ -1,6 +1,6 @@
 import warnings
 
-from aidial_sdk.pydantic._compat import PYDANTIC_V2
+from aidial_sdk._pydantic import PYDANTIC_V2
 
 _WARN_MESSAGE_V1 = """"
 The usage of `aidial_sdk.pydantic_v1` module is deprecated.

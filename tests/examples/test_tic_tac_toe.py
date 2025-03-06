@@ -3,7 +3,7 @@ from typing import List
 
 import pytest
 
-from aidial_sdk.pydantic._compat import PYDANTIC_V2
+from aidial_sdk._pydantic import PYDANTIC_V2
 from tests.utils.client import create_test_client
 
 pytestmark = pytest.mark.skipif(

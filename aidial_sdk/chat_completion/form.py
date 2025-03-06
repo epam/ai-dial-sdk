@@ -25,7 +25,7 @@ from aidial_sdk._pydantic import (
     ModelMetaclass,
     validator,
 )
-from aidial_sdk.pydantic._model_config import ModelConfigWrapper
+from aidial_sdk._pydantic._model_config import ModelConfigWrapper
 
 _T = TypeVar("_T")
 
