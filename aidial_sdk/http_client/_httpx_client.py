@@ -7,11 +7,15 @@ from ._base import BaseHTTPClient, HttpRequestOptions, ResponseT
 
 
 class HttpxClient(BaseHTTPClient):
+
+    def set_base_url(self, url: str) -> None:
+        self.__base_url = url
+
     async def request(self, options: HttpRequestOptions, cast_to: Type[ResponseT]) -> ResponseT:
         async with httpx.AsyncClient() as client:
             response = await client.request(
                 method=options.method,
-                url=httpx.URL(options.url),
+                url=httpx.URL(f'{self.__base_url}/ + {options.url}'),
                 params=options.params,
                 headers=options.headers
             )

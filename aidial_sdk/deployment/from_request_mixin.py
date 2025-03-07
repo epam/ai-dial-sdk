@@ -3,11 +3,12 @@ from json import JSONDecodeError, loads
 from typing import Any, Mapping, Optional, Type, TypeVar, Dict
 
 import fastapi
-from aidial_sdk import BaseHTTPClient
+
 from starlette.datastructures import MutableHeaders
 
 from aidial_sdk.exceptions import HTTPException as DIALException
-from aidial_sdk.pydantic_v1 import Field, SecretStr, StrictStr, root_validator
+from aidial_sdk.http_client import BaseHTTPClient, HttpRequestOptions
+from aidial_sdk.pydantic_v1 import Field, SecretStr, StrictStr, root_validator, BaseModel
 from aidial_sdk.utils.pydantic import ExtraForbidModel
 
 T = TypeVar("T", bound="FromRequestMixin")
@@ -17,7 +18,7 @@ class FromRequestMixin(ABC, ExtraForbidModel):
     @classmethod
     @abstractmethod
     async def from_request(
-        cls: Type[T], request: fastapi.Request, deployment_id: str
+        cls: Type[T], request: fastapi.Request, deployment_id: str, http_client: BaseHTTPClient
     ) -> T:
         pass
 
@@ -30,7 +31,7 @@ class ApplicationPropertiesMixin(ExtraForbidModel):
     application_properties: Optional[Dict[str, Any]] = None
 
     @staticmethod
-    def application_properties_from_headers(headers: MutableHeaders, http_client: BaseHTTPClient) -> Optional[Dict[str, Any]]:
+    async def application_properties_from_headers(headers: MutableHeaders, http_client: BaseHTTPClient) -> Optional[Dict[str, Any]]:
         props_header = headers.get("X-DIAL-APPLICATION-PROPERTIES")
         if props_header:
             try:
@@ -41,13 +42,29 @@ class ApplicationPropertiesMixin(ExtraForbidModel):
                     type="invalid_request_error",
                     message=f"The X-APPLICATION-PROPERTIES header isn't valid JSON: {e.msg}",
                 )
+        else:
+            dial_app_id= headers.get("X-DIAL-APPLICATION-ID")
+            if not dial_app_id:
+                return None
+            try:
+                class Application(BaseModel):
+                    application_properties: dict[str, Any]
+                response = await http_client.request(HttpRequestOptions(method="GET", url=f"applications/{dial_app_id}", headers={"api_key": headers.get("Api-Key"), "Authorization": headers.get("Authorization")}), cast_to=Application)
+                return response.application_properties
+            except Exception as e:
+                raise DIALException(
+                    status_code=500,
+                    type="internal_server_error",
+                    message=f"Error while fetching application (app_id {dial_app_id})properties: {e}",
+                )
+
 
 
 class FromRequestBasicMixin(FromRequestMixin, ApplicationPropertiesMixin):
     @classmethod
-    async def from_request(cls, request: fastapi.Request, deployment_id: str):
+    async def from_request(cls, request: fastapi.Request, deployment_id: str, http_client: BaseHTTPClient):
         headers = request.headers.mutablecopy()
-        application_properties = cls.application_properties_from_headers(headers)
+        application_properties = await cls.application_properties_from_headers(headers, http_client)
 
         return cls(
             **(await cls.get_request_body(request)),
@@ -101,7 +118,7 @@ class FromRequestDeploymentMixin(FromRequestMixin, ApplicationPropertiesMixin):
         return self.jwt_secret.get_secret_value() if self.jwt_secret else None
 
     @classmethod
-    async def from_request(cls, request: fastapi.Request, deployment_id: str, **kwargs: Any):
+    async def from_request(cls, request: fastapi.Request, deployment_id: str, http_client: BaseHTTPClient, **kwargs: Any):
         headers = request.headers.mutablecopy()
 
         api_key = headers.get("Api-Key")
@@ -116,7 +133,7 @@ class FromRequestDeploymentMixin(FromRequestMixin, ApplicationPropertiesMixin):
         jwt = headers.get("Authorization")
         del headers["Authorization"]
 
-        application_properties = cls.application_properties_from_headers(headers)
+        application_properties = await cls.application_properties_from_headers(headers, http_client)
 
         return cls(
             **(await cls.get_request_body(request)),

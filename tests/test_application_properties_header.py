@@ -45,7 +45,7 @@ def headers():
     return {
         "Api-Key": API_KEY,
         "Authorization": "Bearer test-jwt",
-        "X-APPLICATION-PROPERTIES": json.dumps({"key1": "value1", "key2": "value2"})
+        "X-DIAL-APPLICATION-PROPERTIES": json.dumps({"key1": "value1", "key2": "value2"})
     }
 
 @pytest.fixture
@@ -53,7 +53,7 @@ def invalid_headers():
     return {
         "Api-Key": API_KEY,
         "Authorization": "Bearer test-jwt",
-        "X-APPLICATION-PROPERTIES": "invalid header"
+        "X-DIAL-APPLICATION-PROPERTIES": "invalid header"
     }
 
 @pytest.fixture

@@ -20,10 +20,16 @@ ResponseT = TypeVar(
 
 class BaseHTTPClient(ABC):
 
+    __base_url: str = None
+
     @abstractmethod
     async def request(
             self,
             options: HttpRequestOptions,
             cast_to: Type[ResponseT],
     ) -> ResponseT:
+        ...
+
+    @abstractmethod
+    def set_base_url(self, url: str) -> None:
         ...
