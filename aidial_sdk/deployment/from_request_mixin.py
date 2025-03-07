@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 from json import JSONDecodeError, loads
+from os import path
 from typing import Any, Mapping, Optional, Type, TypeVar, Dict
 
 import fastapi
@@ -31,7 +32,7 @@ class ApplicationPropertiesMixin(ExtraForbidModel):
     application_properties: Optional[Dict[str, Any]] = None
 
     @staticmethod
-    async def application_properties_from_headers(headers: MutableHeaders, http_client: BaseHTTPClient) -> Optional[Dict[str, Any]]:
+    async def application_properties_from_headers(headers: MutableHeaders, http_client: BaseHTTPClient, api_key: str) -> Optional[Dict[str, Any]]:
         props_header = headers.get("X-DIAL-APPLICATION-PROPERTIES")
         if props_header:
             try:
@@ -49,7 +50,7 @@ class ApplicationPropertiesMixin(ExtraForbidModel):
             try:
                 class Application(BaseModel):
                     application_properties: dict[str, Any]
-                response = await http_client.request(HttpRequestOptions(method="GET", url=f"applications/{dial_app_id}", headers={"api_key": headers.get("Api-Key"), "Authorization": headers.get("Authorization")}), cast_to=Application)
+                response = await http_client.request(HttpRequestOptions(method="GET", url=path.join("openai/applications", dial_app_id), headers={"api_key": api_key}), cast_to=Application)
                 return response.application_properties
             except Exception as e:
                 raise DIALException(
@@ -64,7 +65,7 @@ class FromRequestBasicMixin(FromRequestMixin, ApplicationPropertiesMixin):
     @classmethod
     async def from_request(cls, request: fastapi.Request, deployment_id: str, http_client: BaseHTTPClient):
         headers = request.headers.mutablecopy()
-        application_properties = await cls.application_properties_from_headers(headers, http_client)
+        application_properties = await cls.application_properties_from_headers(headers, http_client, headers.get("Api-Key"))
 
         return cls(
             **(await cls.get_request_body(request)),
@@ -133,7 +134,7 @@ class FromRequestDeploymentMixin(FromRequestMixin, ApplicationPropertiesMixin):
         jwt = headers.get("Authorization")
         del headers["Authorization"]
 
-        application_properties = await cls.application_properties_from_headers(headers, http_client)
+        application_properties = await cls.application_properties_from_headers(headers, http_client, api_key)
 
         return cls(
             **(await cls.get_request_body(request)),
