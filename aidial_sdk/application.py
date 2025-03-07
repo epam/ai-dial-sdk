@@ -26,7 +26,7 @@ from aidial_sdk.embeddings.base import Embeddings
 from aidial_sdk.embeddings.request import Request as EmbeddingsRequest
 from aidial_sdk.exceptions import HTTPException as DIALException
 from aidial_sdk.header_propagator import HeaderPropagator
-from aidial_sdk.pydantic_v1 import ValidationError
+from aidial_sdk.pydantic_v1 import BaseModel, ValidationError
 from aidial_sdk.telemetry.types import TelemetryConfig
 from aidial_sdk.utils._reflection import get_method_implementation
 from aidial_sdk.utils.log_config import LogConfig
@@ -195,7 +195,16 @@ class DIALApp(FastAPI):
             log_debug(f"request[{endpoint}]: {request}")
 
             response = await endpoint_impl(request)
-            response_json = response.dict()
+
+            if isinstance(response, dict):
+                response_json = response
+            elif isinstance(response, BaseModel):
+                response_json = response.dict()
+            else:
+                raise ValueError(
+                    f"Unexpected response type from {endpoint}: {type(response)}"
+                )
+
             log_debug(f"response[{endpoint}]: {response_json}")
 
             return JSONResponse(content=response_json)

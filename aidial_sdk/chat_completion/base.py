@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Union
 
 from aidial_sdk.chat_completion.request import Request
 from aidial_sdk.chat_completion.response import Response
@@ -36,6 +37,6 @@ class ChatCompletion(ABC):
 
     async def configuration(
         self, request: ConfigurationRequest
-    ) -> ConfigurationResponse:
+    ) -> Union[ConfigurationResponse, dict]:
         """Implement configuration logic"""
         raise NotImplementedError()

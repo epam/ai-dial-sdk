@@ -3,11 +3,11 @@ from json import JSONDecodeError, loads
 from typing import Any, Mapping, Optional, Type, TypeVar, Dict
 
 import fastapi
-from pydantic import Field
+from aidial_sdk import BaseHTTPClient
 from starlette.datastructures import MutableHeaders
 
 from aidial_sdk.exceptions import HTTPException as DIALException
-from aidial_sdk.pydantic_v1 import SecretStr, StrictStr, root_validator
+from aidial_sdk.pydantic_v1 import Field, SecretStr, StrictStr, root_validator
 from aidial_sdk.utils.pydantic import ExtraForbidModel
 
 T = TypeVar("T", bound="FromRequestMixin")
@@ -30,9 +30,8 @@ class ApplicationPropertiesMixin(ExtraForbidModel):
     application_properties: Optional[Dict[str, Any]] = None
 
     @staticmethod
-    def application_properties_from_headers(headers: MutableHeaders) -> Optional[Dict[str, Any]]:
-        props_header = headers.get("X-APPLICATION-PROPERTIES")
-        del headers["X-APPLICATION-PROPERTIES"]
+    def application_properties_from_headers(headers: MutableHeaders, http_client: BaseHTTPClient) -> Optional[Dict[str, Any]]:
+        props_header = headers.get("X-DIAL-APPLICATION-PROPERTIES")
         if props_header:
             try:
                 return loads(props_header)

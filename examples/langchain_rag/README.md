@@ -1,4 +1,4 @@
-## Overview
+# Overview
 
 An example of a simple DIAL RAG application based on Langchain utilizing Chroma vector database and RetrievalQA chain.
 
