@@ -1,5 +1,6 @@
 from types import NoneType
 from typing import Type
+from urllib.parse import urljoin
 
 import httpx
 
@@ -8,18 +9,18 @@ from ._base import BaseHTTPClient, HttpRequestOptions, ResponseT
 
 class HttpxClient(BaseHTTPClient):
 
-    def set_base_url(self, url: str) -> None:
-        self.__base_url = url
+    def set_base_url(self, base_url: str) -> None:
+        self.__base_url = base_url
 
     async def request(self, options: HttpRequestOptions, cast_to: Type[ResponseT]) -> ResponseT:
         async with httpx.AsyncClient() as client:
             response = await client.request(
                 method=options.method,
-                url=httpx.URL(f'{self.__base_url}/ + {options.url}'),
+                url=urljoin(self.__base_url, options.path),
                 params=options.params,
                 headers=options.headers
             )
             response.raise_for_status()
             if cast_to is NoneType:
                 return None
-            return cast_to.model_validate(response.json())
+            return cast_to(**response.json())

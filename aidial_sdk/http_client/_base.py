@@ -7,7 +7,7 @@ from aidial_sdk.pydantic_v1 import BaseModel
 @final
 class HttpRequestOptions(BaseModel):
     method: Literal["GET", "PUT", "POST", "DELETE"]
-    url: str
+    path: str
     params: Optional[Mapping[str, Any]] = None
     headers: Optional[Mapping[str, Any]] = None
 
@@ -19,7 +19,6 @@ ResponseT = TypeVar(
 
 
 class BaseHTTPClient(ABC):
-
     __base_url: str = None
 
     @abstractmethod
