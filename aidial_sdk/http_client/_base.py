@@ -19,7 +19,6 @@ ResponseT = TypeVar(
 
 
 class BaseHTTPClient(ABC):
-    __base_url: str = None
 
     @abstractmethod
     async def request(
@@ -30,5 +29,5 @@ class BaseHTTPClient(ABC):
         ...
 
     @abstractmethod
-    def set_base_url(self, url: str) -> None:
+    def set_dial_base_url(self, base_url: Optional[str]) -> None:
         ...

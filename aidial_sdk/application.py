@@ -78,7 +78,7 @@ class DIALApp(FastAPI):
         super().__init__(**kwargs)
 
         self.__http_client = http_client
-        self.__http_client.set_base_url(dial_url)
+        self.__http_client.set_dial_base_url(dial_url)
 
         if telemetry_config is not None:
             self.configure_telemetry(telemetry_config)
