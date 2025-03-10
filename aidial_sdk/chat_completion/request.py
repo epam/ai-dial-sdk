@@ -228,7 +228,6 @@ class AzureChatCompletionRequest(ExtraForbidModel):
         Union[Literal["auto", "none", "required"], ToolChoice]
     ] = None
     stream: bool = False
-    stream_options: Optional[StreamOptions] = None
     temperature: Optional[Temperature] = None
     top_p: Optional[TopP] = None
     n: Optional[N] = None
