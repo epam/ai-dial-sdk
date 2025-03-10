@@ -6,12 +6,12 @@ import fastapi
 
 from aidial_sdk.exceptions import HTTPException as DIALException
 from aidial_sdk.pydantic_v1 import Field, SecretStr, StrictStr, root_validator
-from aidial_sdk.utils.pydantic import ExtraForbidModel
+from aidial_sdk.utils.pydantic import ExtraAllowModel as BaseModel
 
 T = TypeVar("T", bound="FromRequestMixin")
 
 
-class FromRequestMixin(ABC, ExtraForbidModel):
+class FromRequestMixin(ABC, BaseModel):
     @classmethod
     @abstractmethod
     async def from_request(
