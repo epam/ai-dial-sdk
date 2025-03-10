@@ -5,11 +5,21 @@ import pytest
 from aidial_sdk import DIALApp
 from tests.applications.noop import NoopApplication
 from tests.utils.endpoint_test import TestCase, run_endpoint_test
+from tests.utils.errors import Error
 
 RATE_REQUEST_OK1 = {}
 RATE_REQUEST_OK2 = {"responseId": "123", "rate": True}
-RATE_REQUEST_OK3 = {"foo": "bar"}
-
+RATE_REQUEST_FAIL = {"foo": "bar"}
+RATE_RESPONSE_FAIL = Error(
+    code=400,
+    error={
+        "error": {
+            "code": "400",
+            "message": "Your request contained invalid structure on path foo. extra fields not permitted",
+            "type": "invalid_request_error",
+        }
+    },
+)
 
 deployment = "test-app"
 app = DIALApp().add_chat_completion(deployment, NoopApplication())
@@ -18,7 +28,7 @@ app = DIALApp().add_chat_completion(deployment, NoopApplication())
 testcases: List[TestCase] = [
     TestCase(app, deployment, "rate", RATE_REQUEST_OK1, None),
     TestCase(app, deployment, "rate", RATE_REQUEST_OK2, None),
-    TestCase(app, deployment, "rate", RATE_REQUEST_OK3, None),
+    TestCase(app, deployment, "rate", RATE_REQUEST_FAIL, RATE_RESPONSE_FAIL),
 ]
 
 
