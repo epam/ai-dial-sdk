@@ -1,3 +1,6 @@
+from enum import Enum
+from typing import Tuple
+
 import nox
 
 nox.options.reuse_existing_virtualenvs = True
@@ -33,15 +36,28 @@ def format(session: nox.Session):
     format_with_args(session, SRC)
 
 
+class UsePydanticV2(Enum):
+    YES = "1"
+    NO = "0"
+
+
 @nox.session(python=["3.8", "3.9", "3.10", "3.11", "3.12"])
 # Testing against earliest and latest supported versions of the dependencies
-@nox.parametrize("pydantic", ["1.10.17", "2.8.2"])
+@nox.parametrize(
+    "pydantic",
+    [
+        ("1.10.17", UsePydanticV2.NO),
+        ("2.8.2", UsePydanticV2.NO),
+        ("2.8.2", UsePydanticV2.YES),
+    ],
+)
 @nox.parametrize("httpx", ["0.25.0", "0.27.0"])
-def test(session: nox.Session, pydantic: str, httpx: str) -> None:
+def test(
+    session: nox.Session, pydantic: Tuple[str, UsePydanticV2], httpx: str
+) -> None:
     """Runs tests"""
     session.run("poetry", "install", external=True)
-    session.install(
-        f"pydantic=={pydantic}",
-        f"httpx=={httpx}",
+    session.install(f"pydantic=={pydantic[0]}", f"httpx=={httpx}")
+    session.run(
+        "pytest", *session.posargs, env={"PYDANTIC_V2": str(pydantic[1].value)}
     )
-    session.run("pytest", *session.posargs)
