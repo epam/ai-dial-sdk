@@ -79,7 +79,16 @@ class MessageContentTextPart(BaseModel):
     text: StrictStr
 
 
-MessageContentPart = Union[MessageContentTextPart, MessageContentImagePart]
+class MessageContentRefusalPart(BaseModel):
+    type: Literal["refusal"]
+    refusal: StrictStr
+
+
+MessageContentPart = Union[
+    MessageContentTextPart,
+    MessageContentImagePart,
+    MessageContentRefusalPart,
+]
 
 
 class Message(BaseModel):
@@ -90,6 +99,7 @@ class Message(BaseModel):
     tool_calls: Optional[List[ToolCall]] = None
     tool_call_id: Optional[StrictStr] = None
     function_call: Optional[FunctionCall] = None
+    refusal: Optional[StrictStr] = None
 
     def text(self) -> str:
         """
@@ -202,6 +212,10 @@ ResponseFormat = Union[
 ]
 
 
+class StreamOptions(BaseModel):
+    include_usage: Optional[StrictBool] = None
+
+
 class AzureChatCompletionRequest(BaseModel):
     model: Optional[StrictStr] = None
     messages: List[Message]
@@ -219,6 +233,7 @@ class AzureChatCompletionRequest(BaseModel):
     n: Optional[N] = None
     stop: Optional[Union[StrictStr, Stop]] = None
     max_tokens: Optional[PositiveInt] = None
+    max_completion_tokens: Optional[PositiveInt] = None
     presence_penalty: Optional[Penalty] = None
     frequency_penalty: Optional[Penalty] = None
     logit_bias: Optional[Mapping[int, float]] = None
@@ -227,6 +242,7 @@ class AzureChatCompletionRequest(BaseModel):
     logprobs: Optional[StrictBool] = None
     top_logprobs: Optional[StrictInt] = None
     response_format: Optional[ResponseFormat] = None
+    parallel_tool_calls: Optional[StrictBool] = None
 
 
 class ChatCompletionRequestCustomFields(BaseModel):
