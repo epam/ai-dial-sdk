@@ -1,9 +1,7 @@
-from fastapi.testclient import TestClient
 import pytest
+from fastapi.testclient import TestClient
 
 from aidial_sdk import DIALApp
-from aidial_sdk.pydantic_v1 import BaseModel
-from aidial_sdk.utils.pydantic import model_validate_extra_fields
 from tests.applications.validator import ValidatorApplication
 
 
