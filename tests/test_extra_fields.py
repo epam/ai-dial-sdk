@@ -2,57 +2,50 @@ import pytest
 from fastapi.testclient import TestClient
 
 from aidial_sdk import DIALApp
-from tests.applications.validator import ValidatorApplication
+from tests.applications.validator import RequestValidator, ValidatorApplication
+from tests.utils.errors import extra_fields_error
 
 
-@pytest.mark.parametrize("validate", [True, False, None])
-def test_top_level_extra_field(validate: bool):
-    app = ValidatorApplication(request_validator=lambda r: r.extra_field == "extra_value")  # type: ignore
-
+def _create_client(allow_extra: bool, validator: RequestValidator):
     dial_app = (
         DIALApp()
-        if validate is None
-        else DIALApp(validate_extra_request_fields=validate)
+        if allow_extra is None
+        else DIALApp(allow_extra_request_fields=allow_extra)
+    ).add_chat_completion(
+        "test-app", ValidatorApplication(request_validator=validator)
     )
-    dial_app.add_chat_completion("test-app", app)
 
-    client = TestClient(dial_app)
-
-    actual_response = client.post(
-        "/openai/deployments/test-app/chat/completions",
-        json={"messages": [], "extra_field": "extra_value"},
+    return TestClient(
+        dial_app,
         headers={"Api-Key": "TEST_API_KEY"},
+        base_url="http://testserver/openai/deployments/test-app",
     )
 
-    if validate in [None, True]:
-        assert actual_response.status_code == 400
-        assert actual_response.json() == {
-            "error": {
-                "code": "400",
-                "message": "Your request contained invalid structure on path "
-                "extra_field. extra fields not permitted",
-                "type": "invalid_request_error",
-            }
-        }
+
+@pytest.mark.parametrize("allow_extra", [True, False, None])
+def test_top_level_extra_field(allow_extra: bool):
+
+    client = _create_client(allow_extra, lambda r: r.extra_field == "extra_value")  # type: ignore
+
+    response = client.post(
+        "chat/completions",
+        json={"messages": [], "extra_field": "extra_value"},
+    )
+
+    if allow_extra in [None, False]:
+        expected_response = extra_fields_error("extra_field")
+        assert response.status_code == expected_response.code
+        assert response.json() == expected_response.error
     else:
-        assert actual_response.status_code == 200
+        assert response.status_code == 200
 
 
-@pytest.mark.parametrize("validate", [True, False, None])
-def test_message_extra_field(validate: bool):
-    app = ValidatorApplication(request_validator=lambda r: r.messages[0].extra_field == "extra_value")  # type: ignore
+@pytest.mark.parametrize("allow_extra", [True, False, None])
+def test_message_extra_field(allow_extra: bool):
+    client = _create_client(allow_extra, lambda r: r.messages[0].extra_field == "extra_value")  # type: ignore
 
-    dial_app = (
-        DIALApp()
-        if validate is None
-        else DIALApp(validate_extra_request_fields=validate)
-    )
-    dial_app.add_chat_completion("test-app", app)
-
-    client = TestClient(dial_app)
-
-    actual_response = client.post(
-        "/openai/deployments/test-app/chat/completions",
+    response = client.post(
+        "chat/completions",
         json={
             "messages": [
                 {
@@ -62,18 +55,11 @@ def test_message_extra_field(validate: bool):
                 }
             ]
         },
-        headers={"Api-Key": "TEST_API_KEY"},
     )
 
-    if validate in [None, True]:
-        assert actual_response.status_code == 400
-        assert actual_response.json() == {
-            "error": {
-                "code": "400",
-                "message": "Your request contained invalid structure on path "
-                "messages.0.extra_field. extra fields not permitted",
-                "type": "invalid_request_error",
-            }
-        }
+    if allow_extra in [None, False]:
+        expected_response = extra_fields_error("messages.0.extra_field")
+        assert response.status_code == expected_response.code
+        assert response.json() == expected_response.error
     else:
-        assert actual_response.status_code == 200
+        assert response.status_code == 200

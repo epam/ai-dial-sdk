@@ -55,7 +55,7 @@ class PathFilter(Filter):
 
 
 class DIALApp(FastAPI):
-    _validate_extra_request_fields: bool
+    _allow_extra_request_fields: bool
 
     def __init__(
         self,
@@ -64,7 +64,7 @@ class DIALApp(FastAPI):
         telemetry_config: Optional[TelemetryConfig] = None,
         add_healthcheck: bool = False,
         *,
-        validate_extra_request_fields: bool = True,
+        allow_extra_request_fields: bool = False,
         **kwargs,
     ):
         if "propagation_auth_headers" in kwargs:
@@ -78,7 +78,7 @@ class DIALApp(FastAPI):
 
         super().__init__(**kwargs)
 
-        self._validate_extra_request_fields = validate_extra_request_fields
+        self._allow_extra_request_fields = allow_extra_request_fields
 
         if telemetry_config is not None:
             self.configure_telemetry(telemetry_config)
@@ -237,7 +237,7 @@ class DIALApp(FastAPI):
         deployment_id: str,
     ) -> RequestType:
         ret = await request.from_request(original_request, deployment_id)
-        if self._validate_extra_request_fields:
+        if not self._allow_extra_request_fields:
             model_validate_extra_fields(ret)
         return ret
 
