@@ -29,6 +29,9 @@ opentelemetry-instrumentation-urllib = {version = ">=0.43b0", optional = true}
 opentelemetry-exporter-prometheus = {version = ">=0.43b0", optional = true}
 prometheus-client = {version = ">=0.17.1,<=0.21", optional = true}
 
+# Extras
+httpx = {version = "^0.27.0", optional = true}
+
 [tool.poetry.extras]
 telemetry = [
     "opentelemetry-sdk",
@@ -44,6 +47,7 @@ telemetry = [
     "opentelemetry-exporter-prometheus",
     "prometheus-client",
 ]
+httpx = ["httpx"]
 
 [tool.poetry.group.test.dependencies]
 pytest = "^8.2"

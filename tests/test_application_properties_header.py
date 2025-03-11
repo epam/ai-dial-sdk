@@ -1,19 +1,19 @@
+import json
 from typing import Any
-from unittest.mock import AsyncMock
+from unittest.mock import AsyncMock, patch, MagicMock
 
+import httpx
 import pytest
 from pydantic.v1 import BaseModel
 from starlette.testclient import TestClient
 
 from aidial_sdk import DIALApp
 from aidial_sdk.chat_completion import ChatCompletion, Request, Response
+from aidial_sdk.deployment.application_properties_mixin import ApplicationPropertiesMixin
 from aidial_sdk.deployment.configuration import ConfigurationRequest, ConfigurationResponse
-import json
-
 from aidial_sdk.deployment.rate import RateRequest
 from aidial_sdk.deployment.tokenize import TokenizeRequest, TokenizeResponse
 from aidial_sdk.deployment.truncate_prompt import TruncatePromptRequest, TruncatePromptResponse
-from aidial_sdk.http_client import HttpxClient
 
 
 class TestApp(ChatCompletion):
@@ -54,21 +54,35 @@ class Application(BaseModel):
 
 @pytest.fixture
 def client():
-    mock_client = AsyncMock(spec=HttpxClient)
-    mock_client.request.side_effect = [
-        Application(application_properties={"key1": "value1", "key2": "value2"})
-    ]
-    app = DIALApp(http_client=mock_client).add_chat_completion(deployment_name, TestApp())
-    return TestClient(app)
+    with patch("httpx.AsyncClient") as MockClient:
+        mock_client = AsyncMock()
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {"key1": "value1", "key2": "value2"}
+        mock_client.__aenter__.return_value = mock_client
+        mock_client.__aexit__.return_value = None
+        mock_client.request.return_value = mock_response
+        MockClient.return_value = mock_client
+        app = DIALApp(dial_url="https://test.com").add_chat_completion(deployment_name, TestApp())
+        yield TestClient(app)
 
 @pytest.fixture
 def client_mock_error_core_response():
-    mock_client = AsyncMock(spec=HttpxClient)
-    mock_client.request.side_effect = [
-        Exception()
-    ]
-    app = DIALApp(http_client=mock_client).add_chat_completion(deployment_name, TestApp())
-    return TestClient(app)
+    with patch("httpx.AsyncClient") as MockClient:
+        mock_client = AsyncMock()
+        mock_response = MagicMock()
+        mock_response.status_code = 500
+        mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
+            message="Server error",
+            request=MagicMock(),
+            response=mock_response
+        )
+        mock_client.__aenter__.return_value = mock_client
+        mock_client.__aexit__.return_value = None
+        mock_client.request.return_value = mock_response
+        MockClient.return_value = mock_client
+        app = DIALApp(dial_url="https://test.com").add_chat_completion(deployment_name, TestApp())
+        yield TestClient(app)
 
 @pytest.fixture
 def headers():
@@ -130,7 +144,7 @@ def test_chat_completion_invalid_application_properties_headers(client: TestClie
 def test_chat_completion_core_request_error(client_mock_error_core_response: TestClient, headers_with_app_id_only: dict, body: dict):
     response = client_mock_error_core_response.post(f"/openai/deployments/{deployment_name}/chat/completions", headers=headers_with_app_id_only, json=body)
     response_data = json.loads(response.content)
-    assert response_data["error"]["type"] == "internal_server_error"
+    assert response_data["error"]["type"] == "internal_request_error"
     assert response.status_code == 500
 
 
@@ -156,7 +170,7 @@ def test_configuration_request_invalid_application_properties_headers(client: Te
 def test_configuration_request_core_request_error(client_mock_error_core_response: TestClient, headers_with_app_id_only: dict):
     response = client_mock_error_core_response.get(f"/openai/deployments/{deployment_name}/configuration", headers=headers_with_app_id_only)
     response_data = json.loads(response.content)
-    assert response_data["error"]["type"] == "internal_server_error"
+    assert response_data["error"]["type"] == "internal_request_error"
     assert response.status_code == 500
 
 
@@ -181,7 +195,7 @@ def test_rate_response_request_invalid_application_properties_headers(client: Te
 def test_rate_response_request_core_request_error(client_mock_error_core_response: TestClient, headers_with_app_id_only: dict):
     response = client_mock_error_core_response.post(f"/openai/deployments/{deployment_name}/rate", headers=headers_with_app_id_only, json={"responseId": "123", "rate": False})
     response_data = json.loads(response.content)
-    assert response_data["error"]["type"] == "internal_server_error"
+    assert response_data["error"]["type"] == "internal_request_error"
     assert response.status_code == 500
 
 
@@ -207,7 +221,7 @@ def test_tokenize_request_invalid_application_properties_headers(client: TestCli
 def test_tokenize_request_core_request_error(client_mock_error_core_response: TestClient, headers_with_app_id_only: dict):
     response = client_mock_error_core_response.post(f"/openai/deployments/{deployment_name}/tokenize", headers=headers_with_app_id_only, json={"inputs": []})
     response_data = json.loads(response.content)
-    assert response_data["error"]["type"] == "internal_server_error"
+    assert response_data["error"]["type"] == "internal_request_error"
     assert response.status_code == 500
 
 
@@ -233,8 +247,34 @@ def test_truncate_prompt_request_invalid_application_properties_headers(client: 
 def test_truncate_prompt_core_request_error(client_mock_error_core_response: TestClient, headers_with_app_id_only: dict):
     response = client_mock_error_core_response.post(f"/openai/deployments/{deployment_name}/truncate_prompt", headers=headers_with_app_id_only, json={"inputs": []})
     response_data = json.loads(response.content)
-    assert response_data["error"]["type"] == "internal_server_error"
+    assert response_data["error"]["type"] == "internal_request_error"
     assert response.status_code == 500
 
+async def test_import_error_handling():
+    with patch.dict('sys.modules', {'httpx': None}):
+        mock_headers = MagicMock()
+        mock_headers.get.side_effect = lambda key: "test_value" if key == "X-DIAL-APPLICATION-ID" else None
 
+        try:
+            await ApplicationPropertiesMixin.get_application_properties_from_core(mock_headers, "api_key", "base_url")
+        except Exception as exc_info:
+            code = exc_info.status_code
+            ex_type = exc_info.type
+            message = exc_info.message
+
+        assert code == 500
+        assert ex_type == "dependency_error"
+        assert message == "Httpx is not installed. Please install it as extras dependency."
+
+async def test_base_url_required():
+    mock_headers = MagicMock()
+    mock_headers.get.side_effect = lambda key: "test_value" if key == "X-DIAL-APPLICATION-ID" else None
+    message = ""
+
+    try:
+        await ApplicationPropertiesMixin.get_application_properties_from_core(mock_headers, "api_key", None)
+    except ValueError as exc_info:
+        message = exc_info.args[0]
+
+    assert message == "Base URL is required to make a request. Pls set one in DIALApp"
 

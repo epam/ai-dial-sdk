@@ -55,7 +55,7 @@ class PathFilter(Filter):
 
 
 class DIALApp(FastAPI):
-    __http_client: BaseHTTPClient
+    __dial_url: str
 
     def __init__(
         self,
@@ -63,7 +63,6 @@ class DIALApp(FastAPI):
         propagate_auth_headers: bool = False,
         telemetry_config: Optional[TelemetryConfig] = None,
         add_healthcheck: bool = False,
-        http_client: BaseHTTPClient = HttpxClient(),
         **kwargs,
     ):
         if "propagation_auth_headers" in kwargs:
@@ -77,8 +76,7 @@ class DIALApp(FastAPI):
 
         super().__init__(**kwargs)
 
-        self.__http_client = http_client
-        self.__http_client.set_dial_base_url(dial_url)
+        self.__dial_url = dial_url
 
         if telemetry_config is not None:
             self.configure_telemetry(telemetry_config)
@@ -196,7 +194,7 @@ class DIALApp(FastAPI):
             set_log_deployment(deployment_id)
 
             request = await request_type.from_request(
-                original_request, deployment_id, self.__http_client
+                original_request, deployment_id, self.__dial_url
             )
             log_debug(f"request[{endpoint}]: {request}")
 
@@ -222,7 +220,7 @@ class DIALApp(FastAPI):
             set_log_deployment(deployment_id)
 
             request = await RateRequest.from_request(
-                original_request, deployment_id, self.__http_client
+                original_request, deployment_id, self.__dial_url
             )
 
             await impl.rate_response(request)
@@ -241,7 +239,7 @@ class DIALApp(FastAPI):
             set_log_deployment(deployment_id)
 
             request = await ChatCompletionRequest.from_request(
-                original_request, deployment_id, self.__http_client
+                original_request, deployment_id, self.__dial_url
             )
 
             response = ChatCompletionResponse(request)
@@ -273,7 +271,7 @@ class DIALApp(FastAPI):
         async def _handler(original_request: Request):
             set_log_deployment(deployment_id)
             request = await EmbeddingsRequest.from_request(
-                original_request, deployment_id, self.__http_client
+                original_request, deployment_id, self.__dial_url
             )
             response = await impl.embeddings(request)
             response_json = response.dict()
