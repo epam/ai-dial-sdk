@@ -23,13 +23,18 @@ def _create_client(allow_extra: bool, validator: RequestValidator):
 
 
 @pytest.mark.parametrize("allow_extra", [True, False, None])
-def test_top_level_extra_field(allow_extra: bool):
+@pytest.mark.parametrize("stream", [True, False])
+def test_top_level_extra_field(allow_extra: bool, stream: bool):
 
     client = _create_client(allow_extra, lambda r: r.extra_field == "extra_value")  # type: ignore
 
     response = client.post(
         "chat/completions",
-        json={"messages": [], "extra_field": "extra_value"},
+        json={
+            "messages": [{"role": "user", "content": "Test content"}],
+            "extra_field": "extra_value",
+            "stream": stream,
+        },
     )
 
     if allow_extra in [None, False]:
@@ -41,7 +46,8 @@ def test_top_level_extra_field(allow_extra: bool):
 
 
 @pytest.mark.parametrize("allow_extra", [True, False, None])
-def test_message_extra_field(allow_extra: bool):
+@pytest.mark.parametrize("stream", [True, False])
+def test_message_extra_field(allow_extra: bool, stream: bool):
     client = _create_client(allow_extra, lambda r: r.messages[0].extra_field == "extra_value")  # type: ignore
 
     response = client.post(
@@ -53,7 +59,8 @@ def test_message_extra_field(allow_extra: bool):
                     "content": "Test content",
                     "extra_field": "extra_value",
                 }
-            ]
+            ],
+            "stream": stream,
         },
     )
 
