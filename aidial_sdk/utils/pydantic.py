@@ -1,6 +1,5 @@
 from typing import Any, Iterator, List, Tuple, Union
 
-# FIXME
 from pydantic.v1.error_wrappers import ErrorWrapper, ValidationError
 from pydantic.v1.errors import ExtraError
 
