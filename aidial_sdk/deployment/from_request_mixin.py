@@ -28,6 +28,7 @@ class FromRequestMixin(ABC, ExtraForbidModel):
     async def get_request_body(request: fastapi.Request) -> Any:
         pass
 
+
 class ExtraForbidModelWithHeadersAndBaseUrl(ExtraForbidModel):
     headers: MutableHeaders
     base_url: Optional[str] = None
@@ -36,7 +37,9 @@ class ExtraForbidModelWithHeadersAndBaseUrl(ExtraForbidModel):
         arbitrary_types_allowed = True
 
 
-class FromRequestDeploymentMixin(FromRequestMixin, ExtraForbidModelWithHeadersAndBaseUrl):
+class FromRequestDeploymentMixin(
+    FromRequestMixin, ExtraForbidModelWithHeadersAndBaseUrl
+):
     api_key_secret: SecretStr
     jwt_secret: Optional[SecretStr] = None
 
@@ -94,7 +97,6 @@ class FromRequestDeploymentMixin(FromRequestMixin, ExtraForbidModelWithHeadersAn
         jwt = headers.get("Authorization")
         del headers["Authorization"]
 
-
         return cls(
             **(await cls.get_request_body(request)),
             api_key_secret=SecretStr(api_key),
@@ -103,7 +105,7 @@ class FromRequestDeploymentMixin(FromRequestMixin, ExtraForbidModelWithHeadersAn
             api_version=request.query_params.get("api-version"),
             headers=headers,
             original_request=request,
-            base_url=base_url
+            base_url=base_url,
         )
 
     @staticmethod
@@ -120,4 +122,3 @@ async def _get_request_json_body(request: fastapi.Request) -> dict:
             type="invalid_request_error",
             message=f"The request body isn't valid JSON: {e.msg}",
         )
-

@@ -4,13 +4,20 @@ from urllib.parse import urljoin
 
 from aidial_sdk.pydantic_v1 import StrictStr
 
-from aidial_sdk.deployment.from_request_mixin import ExtraForbidModelWithHeadersAndBaseUrl
+from aidial_sdk.deployment.from_request_mixin import (
+    ExtraForbidModelWithHeadersAndBaseUrl,
+)
 from aidial_sdk.exceptions import HTTPException as DIALException
+
 
 class SchemaRichApplicationsMixin(ExtraForbidModelWithHeadersAndBaseUrl):
     @property
-    def unreliable_dial_application_properties(self) -> Optional[Dict[str, Any]]:
-        props_header = self.headers.get(StrictStr("X-DIAL-APPLICATION-PROPERTIES"))
+    def unreliable_dial_application_properties(
+        self,
+    ) -> Optional[Dict[str, Any]]:
+        props_header = self.headers.get(
+            StrictStr("X-DIAL-APPLICATION-PROPERTIES")
+        )
         if props_header:
             try:
                 return loads(props_header)
@@ -25,7 +32,9 @@ class SchemaRichApplicationsMixin(ExtraForbidModelWithHeadersAndBaseUrl):
     def dial_application_id(self) -> str:
         return self.headers.get(StrictStr("X-DIAL-APPLICATION-ID"))
 
-    async def request_dial_application_properties(self) -> Optional[Dict[str, Any]]:
+    async def request_dial_application_properties(
+        self,
+    ) -> Optional[Dict[str, Any]]:
         if self.unreliable_dial_application_properties:
             return self.unreliable_dial_application_properties
 
@@ -45,10 +54,14 @@ class SchemaRichApplicationsMixin(ExtraForbidModelWithHeadersAndBaseUrl):
 
         try:
             import httpx
+
             async with httpx.AsyncClient() as client:
                 response = await client.request(
                     method="GET",
-                    url=urljoin(self.base_url, f"/openai/applications/{self.dial_application_id}"),
+                    url=urljoin(
+                        self.base_url,
+                        f"/openai/applications/{self.dial_application_id}",
+                    ),
                     headers={"api-key": self.api_key},
                 )
                 response.raise_for_status()
