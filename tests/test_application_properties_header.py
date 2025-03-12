@@ -1,12 +1,11 @@
 import json
-from unittest.mock import AsyncMock, patch, MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import httpx
 import pytest
 from pydantic.v1 import StrictStr
 from starlette.datastructures import MutableHeaders
 from starlette.testclient import TestClient
-from aidial_sdk.pydantic_v1 import SecretStr
 
 from aidial_sdk import DIALApp, HTTPException
 from aidial_sdk.chat_completion import ChatCompletion, Request, Response
@@ -23,6 +22,7 @@ from aidial_sdk.deployment.truncate_prompt import (
     TruncatePromptRequest,
     TruncatePromptResponse,
 )
+from aidial_sdk.pydantic_v1 import SecretStr
 
 
 class TestApp(ChatCompletion):

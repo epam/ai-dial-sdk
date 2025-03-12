@@ -1,13 +1,12 @@
-from json import loads, JSONDecodeError
-from typing import Optional, Dict, Any
+from json import JSONDecodeError, loads
+from typing import Any, Dict, Optional
 from urllib.parse import urljoin
-
-from aidial_sdk.pydantic_v1 import StrictStr
 
 from aidial_sdk.deployment.from_request_mixin import (
     ExtraForbidRequestWithAuthAndApplicationProperties,
 )
 from aidial_sdk.exceptions import HTTPException as DIALException
+from aidial_sdk.pydantic_v1 import StrictStr
 
 
 class SchemaRichApplicationsMixin(

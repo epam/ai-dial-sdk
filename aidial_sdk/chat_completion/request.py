@@ -4,10 +4,10 @@ from typing import Any, Dict, List, Literal, Mapping, Optional, Union
 from typing_extensions import assert_never
 
 from aidial_sdk.chat_completion.enums import Status
+from aidial_sdk.deployment.from_request_mixin import FromRequestDeploymentMixin
 from aidial_sdk.deployment.schema_rich_applications_mixin import (
     SchemaRichApplicationsMixin,
 )
-from aidial_sdk.deployment.from_request_mixin import FromRequestDeploymentMixin
 from aidial_sdk.exceptions import InvalidRequestError
 from aidial_sdk.pydantic_v1 import (
     ConstrainedFloat,
