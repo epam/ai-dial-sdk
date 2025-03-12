@@ -458,7 +458,7 @@ async def test_import_error_handling():
         )
 
 
-async def test_base_url_required():
+async def test_base_url_required_if_need_to_get_application_properties_from_core():
     mock_headers = MagicMock()
     mock_headers.get.side_effect = lambda key: (
         "test_value" if key == "X-DIAL-APPLICATION-ID" else None
@@ -474,5 +474,5 @@ async def test_base_url_required():
 
     assert (
         message
-        == "Base URL is required to make a request. Pls set one in DIALApp "
+        == "Base URL is required to make a request. Pls set one in DIALApp"
     )
