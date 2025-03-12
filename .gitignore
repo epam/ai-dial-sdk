@@ -10,3 +10,4 @@ dist/
 .env
 ~*
 .vscode/launch.json
+.python-version
