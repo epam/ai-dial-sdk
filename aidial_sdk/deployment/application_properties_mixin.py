@@ -8,7 +8,6 @@ from aidial_sdk.deployment.from_request_mixin import ExtraForbidModelWithHeaders
 from aidial_sdk.exceptions import HTTPException as DIALException
 
 class SchemaRichApplicationsMixin(ExtraForbidModelWithHeadersAndBaseUrl):
-
     @property
     def unreliable_dial_application_properties(self) -> Optional[Dict[str, Any]]:
         props_header = self.headers.get(StrictStr("X-DIAL-APPLICATION-PROPERTIES"))

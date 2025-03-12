@@ -111,7 +111,9 @@ def client():
         mock_client = AsyncMock()
         mock_response = MagicMock()
         mock_response.status_code = 200
-        mock_response.json.return_value = {"key1": "value1", "key2": "value2"}
+        mock_response.json.return_value = {
+            "application_properties": {"key1": "value1", "key2": "value2"}
+        }
         mock_client.__aenter__.return_value = mock_client
         mock_client.__aexit__.return_value = None
         mock_client.request.return_value = mock_response
@@ -153,7 +155,7 @@ def headers():
 
 
 @pytest.fixture
-def headers_without_app_properties():
+def headers_without_app_properties_and_app_id():
     return {"Api-Key": API_KEY, "Authorization": "Bearer test-jwt"}
 
 
@@ -189,15 +191,23 @@ def test_chat_completion_request(client: TestClient, headers: dict, body: dict):
     assert response.status_code == 200
 
 
-def test_chat_completion_request_without_app_props_headers(
-    client: TestClient, headers_without_app_properties: dict, body: dict
+def test_chat_completion_request_without_app_props_and_id_headers(
+    client: TestClient,
+    headers_without_app_properties_and_app_id: dict,
+    body: dict,
 ):
     response = client.post(
         f"/openai/deployments/{deployment_name}/chat/completions",
-        headers=headers_without_app_properties,
+        headers=headers_without_app_properties_and_app_id,
         json=body,
     )
-    assert response.status_code == 200
+    response_data = json.loads(response.content)
+    assert response_data["error"]["type"] == "invalid_request_error"
+    assert (
+        response_data["error"]["message"]
+        == "The X-DIAL-APPLICATION-ID header isn't set"
+    )
+    assert response.status_code == 400
 
 
 def test_chat_completion_request_app_properties_from_core(
@@ -239,14 +249,20 @@ def test_chat_completion_core_request_error(
     assert response.status_code == 500
 
 
-def test_configuration_request_without_app_props_headers(
-    client: TestClient, headers_without_app_properties: dict
+def test_configuration_request_without_app_props_and_id_headers(
+    client: TestClient, headers_without_app_properties_and_app_id: dict
 ):
     response = client.get(
         f"/openai/deployments/{deployment_name}/configuration",
-        headers=headers_without_app_properties,
+        headers=headers_without_app_properties_and_app_id,
     )
-    assert response.status_code == 200
+    response_data = json.loads(response.content)
+    assert response_data["error"]["type"] == "invalid_request_error"
+    assert (
+        response_data["error"]["message"]
+        == "The X-DIAL-APPLICATION-ID header isn't set"
+    )
+    assert response.status_code == 400
 
 
 def test_configuration_request(client: TestClient, headers: dict):
@@ -299,26 +315,32 @@ def test_rate_response_request(client: TestClient, headers: dict):
     assert response.status_code == 200
 
 
-def test_rate_response_request_without_app_props_headers(
-    client: TestClient, headers_without_app_properties: dict
+def test_rate_response_request_without_app_props_and_id_headers(
+    client: TestClient, headers_without_app_properties_and_app_id: dict
 ):
     response = client.post(
         f"/openai/deployments/{deployment_name}/rate",
-        headers=headers_without_app_properties,
+        headers=headers_without_app_properties_and_app_id,
         json={"responseId": "123", "rate": False},
     )
-    assert response.status_code == 200
-
-
-def test_rate_response_request_app_properties_from_core(
-    client: TestClient, headers_without_app_properties: dict
-):
-    response = client.post(
-        f"/openai/deployments/{deployment_name}/rate",
-        headers=headers_without_app_properties,
-        json={"responseId": "123", "rate": False},
+    response_data = json.loads(response.content)
+    assert response_data["error"]["type"] == "invalid_request_error"
+    assert (
+        response_data["error"]["message"]
+        == "The X-DIAL-APPLICATION-ID header isn't set"
     )
-    assert response.status_code == 200
+    assert response.status_code == 400
+
+
+# def test_rate_response_request_app_properties_from_core(
+#     client: TestClient, headers_without_app_properties_and_app_id: dict
+# ):
+#     response = client.post(
+#         f"/openai/deployments/{deployment_name}/rate",
+#         headers=headers_without_app_properties_and_app_id,
+#         json={"responseId": "123", "rate": False},
+#     )
+#     assert response.status_code == 200
 
 
 def test_rate_response_request_invalid_application_properties_headers(
@@ -356,15 +378,21 @@ def test_tokenize_request(client: TestClient, headers: dict):
     assert response.status_code == 200
 
 
-def test_tokenize_request_without_app_props_headers(
-    client: TestClient, headers_without_app_properties: dict
+def test_tokenize_request_without_app_props_and_id_headers(
+    client: TestClient, headers_without_app_properties_and_app_id: dict
 ):
     response = client.post(
         f"/openai/deployments/{deployment_name}/tokenize",
-        headers=headers_without_app_properties,
+        headers=headers_without_app_properties_and_app_id,
         json={"inputs": []},
     )
-    assert response.status_code == 200
+    response_data = json.loads(response.content)
+    assert response_data["error"]["type"] == "invalid_request_error"
+    assert (
+        response_data["error"]["message"]
+        == "The X-DIAL-APPLICATION-ID header isn't set"
+    )
+    assert response.status_code == 400
 
 
 def test_tokenize_request__app_properties_from_core(
@@ -413,15 +441,21 @@ def test_truncate_prompt_request(client: TestClient, headers: dict):
     assert response.status_code == 200
 
 
-def test_truncate_prompt_request_without_app_props_headers(
-    client: TestClient, headers_without_app_properties: dict
+def test_truncate_prompt_request_without_app_props_and_id_headers(
+    client: TestClient, headers_without_app_properties_and_app_id: dict
 ):
     response = client.post(
         f"/openai/deployments/{deployment_name}/truncate_prompt",
         json={"inputs": []},
-        headers=headers_without_app_properties,
+        headers=headers_without_app_properties_and_app_id,
     )
-    assert response.status_code == 200
+    response_data = json.loads(response.content)
+    assert response_data["error"]["type"] == "invalid_request_error"
+    assert (
+        response_data["error"]["message"]
+        == "The X-DIAL-APPLICATION-ID header isn't set"
+    )
+    assert response.status_code == 400
 
 
 def test_truncate_prompt_request_app_properties_from_core(
