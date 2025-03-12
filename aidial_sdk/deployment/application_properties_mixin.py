@@ -23,14 +23,14 @@ class SchemaRichApplicationsMixin(HasHeadersAndBaseUrl):
                 )
 
     @property
-    def get_application_id(self) -> str:
+    def application_id(self) -> str:
         return self.headers.get(StrictStr("X-DIAL-APPLICATION-ID"))
 
     async def request_dial_application_properties(self) -> Optional[Dict[str, Any]]:
         if self.unreliable_dial_application_properties:
             return self.unreliable_dial_application_properties
 
-        if not self.get_application_id:
+        if not self.application_id:
             raise DIALException(
                 status_code=400,
                 type="invalid_request_error",
