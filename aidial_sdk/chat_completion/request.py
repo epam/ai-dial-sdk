@@ -61,6 +61,7 @@ class ToolCall(ExtraForbidModel):
 
 class Role(str, Enum):
     SYSTEM = "system"
+    DEVELOPER = "developer"
     USER = "user"
     ASSISTANT = "assistant"
     FUNCTION = "function"
@@ -213,10 +214,6 @@ ResponseFormat = Union[
     ResponseFormatJsonObject,
     ResponseFormatJsonSchema,
 ]
-
-
-class StreamOptions(ExtraForbidModel):
-    include_usage: Optional[StrictBool] = None
 
 
 class AzureChatCompletionRequest(ExtraForbidModel):
