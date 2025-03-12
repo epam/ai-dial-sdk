@@ -212,10 +212,6 @@ ResponseFormat = Union[
 ]
 
 
-class StreamOptions(ExtraForbidModel):
-    include_usage: Optional[StrictBool] = None
-
-
 class AzureChatCompletionRequest(ExtraForbidModel):
     model: Optional[StrictStr] = None
     messages: List[Message]
