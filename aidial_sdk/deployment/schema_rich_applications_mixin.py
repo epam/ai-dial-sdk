@@ -10,7 +10,9 @@ from aidial_sdk.deployment.from_request_mixin import (
 from aidial_sdk.exceptions import HTTPException as DIALException
 
 
-class SchemaRichApplicationsMixin(ExtraForbidRequestWithAuthAndApplicationProperties):
+class SchemaRichApplicationsMixin(
+    ExtraForbidRequestWithAuthAndApplicationProperties
+):
     @property
     def unreliable_dial_application_properties(
         self,
