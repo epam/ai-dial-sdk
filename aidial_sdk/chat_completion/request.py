@@ -1,9 +1,13 @@
 from enum import Enum
 from typing import Any, Dict, List, Literal, Mapping, Optional, Union
 
+from pydantic.v1 import ConfigDict
 from typing_extensions import assert_never
 
 from aidial_sdk.chat_completion.enums import Status
+from aidial_sdk.deployment.application_properties_mixin import (
+    SchemaRichApplicationsMixin,
+)
 from aidial_sdk.deployment.from_request_mixin import FromRequestDeploymentMixin
 from aidial_sdk.exceptions import InvalidRequestError
 from aidial_sdk.pydantic_v1 import (
@@ -247,7 +251,6 @@ class AzureChatCompletionRequest(ExtraForbidModel):
 
 class ChatCompletionRequestCustomFields(ExtraForbidModel):
     configuration: Optional[Dict[str, Any]] = None
-    application_properties: Optional[Dict[str, Any]] = None
 
 
 class ChatCompletionRequest(AzureChatCompletionRequest):
@@ -256,5 +259,9 @@ class ChatCompletionRequest(AzureChatCompletionRequest):
     custom_fields: Optional[ChatCompletionRequestCustomFields] = None
 
 
-class Request(ChatCompletionRequest, FromRequestDeploymentMixin):
-    pass
+class Request(
+    ChatCompletionRequest,
+    FromRequestDeploymentMixin,
+    SchemaRichApplicationsMixin,
+):
+    model_config = ConfigDict(arbitrary_types_allowed=True, extra="forbid")

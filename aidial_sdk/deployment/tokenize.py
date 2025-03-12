@@ -1,6 +1,7 @@
 from typing import List, Literal, Union
 
 from aidial_sdk.chat_completion.request import ChatCompletionRequest
+from aidial_sdk.deployment.application_properties_mixin import SchemaRichApplicationsMixin
 from aidial_sdk.deployment.from_request_mixin import FromRequestDeploymentMixin
 from aidial_sdk.pydantic_v1 import BaseModel
 
@@ -18,7 +19,7 @@ class TokenizeInputString(BaseModel):
 TokenizeInput = Union[TokenizeInputRequest, TokenizeInputString]
 
 
-class TokenizeRequest(FromRequestDeploymentMixin):
+class TokenizeRequest(FromRequestDeploymentMixin, SchemaRichApplicationsMixin):
     inputs: List[TokenizeInput]
 
 

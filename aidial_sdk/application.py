@@ -54,7 +54,7 @@ class PathFilter(Filter):
 
 
 class DIALApp(FastAPI):
-    __dial_url: str
+    __dial_url: Optional[str]
 
     def __init__(
         self,

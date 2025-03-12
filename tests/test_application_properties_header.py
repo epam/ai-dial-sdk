@@ -1,17 +1,12 @@
 import json
-from typing import Any
 from unittest.mock import AsyncMock, patch, MagicMock
 
 import httpx
 import pytest
-from pydantic.v1 import BaseModel
 from starlette.testclient import TestClient
 
 from aidial_sdk import DIALApp
 from aidial_sdk.chat_completion import ChatCompletion, Request, Response
-from aidial_sdk.deployment.application_properties_mixin import (
-    ApplicationPropertiesMixin,
-)
 from aidial_sdk.deployment.configuration import (
     ConfigurationRequest,
     ConfigurationResponse,
@@ -26,8 +21,8 @@ from aidial_sdk.deployment.truncate_prompt import (
 
 class TestApp(ChatCompletion):
     async def chat_completion(self, request: Request, response: Response):
-        if request.application_properties:
-            assert request.application_properties == {
+        if request.unreliable_dial_application_properties:
+            assert request.unreliable_dial_application_properties == {
                 "key1": "value1",
                 "key2": "value2",
             }
@@ -35,31 +30,31 @@ class TestApp(ChatCompletion):
             choice.append_content("Hello")
 
     async def configuration(self, request: ConfigurationRequest):
-        if request.application_properties:
-            assert request.application_properties == {
+        if request.unreliable_dial_application_properties:
+            assert request.unreliable_dial_application_properties == {
                 "key1": "value1",
                 "key2": "value2",
             }
         return ConfigurationResponse()
 
     async def rate_response(self, request: RateRequest):
-        if request.application_properties:
-            assert request.application_properties == {
+        if request.unreliable_dial_application_properties:
+            assert request.unreliable_dial_application_properties == {
                 "key1": "value1",
                 "key2": "value2",
             }
 
     async def tokenize(self, request: TokenizeRequest):
-        if request.application_properties:
-            assert request.application_properties == {
+        if request.unreliable_dial_application_properties:
+            assert request.unreliable_dial_application_properties == {
                 "key1": "value1",
                 "key2": "value2",
             }
         return TokenizeResponse(outputs=[])
 
     async def truncate_prompt(self, request: TruncatePromptRequest):
-        if request.application_properties:
-            assert request.application_properties == {
+        if request.unreliable_dial_application_properties:
+            assert request.unreliable_dial_application_properties == {
                 "key1": "value1",
                 "key2": "value2",
             }
@@ -68,14 +63,6 @@ class TestApp(ChatCompletion):
 
 deployment_name = "test-app"
 API_KEY = "test-api-key"
-
-
-class Application(BaseModel):
-    application_properties: dict[str, Any]
-
-    class Config:
-        arbitrary_types_allowed = True
-        extra = "allow"
 
 
 @pytest.fixture

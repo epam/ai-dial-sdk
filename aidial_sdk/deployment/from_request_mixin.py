@@ -3,10 +3,8 @@ from json import JSONDecodeError
 from typing import Any, Mapping, Optional, Type, TypeVar, Dict
 
 import fastapi
+from starlette.datastructures import MutableHeaders
 
-from aidial_sdk.deployment.application_properties_mixin import (
-    ApplicationPropertiesMixin,
-)
 from aidial_sdk.exceptions import HTTPException as DIALException
 from aidial_sdk.pydantic_v1 import Field, SecretStr, StrictStr, root_validator
 from aidial_sdk.utils.pydantic import ExtraForbidModel
@@ -30,41 +28,33 @@ class FromRequestMixin(ABC, ExtraForbidModel):
     async def get_request_body(request: fastapi.Request) -> Any:
         pass
 
+class HasHeadersAndBaseUrl(ABC, ExtraForbidModel):
+    @abstractmethod
+    def get_headers(self) -> Mapping[StrictStr, StrictStr]:
+        ...
 
-class FromRequestBasicMixin(FromRequestMixin, ApplicationPropertiesMixin):
-    @classmethod
-    async def from_request(
-        cls,
-        request: fastapi.Request,
-        deployment_id: str,
-        base_url: Optional[str],
-    ):
-        headers = request.headers.mutablecopy()
-        application_properties = await cls.get_application_properties(
-            headers, headers.get("Api-Key"), base_url
-        )
-
-        return cls(
-            **(await cls.get_request_body(request)),
-            application_properties=application_properties,
-        )
-
-    @staticmethod
-    async def get_request_body(request: fastapi.Request) -> dict:
-        return await _get_request_json_body(request)
+    @abstractmethod
+    def get_base_url(self) -> Optional[str]:
+        ...
 
 
-class FromRequestDeploymentMixin(FromRequestMixin, ApplicationPropertiesMixin):
+class FromRequestDeploymentMixin(FromRequestMixin, HasHeadersAndBaseUrl):
     api_key_secret: SecretStr
     jwt_secret: Optional[SecretStr] = None
 
     deployment_id: StrictStr
     api_version: Optional[StrictStr] = None
-    headers: Mapping[StrictStr, StrictStr]
 
     original_request: fastapi.Request = Field(..., exclude=True)
 
-    application_properties: Optional[Dict[str, Any]] = None
+    headers: MutableHeaders
+    base_url: Optional[str] = None
+
+    def get_headers(self) -> MutableHeaders:
+        return self.headers
+
+    def get_base_url(self) -> Optional[str]:
+        return self.base_url
 
     class Config:
         arbitrary_types_allowed = True
@@ -99,10 +89,11 @@ class FromRequestDeploymentMixin(FromRequestMixin, ApplicationPropertiesMixin):
     async def from_request(
         cls,
         request: fastapi.Request,
-        deployment_id: str,
+        deployment_id: StrictStr,
         base_url: Optional[str],
         **kwargs: Any,
     ):
+
         headers = request.headers.mutablecopy()
 
         api_key = headers.get("Api-Key")
@@ -117,9 +108,6 @@ class FromRequestDeploymentMixin(FromRequestMixin, ApplicationPropertiesMixin):
         jwt = headers.get("Authorization")
         del headers["Authorization"]
 
-        application_properties = await cls.get_application_properties(
-            headers, api_key, base_url
-        )
 
         return cls(
             **(await cls.get_request_body(request)),
@@ -129,7 +117,7 @@ class FromRequestDeploymentMixin(FromRequestMixin, ApplicationPropertiesMixin):
             api_version=request.query_params.get("api-version"),
             headers=headers,
             original_request=request,
-            application_properties=application_properties,
+            base_url=base_url
         )
 
     @staticmethod
@@ -146,3 +134,4 @@ async def _get_request_json_body(request: fastapi.Request) -> dict:
             type="invalid_request_error",
             message=f"The request body isn't valid JSON: {e.msg}",
         )
+

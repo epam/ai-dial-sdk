@@ -1,37 +1,30 @@
+from abc import ABC, abstractmethod
 from json import loads, JSONDecodeError
-from typing import Dict, Any, Optional
+from typing import Optional, Dict, Any, Mapping
 from urllib.parse import urljoin
 
+from aidial_sdk.pydantic_v1 import StrictStr
+
+from aidial_sdk.deployment.from_request_mixin import HasHeadersAndBaseUrl
 from aidial_sdk.exceptions import HTTPException as DIALException
-from starlette.datastructures import MutableHeaders
 from aidial_sdk.utils.pydantic import ExtraForbidModel
 
+class SchemaRichApplicationsMixin(HasHeadersAndBaseUrl, ExtraForbidModel):
 
-class ApplicationPropertiesMixin(ExtraForbidModel):
-    application_properties: Optional[Dict[str, Any]] = None
+    @abstractmethod
+    def get_headers(self) -> Mapping[StrictStr, StrictStr]:
+        ...
 
-    @classmethod
-    async def get_application_properties(
-        cls, headers: MutableHeaders, api_key: str, base_url: Optional[str]
-    ) -> Optional[Dict[str, Any]]:
-        application_properties = (
-            ApplicationPropertiesMixin.get_application_properties_from_headers(
-                headers
-            )
-        )
-        if not application_properties:
-            application_properties = (
-                await cls.get_application_properties_from_core(
-                    headers, api_key, base_url
-                )
-            )
-        return application_properties
+    @abstractmethod
+    def get_base_url(self) -> Optional[str]:
+        ...
 
-    @staticmethod
-    def get_application_properties_from_headers(
-        headers: MutableHeaders,
-    ) -> Optional[Dict[str, Any]]:
-        props_header = headers.get("X-DIAL-APPLICATION-PROPERTIES")
+    class Config:
+        arbitrary_types_allowed = True
+
+    @property
+    def unreliable_dial_application_properties(self) -> Optional[Dict[str, Any]]:
+        props_header = self.get_headers().get(StrictStr("X-DIAL-APPLICATION-PROPERTIES"))
         if props_header:
             try:
                 return loads(props_header)
@@ -42,42 +35,48 @@ class ApplicationPropertiesMixin(ExtraForbidModel):
                     message=f"The X-APPLICATION-PROPERTIES header isn't valid JSON: {e.msg}",
                 )
 
-    @staticmethod
-    async def get_application_properties_from_core(
-        headers: MutableHeaders, api_key: str, base_url: Optional[str]
-    ) -> Optional[Dict[str, Any]]:
-        dial_app_id = headers.get("X-DIAL-APPLICATION-ID")
-        if headers.get("X-DIAL-APPLICATION-PROPERTIES") or not dial_app_id:
-            return None
+    @property
+    def get_application_id(self) -> str:
+        return self.get_headers().get(StrictStr("X-DIAL-APPLICATION-ID"))
 
+    async def request_dial_application_properties(self) -> Optional[Dict[str, Any]]:
+        if self.unreliable_dial_application_properties:
+            return self.unreliable_dial_application_properties
+
+        if not self.get_application_id:
+            raise DIALException(
+                status_code=400,
+                type="invalid_request_error",
+                message=f"The X-DIAL-APPLICATION-ID header isn't set",
+            )
+
+        base_url = self.get_base_url()
         if not base_url:
-            raise ValueError(
-                "Base URL is required to make a request. Pls set one in DIALApp"
+            raise DIALException(
+                status_code=500,
+                type="dependency_error",
+                message="Base url should be set to perform request_dial_application_properties invocation",
             )
 
         try:
             import httpx
+            async with httpx.AsyncClient() as client:
+                response = await client.request(
+                    method="GET",
+                    url=urljoin(base_url, f"/openai/applications/{self.dial_app_id}"),
+                    headers={"api-key": self.api_key},
+                )
+                response.raise_for_status()
+                return response.json().get("application_properties")
         except ImportError:
             raise DIALException(
                 status_code=500,
                 type="dependency_error",
                 message="Httpx is not installed. Please install it as extras dependency.",
             )
-
-        try:
-            async with httpx.AsyncClient() as client:
-                response = await client.request(
-                    method="GET",
-                    url=urljoin(
-                        urljoin(base_url, "/openai/applications/"), dial_app_id
-                    ),
-                    headers={"api-key": api_key},
-                )
-                response.raise_for_status()
-                return response.json()
         except Exception as e:
             raise DIALException(
                 status_code=500,
                 type="internal_request_error",
-                message=f"Error while fetching application (app_id {dial_app_id})properties: {e}",
+                message=f"Error while fetching application (app_id {self.dial_app_id})properties: {e}",
             )
