@@ -44,7 +44,7 @@ class SchemaRichApplicationsMixin(
             raise DIALException(
                 status_code=400,
                 type="invalid_request_error",
-                message=f"The X-DIAL-APPLICATION-ID header isn't set",
+                message="The X-DIAL-APPLICATION-ID header isn't set",
             )
 
         if not self.base_url:

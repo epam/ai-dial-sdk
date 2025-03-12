@@ -527,7 +527,7 @@ def test_truncate_prompt_core_request_error(
 
 
 class TestSchemaRichApplicationsMixin(SchemaRichApplicationsMixin):
-    ...
+    pass
 
 
 async def test_import_error_handling():
