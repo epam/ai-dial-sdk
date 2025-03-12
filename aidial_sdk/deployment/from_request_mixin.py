@@ -29,23 +29,21 @@ class FromRequestMixin(ABC, ExtraForbidModel):
         pass
 
 
-class ExtraForbidModelWithHeadersAndBaseUrl(ExtraForbidModel):
+class ExtraForbidRequestWithAuthAndApplicationProperties(ExtraForbidModel):
     headers: MutableHeaders
     base_url: Optional[str] = None
+    api_key_secret: SecretStr
+    jwt_secret: Optional[SecretStr] = None
+    deployment_id: StrictStr
+    api_version: Optional[StrictStr] = None
 
     class Config:
         arbitrary_types_allowed = True
 
 
 class FromRequestDeploymentMixin(
-    FromRequestMixin, ExtraForbidModelWithHeadersAndBaseUrl
+    FromRequestMixin, ExtraForbidRequestWithAuthAndApplicationProperties
 ):
-    api_key_secret: SecretStr
-    jwt_secret: Optional[SecretStr] = None
-
-    deployment_id: StrictStr
-    api_version: Optional[StrictStr] = None
-
     original_request: fastapi.Request = Field(..., exclude=True)
 
     @root_validator(pre=True)

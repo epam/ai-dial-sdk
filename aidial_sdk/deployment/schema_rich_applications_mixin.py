@@ -5,12 +5,12 @@ from urllib.parse import urljoin
 from aidial_sdk.pydantic_v1 import StrictStr
 
 from aidial_sdk.deployment.from_request_mixin import (
-    ExtraForbidModelWithHeadersAndBaseUrl,
+    ExtraForbidRequestWithAuthAndApplicationProperties,
 )
 from aidial_sdk.exceptions import HTTPException as DIALException
 
 
-class SchemaRichApplicationsMixin(ExtraForbidModelWithHeadersAndBaseUrl):
+class SchemaRichApplicationsMixin(ExtraForbidRequestWithAuthAndApplicationProperties):
     @property
     def unreliable_dial_application_properties(
         self,
@@ -29,7 +29,7 @@ class SchemaRichApplicationsMixin(ExtraForbidModelWithHeadersAndBaseUrl):
                 )
 
     @property
-    def dial_application_id(self) -> str:
+    def dial_application_id(self) -> Optional[str]:
         return self.headers.get(StrictStr("X-DIAL-APPLICATION-ID"))
 
     async def request_dial_application_properties(
@@ -62,7 +62,7 @@ class SchemaRichApplicationsMixin(ExtraForbidModelWithHeadersAndBaseUrl):
                         self.base_url,
                         f"/openai/applications/{self.dial_application_id}",
                     ),
-                    headers={"api-key": self.api_key},
+                    headers={"api-key": self.api_key_secret.get_secret_value()},
                 )
                 response.raise_for_status()
                 return response.json().get("application_properties")

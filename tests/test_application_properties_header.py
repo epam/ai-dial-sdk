@@ -3,10 +3,12 @@ from unittest.mock import AsyncMock, patch, MagicMock
 
 import httpx
 import pytest
+from pydantic.v1 import StrictStr
 from starlette.datastructures import MutableHeaders
 from starlette.testclient import TestClient
+from aidial_sdk.pydantic_v1 import SecretStr
 
-from aidial_sdk import DIALApp
+from aidial_sdk import DIALApp, HTTPException
 from aidial_sdk.chat_completion import ChatCompletion, Request, Response
 from aidial_sdk.deployment.configuration import (
     ConfigurationRequest,
@@ -532,10 +534,14 @@ async def test_import_error_handling():
         testable_class = TestSchemaRichApplicationsMixin(
             headers=MutableHeaders({"X-DIAL-APPLICATION-ID": "123"}),
             base_url="https://test.com",
+            api_key_secret=SecretStr("123"),
+            jwt_secret=None,
+            api_version=None,
+            deployment_id=StrictStr("123"),
         )
         try:
             await testable_class.request_dial_application_properties()
-        except Exception as exc_info:
+        except HTTPException as exc_info:
             code = exc_info.status_code
             ex_type = exc_info.type
             message = exc_info.message
@@ -550,14 +556,18 @@ async def test_import_error_handling():
 
 async def test_base_url_required_if_need_to_get_application_properties_from_core():
     testable_class = TestSchemaRichApplicationsMixin(
-        headers=MutableHeaders({"X-DIAL-APPLICATION-ID": "123"})
+        headers=MutableHeaders({"X-DIAL-APPLICATION-ID": "123"}),
+        api_key_secret=SecretStr("123"),
+        jwt_secret=None,
+        api_version=None,
+        deployment_id=StrictStr("123"),
     )
     code = 0
     ex_type = None
     message = None
     try:
         await testable_class.request_dial_application_properties()
-    except Exception as exc_info:
+    except HTTPException as exc_info:
         code = exc_info.status_code
         ex_type = exc_info.type
         message = exc_info.message
@@ -572,13 +582,17 @@ async def test_base_url_required_if_need_to_get_application_properties_from_core
 
 async def test_return_unreliable_dial_application_properties_from_headers_on_reqeust_to_core():
     testable_class = TestSchemaRichApplicationsMixin(
+        api_key_secret=SecretStr("123"),
+        jwt_secret=None,
+        api_version=None,
+        deployment_id=StrictStr("123"),
         headers=MutableHeaders(
             {
                 "X-DIAL-APPLICATION-PROPERTIES": json.dumps(
                     {"key1": "value1", "key2": "value2"}
                 )
             }
-        )
+        ),
     )
     application_properties = (
         await testable_class.request_dial_application_properties()
