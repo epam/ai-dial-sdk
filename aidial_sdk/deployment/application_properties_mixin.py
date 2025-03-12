@@ -23,14 +23,14 @@ class SchemaRichApplicationsMixin(HasHeadersAndBaseUrl):
                 )
 
     @property
-    def application_id(self) -> str:
+    def dial_application_id(self) -> str:
         return self.headers.get(StrictStr("X-DIAL-APPLICATION-ID"))
 
     async def request_dial_application_properties(self) -> Optional[Dict[str, Any]]:
         if self.unreliable_dial_application_properties:
             return self.unreliable_dial_application_properties
 
-        if not self.application_id:
+        if not self.dial_application_id:
             raise DIALException(
                 status_code=400,
                 type="invalid_request_error",
@@ -49,7 +49,7 @@ class SchemaRichApplicationsMixin(HasHeadersAndBaseUrl):
             async with httpx.AsyncClient() as client:
                 response = await client.request(
                     method="GET",
-                    url=urljoin(self.base_url, f"/openai/applications/{self.dial_app_id}"),
+                    url=urljoin(self.base_url, f"/openai/applications/{self.dial_application_id}"),
                     headers={"api-key": self.api_key},
                 )
                 response.raise_for_status()
@@ -64,5 +64,5 @@ class SchemaRichApplicationsMixin(HasHeadersAndBaseUrl):
             raise DIALException(
                 status_code=500,
                 type="internal_request_error",
-                message=f"Error while fetching application (app_id {self.dial_app_id})properties: {e}",
+                message=f"Error while fetching application (app_id {self.dial_application_id})properties: {e}",
             )
