@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from json import JSONDecodeError
-from typing import Any, Mapping, Optional, Type, TypeVar, Dict
+from typing import Any, Optional, Type, TypeVar
 
 import fastapi
 from starlette.datastructures import MutableHeaders
@@ -28,14 +28,12 @@ class FromRequestMixin(ABC, ExtraForbidModel):
     async def get_request_body(request: fastapi.Request) -> Any:
         pass
 
-class HasHeadersAndBaseUrl(ABC, ExtraForbidModel):
-    @abstractmethod
-    def get_headers(self) -> Mapping[StrictStr, StrictStr]:
-        ...
+class HasHeadersAndBaseUrl(ExtraForbidModel):
+    headers: MutableHeaders
+    base_url: Optional[str] = None
 
-    @abstractmethod
-    def get_base_url(self) -> Optional[str]:
-        ...
+    class Config:
+        arbitrary_types_allowed = True
 
 
 class FromRequestDeploymentMixin(FromRequestMixin, HasHeadersAndBaseUrl):
@@ -46,18 +44,6 @@ class FromRequestDeploymentMixin(FromRequestMixin, HasHeadersAndBaseUrl):
     api_version: Optional[StrictStr] = None
 
     original_request: fastapi.Request = Field(..., exclude=True)
-
-    headers: MutableHeaders
-    base_url: Optional[str] = None
-
-    def get_headers(self) -> MutableHeaders:
-        return self.headers
-
-    def get_base_url(self) -> Optional[str]:
-        return self.base_url
-
-    class Config:
-        arbitrary_types_allowed = True
 
     @root_validator(pre=True)
     def create_secrets(cls, values: dict):

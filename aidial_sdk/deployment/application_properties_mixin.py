@@ -1,30 +1,17 @@
-from abc import ABC, abstractmethod
 from json import loads, JSONDecodeError
-from typing import Optional, Dict, Any, Mapping
+from typing import Optional, Dict, Any
 from urllib.parse import urljoin
 
 from aidial_sdk.pydantic_v1 import StrictStr
 
 from aidial_sdk.deployment.from_request_mixin import HasHeadersAndBaseUrl
 from aidial_sdk.exceptions import HTTPException as DIALException
-from aidial_sdk.utils.pydantic import ExtraForbidModel
 
-class SchemaRichApplicationsMixin(HasHeadersAndBaseUrl, ExtraForbidModel):
-
-    @abstractmethod
-    def get_headers(self) -> Mapping[StrictStr, StrictStr]:
-        ...
-
-    @abstractmethod
-    def get_base_url(self) -> Optional[str]:
-        ...
-
-    class Config:
-        arbitrary_types_allowed = True
+class SchemaRichApplicationsMixin(HasHeadersAndBaseUrl):
 
     @property
     def unreliable_dial_application_properties(self) -> Optional[Dict[str, Any]]:
-        props_header = self.get_headers().get(StrictStr("X-DIAL-APPLICATION-PROPERTIES"))
+        props_header = self.headers.get(StrictStr("X-DIAL-APPLICATION-PROPERTIES"))
         if props_header:
             try:
                 return loads(props_header)
@@ -37,7 +24,7 @@ class SchemaRichApplicationsMixin(HasHeadersAndBaseUrl, ExtraForbidModel):
 
     @property
     def get_application_id(self) -> str:
-        return self.get_headers().get(StrictStr("X-DIAL-APPLICATION-ID"))
+        return self.headers.get(StrictStr("X-DIAL-APPLICATION-ID"))
 
     async def request_dial_application_properties(self) -> Optional[Dict[str, Any]]:
         if self.unreliable_dial_application_properties:
@@ -50,8 +37,7 @@ class SchemaRichApplicationsMixin(HasHeadersAndBaseUrl, ExtraForbidModel):
                 message=f"The X-DIAL-APPLICATION-ID header isn't set",
             )
 
-        base_url = self.get_base_url()
-        if not base_url:
+        if not self.base_url:
             raise DIALException(
                 status_code=500,
                 type="dependency_error",
@@ -63,7 +49,7 @@ class SchemaRichApplicationsMixin(HasHeadersAndBaseUrl, ExtraForbidModel):
             async with httpx.AsyncClient() as client:
                 response = await client.request(
                     method="GET",
-                    url=urljoin(base_url, f"/openai/applications/{self.dial_app_id}"),
+                    url=urljoin(self.base_url, f"/openai/applications/{self.dial_app_id}"),
                     headers={"api-key": self.api_key},
                 )
                 response.raise_for_status()
