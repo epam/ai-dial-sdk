@@ -15,6 +15,6 @@ resolutions:
     - message: ".*PyPI::httpcore:0\\.18\\.0.*"
       reason: "CANT_FIX_EXCEPTION"
       comment: "BSD 3-Clause New or Revised License: https://github.com/encode/httpcore/blob/0.18.0/LICENSE.md"
-    - message: ".*PyPI::httpx:0\\.25\\.*"
+    - message: ".*PyPI::httpx:0\\.25\\.2*"
       reason: "CANT_FIX_EXCEPTION"
-      comment: "BSD 3-Clause New or Revised License: https://github.com/encode/httpx/blob/0.25.0/LICENSE.md"
+      comment: "BSD 3-Clause New or Revised License: https://github.com/encode/httpx/blob/0.25.2/LICENSE.md"
