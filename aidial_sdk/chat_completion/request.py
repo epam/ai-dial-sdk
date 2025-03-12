@@ -1,7 +1,6 @@
 from enum import Enum
 from typing import Any, Dict, List, Literal, Mapping, Optional, Union
 
-from pydantic.v1 import ConfigDict
 from typing_extensions import assert_never
 
 from aidial_sdk.chat_completion.enums import Status

@@ -526,7 +526,8 @@ def test_truncate_prompt_core_request_error(
     assert response.status_code == 500
 
 
-class TestSchemaRichApplicationsMixin(SchemaRichApplicationsMixin): ...
+class TestSchemaRichApplicationsMixin(SchemaRichApplicationsMixin):
+    ...
 
 
 async def test_import_error_handling():
