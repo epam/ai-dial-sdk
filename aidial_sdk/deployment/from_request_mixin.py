@@ -28,7 +28,7 @@ class FromRequestMixin(ABC, ExtraForbidModel):
     async def get_request_body(request: fastapi.Request) -> Any:
         pass
 
-class HasHeadersAndBaseUrl(ExtraForbidModel):
+class ExtraForbidModelWithHeadersAndBaseUrl(ExtraForbidModel):
     headers: MutableHeaders
     base_url: Optional[str] = None
 
@@ -36,7 +36,7 @@ class HasHeadersAndBaseUrl(ExtraForbidModel):
         arbitrary_types_allowed = True
 
 
-class FromRequestDeploymentMixin(FromRequestMixin, HasHeadersAndBaseUrl):
+class FromRequestDeploymentMixin(FromRequestMixin, ExtraForbidModelWithHeadersAndBaseUrl):
     api_key_secret: SecretStr
     jwt_secret: Optional[SecretStr] = None
 

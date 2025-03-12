@@ -4,10 +4,10 @@ from urllib.parse import urljoin
 
 from aidial_sdk.pydantic_v1 import StrictStr
 
-from aidial_sdk.deployment.from_request_mixin import HasHeadersAndBaseUrl
+from aidial_sdk.deployment.from_request_mixin import ExtraForbidModelWithHeadersAndBaseUrl
 from aidial_sdk.exceptions import HTTPException as DIALException
 
-class SchemaRichApplicationsMixin(HasHeadersAndBaseUrl):
+class SchemaRichApplicationsMixin(ExtraForbidModelWithHeadersAndBaseUrl):
 
     @property
     def unreliable_dial_application_properties(self) -> Optional[Dict[str, Any]]:
