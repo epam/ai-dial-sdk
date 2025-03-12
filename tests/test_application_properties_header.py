@@ -3,6 +3,7 @@ from unittest.mock import AsyncMock, patch, MagicMock
 
 import httpx
 import pytest
+from starlette.datastructures import MutableHeaders
 from starlette.testclient import TestClient
 
 from aidial_sdk import DIALApp
@@ -12,6 +13,9 @@ from aidial_sdk.deployment.configuration import (
     ConfigurationResponse,
 )
 from aidial_sdk.deployment.rate import RateRequest
+from aidial_sdk.deployment.schema_rich_applications_mixin import (
+    SchemaRichApplicationsMixin,
+)
 from aidial_sdk.deployment.tokenize import TokenizeRequest, TokenizeResponse
 from aidial_sdk.deployment.truncate_prompt import (
     TruncatePromptRequest,
@@ -121,6 +125,23 @@ def client():
         app = DIALApp(dial_url="https://test.com").add_chat_completion(
             deployment_name, TestApp()
         )
+        yield TestClient(app)
+
+
+@pytest.fixture
+def client_without_base_url():
+    with patch("httpx.AsyncClient") as MockClient:
+        mock_client = AsyncMock()
+        mock_response = MagicMock()
+        mock_response.status_code = 200
+        mock_response.json.return_value = {
+            "application_properties": {"key1": "value1", "key2": "value2"}
+        }
+        mock_client.__aenter__.return_value = mock_client
+        mock_client.__aexit__.return_value = None
+        mock_client.request.return_value = mock_response
+        MockClient.return_value = mock_client
+        app = DIALApp().add_chat_completion(deployment_name, TestApp())
         yield TestClient(app)
 
 
@@ -249,6 +270,25 @@ def test_chat_completion_core_request_error(
     assert response.status_code == 500
 
 
+def test_chat_completion_request_dial_url_not_set(
+    client_without_base_url: TestClient,
+    headers_with_app_id_only: dict,
+    body: dict,
+):
+    response = client_without_base_url.post(
+        f"/openai/deployments/{deployment_name}/chat/completions",
+        headers=headers_with_app_id_only,
+        json=body,
+    )
+    response_data = json.loads(response.content)
+    assert response_data["error"]["type"] == "dependency_error"
+    assert response.status_code == 500
+    assert (
+        response_data["error"]["message"]
+        == "Base url should be set to perform request_dial_application_properties invocation"
+    )
+
+
 def test_configuration_request_without_app_props_and_id_headers(
     client: TestClient, headers_without_app_properties_and_app_id: dict
 ):
@@ -330,17 +370,6 @@ def test_rate_response_request_without_app_props_and_id_headers(
         == "The X-DIAL-APPLICATION-ID header isn't set"
     )
     assert response.status_code == 400
-
-
-# def test_rate_response_request_app_properties_from_core(
-#     client: TestClient, headers_without_app_properties_and_app_id: dict
-# ):
-#     response = client.post(
-#         f"/openai/deployments/{deployment_name}/rate",
-#         headers=headers_without_app_properties_and_app_id,
-#         json={"responseId": "123", "rate": False},
-#     )
-#     assert response.status_code == 200
 
 
 def test_rate_response_request_invalid_application_properties_headers(
@@ -495,17 +524,17 @@ def test_truncate_prompt_core_request_error(
     assert response.status_code == 500
 
 
+class TestSchemaRichApplicationsMixin(SchemaRichApplicationsMixin): ...
+
+
 async def test_import_error_handling():
     with patch.dict("sys.modules", {"httpx": None}):
-        mock_headers = MagicMock()
-        mock_headers.get.side_effect = lambda key: (
-            "test_value" if key == "X-DIAL-APPLICATION-ID" else None
+        testable_class = TestSchemaRichApplicationsMixin(
+            headers=MutableHeaders({"X-DIAL-APPLICATION-ID": "123"}),
+            base_url="https://test.com",
         )
-
         try:
-            await ApplicationPropertiesMixin.get_application_properties_from_core(
-                mock_headers, "api_key", "base_url"
-            )
+            await testable_class.request_dial_application_properties()
         except Exception as exc_info:
             code = exc_info.status_code
             ex_type = exc_info.type
@@ -520,20 +549,38 @@ async def test_import_error_handling():
 
 
 async def test_base_url_required_if_need_to_get_application_properties_from_core():
-    mock_headers = MagicMock()
-    mock_headers.get.side_effect = lambda key: (
-        "test_value" if key == "X-DIAL-APPLICATION-ID" else None
+    testable_class = TestSchemaRichApplicationsMixin(
+        headers=MutableHeaders({"X-DIAL-APPLICATION-ID": "123"})
     )
-    message = ""
-
+    code = 0
+    ex_type = None
+    message = None
     try:
-        await ApplicationPropertiesMixin.get_application_properties_from_core(
-            mock_headers, "api_key", None
-        )
-    except ValueError as exc_info:
-        message = exc_info.args[0]
+        await testable_class.request_dial_application_properties()
+    except Exception as exc_info:
+        code = exc_info.status_code
+        ex_type = exc_info.type
+        message = exc_info.message
 
+    assert code == 500
+    assert ex_type == "dependency_error"
     assert (
         message
-        == "Base URL is required to make a request. Pls set one in DIALApp"
+        == "Base url should be set to perform request_dial_application_properties invocation"
     )
+
+
+async def test_return_unreliable_dial_application_properties_from_headers_on_reqeust_to_core():
+    testable_class = TestSchemaRichApplicationsMixin(
+        headers=MutableHeaders(
+            {
+                "X-DIAL-APPLICATION-PROPERTIES": json.dumps(
+                    {"key1": "value1", "key2": "value2"}
+                )
+            }
+        )
+    )
+    application_properties = (
+        await testable_class.request_dial_application_properties()
+    )
+    assert application_properties == {"key1": "value1", "key2": "value2"}
