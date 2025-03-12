@@ -4,7 +4,9 @@ from typing import Any, Mapping, Optional, Type, TypeVar, Dict
 
 import fastapi
 
-from aidial_sdk.deployment.application_properties_mixin import ApplicationPropertiesMixin
+from aidial_sdk.deployment.application_properties_mixin import (
+    ApplicationPropertiesMixin,
+)
 from aidial_sdk.exceptions import HTTPException as DIALException
 from aidial_sdk.pydantic_v1 import Field, SecretStr, StrictStr, root_validator
 from aidial_sdk.utils.pydantic import ExtraForbidModel
@@ -16,7 +18,10 @@ class FromRequestMixin(ABC, ExtraForbidModel):
     @classmethod
     @abstractmethod
     async def from_request(
-            cls: Type[T], request: fastapi.Request, deployment_id: str, base_url: Optional[str]
+        cls: Type[T],
+        request: fastapi.Request,
+        deployment_id: str,
+        base_url: Optional[str],
     ) -> T:
         pass
 
@@ -28,13 +33,20 @@ class FromRequestMixin(ABC, ExtraForbidModel):
 
 class FromRequestBasicMixin(FromRequestMixin, ApplicationPropertiesMixin):
     @classmethod
-    async def from_request(cls, request: fastapi.Request, deployment_id: str, base_url: Optional[str]):
+    async def from_request(
+        cls,
+        request: fastapi.Request,
+        deployment_id: str,
+        base_url: Optional[str],
+    ):
         headers = request.headers.mutablecopy()
-        application_properties = await cls.get_application_properties(headers, headers.get("Api-Key"), base_url)
+        application_properties = await cls.get_application_properties(
+            headers, headers.get("Api-Key"), base_url
+        )
 
         return cls(
             **(await cls.get_request_body(request)),
-            application_properties=application_properties
+            application_properties=application_properties,
         )
 
     @staticmethod
@@ -84,8 +96,13 @@ class FromRequestDeploymentMixin(FromRequestMixin, ApplicationPropertiesMixin):
         return self.jwt_secret.get_secret_value() if self.jwt_secret else None
 
     @classmethod
-    async def from_request(cls, request: fastapi.Request, deployment_id: str, base_url: Optional[str],
-                           **kwargs: Any):
+    async def from_request(
+        cls,
+        request: fastapi.Request,
+        deployment_id: str,
+        base_url: Optional[str],
+        **kwargs: Any,
+    ):
         headers = request.headers.mutablecopy()
 
         api_key = headers.get("Api-Key")
@@ -100,7 +117,9 @@ class FromRequestDeploymentMixin(FromRequestMixin, ApplicationPropertiesMixin):
         jwt = headers.get("Authorization")
         del headers["Authorization"]
 
-        application_properties = await cls.get_application_properties(headers, api_key, base_url)
+        application_properties = await cls.get_application_properties(
+            headers, api_key, base_url
+        )
 
         return cls(
             **(await cls.get_request_body(request)),
@@ -110,7 +129,7 @@ class FromRequestDeploymentMixin(FromRequestMixin, ApplicationPropertiesMixin):
             api_version=request.query_params.get("api-version"),
             headers=headers,
             original_request=request,
-            application_properties=application_properties
+            application_properties=application_properties,
         )
 
     @staticmethod
