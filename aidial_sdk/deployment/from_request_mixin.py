@@ -34,7 +34,6 @@ class FromRequestMixin(ABC, ExtraForbidModel):
 class FromRequestDeploymentMixin(FromRequestMixin):
 
     _DIAL_APPLICATION_PROPERTIES_HEADER = "X-DIAL-APPLICATION-PROPERTIES"
-
     _DIAL_APPLICATION_ID_HEADER = "X-DIAL-APPLICATION-ID"
 
     headers: Mapping[str, str]
@@ -45,11 +44,10 @@ class FromRequestDeploymentMixin(FromRequestMixin):
     api_version: Optional[StrictStr] = None
     unreliable_dial_application_properties: Optional[Dict[str, Any]] = None
     dial_application_id: Optional[str] = None
+    original_request: fastapi.Request = Field(..., exclude=True)
 
     class Config:
         arbitrary_types_allowed = True
-
-    original_request: fastapi.Request = Field(..., exclude=True)
 
     async def request_dial_application_properties(
         self,
