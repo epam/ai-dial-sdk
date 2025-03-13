@@ -1,12 +1,13 @@
 from abc import ABC, abstractmethod
 from json import JSONDecodeError, loads
-from typing import Any, Optional, Type, TypeVar, Dict
+from typing import Any, Dict, Optional, Type, TypeVar
 from urllib.parse import urljoin
 
 import fastapi
 from starlette.datastructures import MutableHeaders
 
-from aidial_sdk.exceptions import HTTPException as DIALException, InvalidRequestError, InternalServerError
+from aidial_sdk.exceptions import HTTPException as DIALException
+from aidial_sdk.exceptions import InternalServerError, InvalidRequestError
 from aidial_sdk.pydantic_v1 import Field, SecretStr, StrictStr, root_validator
 from aidial_sdk.utils.logging import log_debug
 from aidial_sdk.utils.pydantic import ExtraForbidModel
@@ -31,9 +32,7 @@ class FromRequestMixin(ABC, ExtraForbidModel):
         pass
 
 
-class FromRequestDeploymentMixin(
-    FromRequestMixin
-):
+class FromRequestDeploymentMixin(FromRequestMixin):
     headers: MutableHeaders
     base_url: Optional[str] = None
     api_key_secret: SecretStr
@@ -118,7 +117,6 @@ class FromRequestDeploymentMixin(
             raise InternalServerError(
                 f"Unable to retrieve application properties for the application {self.dial_application_id!r}: {ex}",
             )
-
 
     @root_validator(pre=True)
     def create_secrets(cls, values: dict):

@@ -252,8 +252,5 @@ class ChatCompletionRequest(AzureChatCompletionRequest):
     custom_fields: Optional[ChatCompletionRequestCustomFields] = None
 
 
-class Request(
-    ChatCompletionRequest,
-    FromRequestDeploymentMixin
-):
+class Request(ChatCompletionRequest, FromRequestDeploymentMixin):
     pass

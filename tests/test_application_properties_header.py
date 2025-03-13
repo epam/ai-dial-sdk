@@ -538,7 +538,7 @@ async def test_import_error_handling():
             jwt_secret=None,
             api_version=None,
             deployment_id=StrictStr("123"),
-            original_request=MagicMock(fastapi.Request)
+            original_request=MagicMock(fastapi.Request),
         )
         try:
             await testable_class.request_dial_application_properties()
@@ -558,7 +558,7 @@ async def test_base_url_required_if_need_to_get_application_properties_from_core
         jwt_secret=None,
         api_version=None,
         deployment_id=StrictStr("123"),
-        original_request=MagicMock(fastapi.Request)
+        original_request=MagicMock(fastapi.Request),
     )
     code = 0
     ex_type = None
@@ -591,7 +591,7 @@ async def test_return_unreliable_dial_application_properties_from_headers_on_req
                 )
             }
         ),
-        original_request=MagicMock(fastapi.Request)
+        original_request=MagicMock(fastapi.Request),
     )
     application_properties = (
         await testable_class.request_dial_application_properties()
