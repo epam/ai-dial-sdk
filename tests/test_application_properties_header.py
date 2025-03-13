@@ -163,20 +163,20 @@ def headers_with_app_id_only():
     }
 
 
-@pytest.mark.parametrize(
-    "endpoint, method, request_body",
-    [
-        (
-            "chat/completions",
-            "POST",
-            {"messages": [{"role": "user", "content": "Hello"}]},
-        ),
-        ("configuration", "GET", None),
-        ("rate", "POST", {"responseId": "123", "rate": False}),
-        ("tokenize", "POST", {"inputs": []}),
-        ("truncate_prompt", "POST", {"inputs": []}),
-    ],
-)
+parametrize_data = [
+    (
+        "chat/completions",
+        "POST",
+        {"messages": [{"role": "user", "content": "Hello"}]},
+    ),
+    ("configuration", "GET", None),
+    ("rate", "POST", {"responseId": "123", "rate": False}),
+    ("tokenize", "POST", {"inputs": []}),
+    ("truncate_prompt", "POST", {"inputs": []}),
+]
+
+
+@pytest.mark.parametrize("endpoint, method, request_body", parametrize_data)
 def test_valid_request(
     endpoint: str,
     method: str,
@@ -191,19 +191,6 @@ def test_valid_request(
         method=method,
     )
     assert response.status_code == 200
-
-
-parametrize_data = [
-    (
-        "chat/completions",
-        "POST",
-        {"messages": [{"role": "user", "content": "Hello"}]},
-    ),
-    ("configuration", "GET", None),
-    ("rate", "POST", {"responseId": "123", "rate": False}),
-    ("tokenize", "POST", {"inputs": []}),
-    ("truncate_prompt", "POST", {"inputs": []}),
-]
 
 
 @pytest.mark.parametrize("endpoint, method, request_body", parametrize_data)
