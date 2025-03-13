@@ -1,10 +1,9 @@
 from abc import ABC, abstractmethod
 from json import JSONDecodeError, loads
-from typing import Any, Dict, Optional, Type, TypeVar
+from typing import Any, Dict, Optional, Type, TypeVar, Mapping
 from urllib.parse import urljoin
 
 import fastapi
-from starlette.datastructures import MutableHeaders
 
 from aidial_sdk.exceptions import HTTPException as DIALException
 from aidial_sdk.exceptions import InternalServerError, InvalidRequestError
@@ -33,7 +32,12 @@ class FromRequestMixin(ABC, ExtraForbidModel):
 
 
 class FromRequestDeploymentMixin(FromRequestMixin):
-    headers: MutableHeaders
+
+    _DIAL_APPLICATION_PROPERTIES_HEADER = "X-DIAL-APPLICATION-PROPERTIES"
+
+    _DIAL_APPLICATION_ID_HEADER = "X-DIAL-APPLICATION-ID"
+
+    headers: Mapping[str, str]
     base_url: Optional[str] = None
     api_key_secret: SecretStr
     jwt_secret: Optional[SecretStr] = None
@@ -44,10 +48,6 @@ class FromRequestDeploymentMixin(FromRequestMixin):
         arbitrary_types_allowed = True
 
     original_request: fastapi.Request = Field(..., exclude=True)
-    _DIAL_APPLICATION_PROPERTIES_HEADER = StrictStr(
-        "X-DIAL-APPLICATION-PROPERTIES"
-    )
-    _DIAL_APPLICATION_ID_HEADER = StrictStr("X-DIAL-APPLICATION-ID")
 
     @property
     def unreliable_dial_application_properties(
@@ -56,13 +56,14 @@ class FromRequestDeploymentMixin(FromRequestMixin):
         props_header = self.headers.get(
             self._DIAL_APPLICATION_PROPERTIES_HEADER
         )
-        if props_header:
-            try:
-                return loads(props_header)
-            except JSONDecodeError:
-                raise InvalidRequestError(
-                    f"The value of {self._DIAL_APPLICATION_PROPERTIES_HEADER} header isn't valid JSON"
-                )
+        if not props_header:
+            return None
+        try:
+            return loads(props_header)
+        except JSONDecodeError:
+            raise InvalidRequestError(
+                f"The value of {self._DIAL_APPLICATION_PROPERTIES_HEADER} header isn't valid JSON"
+            )
 
     @property
     def dial_application_id(self) -> Optional[str]:
@@ -94,7 +95,7 @@ class FromRequestDeploymentMixin(FromRequestMixin):
 
         try:
             log_debug(
-                f"Requesting application properties for {self.dial_application_id}"
+                f"Requesting application properties for {self.dial_application_id!r}"
             )
             async with httpx.AsyncClient() as client:
                 response = await client.request(
