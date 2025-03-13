@@ -2231,4 +2231,4 @@ telemetry = ["opentelemetry-api", "opentelemetry-exporter-otlp-proto-grpc", "ope
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8.1,<4.0"
-content-hash = "bdeb51bead7277a550c687d48e2f6ae546745840b6f4940f3526df0d8d4c4ae5"
+content-hash = "0483fe4316299ccdccf01f5b7cbe3c141b8ba518300bbcd61f3d8de8b5f98c57"
