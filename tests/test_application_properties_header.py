@@ -100,6 +100,7 @@ def client():
     yield TestClient(
         app,
         base_url=f"https://testserver/openai/deployments/{DEPLOYMENT_NAME}",
+        headers={"Api-Key": API_KEY},
     )
 
 
@@ -109,13 +110,13 @@ def client_without_base_url():
     yield TestClient(
         app,
         base_url=f"https://testserver/openai/deployments/{DEPLOYMENT_NAME}",
+        headers={"Api-Key": API_KEY},
     )
 
 
 @pytest.fixture
 def headers():
     return {
-        "Api-Key": API_KEY,
         "X-DIAL-APPLICATION-PROPERTIES": json.dumps(
             {"key1": "value1", "key2": "value2"}
         ),
@@ -124,13 +125,12 @@ def headers():
 
 @pytest.fixture
 def headers_without_app_properties_and_app_id():
-    return {"Api-Key": API_KEY}
+    return {}
 
 
 @pytest.fixture
 def invalid_headers():
     return {
-        "Api-Key": API_KEY,
         "X-DIAL-APPLICATION-PROPERTIES": "invalid header",
     }
 
@@ -138,7 +138,6 @@ def invalid_headers():
 @pytest.fixture
 def headers_with_app_id_only():
     return {
-        "Api-Key": API_KEY,
         "X-DIAL-APPLICATION-ID": X_APPLICATION_ID,
     }
 
