@@ -21,6 +21,7 @@ from aidial_sdk.deployment.truncate_prompt import (
     TruncatePromptRequest,
     TruncatePromptResponse,
 )
+from aidial_sdk.exceptions import InternalServerError
 from aidial_sdk.pydantic_v1 import SecretStr
 
 
@@ -286,7 +287,7 @@ def test_chat_completion_request_dial_url_not_set(
     assert response.status_code == 500
     assert (
         response_data["error"]["message"]
-        == "Base DIALApp dial_url should be set to perform request_dial_application_properties invocation"
+        == "DIALApp dial_url should be set to perform request_dial_application_properties invocation"
     )
 
 
@@ -542,7 +543,7 @@ async def test_import_error_handling():
         )
         try:
             await testable_class.request_dial_application_properties()
-        except ValueError as exc_info:
+        except InternalServerError as exc_info:
             message = str(exc_info)
 
         assert (
@@ -574,7 +575,7 @@ async def test_base_url_required_if_need_to_get_application_properties_from_core
     assert ex_type == "internal_server_error"
     assert (
         message
-        == "Base DIALApp dial_url should be set to perform request_dial_application_properties invocation"
+        == "DIALApp dial_url should be set to perform request_dial_application_properties invocation"
     )
 
 
