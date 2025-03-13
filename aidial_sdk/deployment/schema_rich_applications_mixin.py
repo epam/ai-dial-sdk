@@ -7,7 +7,7 @@ from aidial_sdk.deployment.from_request_mixin import (
 )
 from aidial_sdk.exceptions import HTTPException as DIALException
 from aidial_sdk.pydantic_v1 import StrictStr
-from aidial_sdk.utils.logging import log_debug, log_exception, log_error
+from aidial_sdk.utils.logging import log_debug, log_error, log_exception
 
 
 class SchemaRichApplicationsMixin(
@@ -48,7 +48,9 @@ class SchemaRichApplicationsMixin(
             )
 
         if not self.base_url:
-            log_error("Base url should be set to perform request_dial_application_properties invocation")
+            log_error(
+                "Base url should be set to perform request_dial_application_properties invocation"
+            )
             raise DIALException(
                 status_code=500,
                 type="dependency_error",
@@ -57,7 +59,12 @@ class SchemaRichApplicationsMixin(
 
         try:
             import httpx
-            log_debug("Requesting application properties for {}".format(self.dial_application_id))
+
+            log_debug(
+                "Requesting application properties for {}".format(
+                    self.dial_application_id
+                )
+            )
             async with httpx.AsyncClient() as client:
                 response = await client.request(
                     method="GET",
