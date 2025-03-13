@@ -27,7 +27,8 @@ from aidial_sdk.pydantic_v1 import SecretStr
 
 
 class TestApp(ChatCompletion):
-    async def chat_completion(self, request: Request, response: Response):
+    @staticmethod
+    async def assert_request_data(request: FromRequestDeploymentMixin) -> None:
         if request.unreliable_dial_application_properties is not None:
             assert request.unreliable_dial_application_properties == {
                 "key1": "value1",
@@ -41,70 +42,25 @@ class TestApp(ChatCompletion):
                 "key1": "value1",
                 "key2": "value2",
             }
+
+    async def chat_completion(self, request: Request, response: Response):
+        await self.assert_request_data(request)
         with response.create_choice() as choice:
             choice.append_content("Hello")
 
     async def configuration(self, request: ConfigurationRequest):
-        if request.unreliable_dial_application_properties is not None:
-            assert request.unreliable_dial_application_properties == {
-                "key1": "value1",
-                "key2": "value2",
-            }
-        else:
-            application_properties = (
-                await request.request_dial_application_properties()
-            )
-            assert application_properties == {
-                "key1": "value1",
-                "key2": "value2",
-            }
+        await self.assert_request_data(request)
         return ConfigurationResponse()
 
     async def rate_response(self, request: RateRequest):
-        if request.unreliable_dial_application_properties is not None:
-            assert request.unreliable_dial_application_properties == {
-                "key1": "value1",
-                "key2": "value2",
-            }
-        else:
-            application_properties = (
-                await request.request_dial_application_properties()
-            )
-            assert application_properties == {
-                "key1": "value1",
-                "key2": "value2",
-            }
+        await self.assert_request_data(request)
 
     async def tokenize(self, request: TokenizeRequest):
-        if request.unreliable_dial_application_properties is not None:
-            assert request.unreliable_dial_application_properties == {
-                "key1": "value1",
-                "key2": "value2",
-            }
-        else:
-            application_properties = (
-                await request.request_dial_application_properties()
-            )
-            assert application_properties == {
-                "key1": "value1",
-                "key2": "value2",
-            }
+        await self.assert_request_data(request)
         return TokenizeResponse(outputs=[])
 
     async def truncate_prompt(self, request: TruncatePromptRequest):
-        if request.unreliable_dial_application_properties is not None:
-            assert request.unreliable_dial_application_properties == {
-                "key1": "value1",
-                "key2": "value2",
-            }
-        else:
-            application_properties = (
-                await request.request_dial_application_properties()
-            )
-            assert application_properties == {
-                "key1": "value1",
-                "key2": "value2",
-            }
+        await self.assert_request_data(request)
         return TruncatePromptResponse(outputs=[])
 
 
