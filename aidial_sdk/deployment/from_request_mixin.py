@@ -82,13 +82,13 @@ class FromRequestDeploymentMixin(FromRequestMixin):
 
         if not self.base_url:
             raise InternalServerError(
-                "Base DIALApp dial_url should be set to perform request_dial_application_properties invocation"
+                "DIALApp dial_url should be set to perform request_dial_application_properties invocation"
             )
 
         try:
             import httpx
         except ImportError:
-            raise ValueError(
+            raise InternalServerError(
                 "Missing httpx dependencies. "
                 "Install the package with the extras: aidial-sdk[httpx]"
             )
