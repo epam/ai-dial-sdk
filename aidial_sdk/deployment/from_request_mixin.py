@@ -150,9 +150,7 @@ class FromRequestDeploymentMixin(FromRequestMixin):
         del headers["Authorization"]
 
         application_properties = None
-        props_header = headers.get(
-            cls._DIAL_APPLICATION_PROPERTIES_HEADER
-        )
+        props_header = headers.get(cls._DIAL_APPLICATION_PROPERTIES_HEADER)
         if props_header:
             try:
                 application_properties = loads(props_header)
@@ -173,7 +171,7 @@ class FromRequestDeploymentMixin(FromRequestMixin):
             original_request=request,
             base_url=base_url,
             unreliable_dial_application_properties=application_properties,
-            dial_application_id = application_id
+            dial_application_id=application_id,
         )
 
     @staticmethod

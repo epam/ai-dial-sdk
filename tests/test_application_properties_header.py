@@ -372,6 +372,7 @@ async def test_import_error_handling():
             api_version=None,
             deployment_id=StrictStr("123"),
             original_request=MagicMock(fastapi.Request),
+            dial_application_id="123",
         )
         try:
             await testable_class.request_dial_application_properties()
@@ -392,6 +393,7 @@ async def test_base_url_required_if_need_to_get_application_properties_from_core
         api_version=None,
         deployment_id=StrictStr("123"),
         original_request=MagicMock(fastapi.Request),
+        dial_application_id="123",
     )
     code = 0
     ex_type = None
@@ -424,6 +426,12 @@ async def test_return_unreliable_dial_application_properties_from_headers_on_req
                 )
             }
         ),
+        dial_application_id="123",
+        unreliable_dial_application_properties={
+            "key1": "value1",
+            "key2": "value2",
+        },
+        base_url="https://test.com",
         original_request=MagicMock(fastapi.Request),
     )
     application_properties = (
