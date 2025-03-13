@@ -2,14 +2,11 @@ from typing import List, Literal, Union
 
 from aidial_sdk.chat_completion.request import ChatCompletionRequest
 from aidial_sdk.deployment.from_request_mixin import FromRequestDeploymentMixin
-from aidial_sdk.deployment.schema_rich_applications_mixin import (
-    SchemaRichApplicationsMixin,
-)
 from aidial_sdk.pydantic_v1 import BaseModel
 
 
 class TruncatePromptRequest(
-    FromRequestDeploymentMixin, SchemaRichApplicationsMixin
+    FromRequestDeploymentMixin
 ):
     inputs: List[ChatCompletionRequest]
 

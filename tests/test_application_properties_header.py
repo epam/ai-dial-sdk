@@ -1,6 +1,7 @@
 import json
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import fastapi
 import httpx
 import pytest
 from pydantic.v1 import StrictStr
@@ -13,10 +14,8 @@ from aidial_sdk.deployment.configuration import (
     ConfigurationRequest,
     ConfigurationResponse,
 )
+from aidial_sdk.deployment.from_request_mixin import FromRequestDeploymentMixin
 from aidial_sdk.deployment.rate import RateRequest
-from aidial_sdk.deployment.schema_rich_applications_mixin import (
-    SchemaRichApplicationsMixin,
-)
 from aidial_sdk.deployment.tokenize import TokenizeRequest, TokenizeResponse
 from aidial_sdk.deployment.truncate_prompt import (
     TruncatePromptRequest,
@@ -526,19 +525,20 @@ def test_truncate_prompt_core_request_error(
     assert response.status_code == 500
 
 
-class TestSchemaRichApplicationsMixin(SchemaRichApplicationsMixin):
+class TestFromRequestDeploymentMixin(FromRequestDeploymentMixin):
     pass
 
 
 async def test_import_error_handling():
     with patch.dict("sys.modules", {"httpx": None}):
-        testable_class = TestSchemaRichApplicationsMixin(
+        testable_class = TestFromRequestDeploymentMixin(
             headers=MutableHeaders({"X-DIAL-APPLICATION-ID": "123"}),
             base_url="https://test.com",
             api_key_secret=SecretStr("123"),
             jwt_secret=None,
             api_version=None,
             deployment_id=StrictStr("123"),
+            original_request=MagicMock(fastapi.Request)
         )
         try:
             await testable_class.request_dial_application_properties()
@@ -552,12 +552,13 @@ async def test_import_error_handling():
 
 
 async def test_base_url_required_if_need_to_get_application_properties_from_core():
-    testable_class = TestSchemaRichApplicationsMixin(
+    testable_class = TestFromRequestDeploymentMixin(
         headers=MutableHeaders({"X-DIAL-APPLICATION-ID": "123"}),
         api_key_secret=SecretStr("123"),
         jwt_secret=None,
         api_version=None,
         deployment_id=StrictStr("123"),
+        original_request=MagicMock(fastapi.Request)
     )
     code = 0
     ex_type = None
@@ -578,7 +579,7 @@ async def test_base_url_required_if_need_to_get_application_properties_from_core
 
 
 async def test_return_unreliable_dial_application_properties_from_headers_on_reqeust_to_core():
-    testable_class = TestSchemaRichApplicationsMixin(
+    testable_class = TestFromRequestDeploymentMixin(
         api_key_secret=SecretStr("123"),
         jwt_secret=None,
         api_version=None,
@@ -590,6 +591,7 @@ async def test_return_unreliable_dial_application_properties_from_headers_on_req
                 )
             }
         ),
+        original_request=MagicMock(fastapi.Request)
     )
     application_properties = (
         await testable_class.request_dial_application_properties()
