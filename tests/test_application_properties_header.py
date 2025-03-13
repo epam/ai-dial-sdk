@@ -373,13 +373,11 @@ async def test_import_error_handling():
             deployment_id=StrictStr("123"),
             original_request=MagicMock(fastapi.Request),
         )
-        try:
+        with pytest.raises(InternalServerError) as exc_info:
             await testable_class.request_dial_application_properties()
-        except InternalServerError as exc_info:
-            message = str(exc_info)
 
         assert (
-            message
+            str(exc_info.value)
             == "Missing httpx dependencies. Install the package with the extras: aidial-sdk[httpx]"
         )
 
@@ -393,20 +391,13 @@ async def test_base_url_required_if_need_to_get_application_properties_from_core
         deployment_id=StrictStr("123"),
         original_request=MagicMock(fastapi.Request),
     )
-    code = 0
-    ex_type = None
-    message = None
-    try:
+    with pytest.raises(HTTPException) as exc_info:
         await testable_class.request_dial_application_properties()
-    except HTTPException as exc_info:
-        code = exc_info.status_code
-        ex_type = exc_info.type
-        message = exc_info.message
 
-    assert code == 500
-    assert ex_type == "internal_server_error"
+    assert exc_info.value.status_code == 500
+    assert exc_info.value.type == "internal_server_error"
     assert (
-        message
+        exc_info.value.message
         == "DIALApp dial_url should be set to perform request_dial_application_properties invocation"
     )
 
