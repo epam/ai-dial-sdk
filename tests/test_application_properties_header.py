@@ -1,4 +1,5 @@
 import json
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import fastapi
@@ -107,7 +108,7 @@ class TestApp(ChatCompletion):
         return TruncatePromptResponse(outputs=[])
 
 
-deployment_name = "test-app"
+DEPLOYMENT_NAME = "test-app"
 API_KEY = "test-api-key"
 
 
@@ -125,9 +126,12 @@ def client():
         mock_client.request.return_value = mock_response
         MockClient.return_value = mock_client
         app = DIALApp(dial_url="https://test.com").add_chat_completion(
-            deployment_name, TestApp()
+            DEPLOYMENT_NAME, TestApp()
         )
-        yield TestClient(app)
+        yield TestClient(
+            app,
+            base_url=f"https://testserver/openai/deployments/{DEPLOYMENT_NAME}",
+        )
 
 
 @pytest.fixture
@@ -143,8 +147,11 @@ def client_without_base_url():
         mock_client.__aexit__.return_value = None
         mock_client.request.return_value = mock_response
         MockClient.return_value = mock_client
-        app = DIALApp().add_chat_completion(deployment_name, TestApp())
-        yield TestClient(app)
+        app = DIALApp().add_chat_completion(DEPLOYMENT_NAME, TestApp())
+        yield TestClient(
+            app,
+            base_url=f"https://testserver/openai/deployments/{DEPLOYMENT_NAME}",
+        )
 
 
 @pytest.fixture
@@ -161,16 +168,18 @@ def client_mock_error_core_response():
         mock_client.request.return_value = mock_response
         MockClient.return_value = mock_client
         app = DIALApp(dial_url="https://test.com").add_chat_completion(
-            deployment_name, TestApp()
+            DEPLOYMENT_NAME, TestApp()
         )
-        yield TestClient(app)
+        yield TestClient(
+            app,
+            base_url=f"https://testserver/openai/deployments/{DEPLOYMENT_NAME}",
+        )
 
 
 @pytest.fixture
 def headers():
     return {
         "Api-Key": API_KEY,
-        "Authorization": "Bearer test-jwt",
         "X-DIAL-APPLICATION-PROPERTIES": json.dumps(
             {"key1": "value1", "key2": "value2"}
         ),
@@ -179,14 +188,13 @@ def headers():
 
 @pytest.fixture
 def headers_without_app_properties_and_app_id():
-    return {"Api-Key": API_KEY, "Authorization": "Bearer test-jwt"}
+    return {"Api-Key": API_KEY}
 
 
 @pytest.fixture
 def invalid_headers():
     return {
         "Api-Key": API_KEY,
-        "Authorization": "Bearer test-jwt",
         "X-DIAL-APPLICATION-PROPERTIES": "invalid header",
     }
 
@@ -195,36 +203,68 @@ def invalid_headers():
 def headers_with_app_id_only():
     return {
         "Api-Key": API_KEY,
-        "Authorization": "Bearer test-jwt",
         "X-DIAL-APPLICATION-ID": "112233",
     }
 
 
-@pytest.fixture
-def body():
-    return {"messages": [{"role": "user", "content": "Hello"}]}
-
-
-def test_chat_completion_request(client: TestClient, headers: dict, body: dict):
-    response = client.post(
-        f"/openai/deployments/{deployment_name}/chat/completions",
+@pytest.mark.parametrize(
+    "endpoint, method, request_body",
+    [
+        (
+            "chat/completions",
+            "POST",
+            {"messages": [{"role": "user", "content": "Hello"}]},
+        ),
+        ("configuration", "GET", None),
+        ("rate", "POST", {"responseId": "123", "rate": False}),
+        ("tokenize", "POST", {"inputs": []}),
+        ("truncate_prompt", "POST", {"inputs": []}),
+    ],
+)
+def test_valid_request(
+    endpoint: str,
+    method: str,
+    request_body: Any,
+    client: TestClient,
+    headers: dict,
+):
+    response = client.request(
+        url=endpoint,
         headers=headers,
-        json=body,
+        json=request_body,
+        method=method,
     )
     assert response.status_code == 200
 
 
-def test_chat_completion_request_without_app_props_and_id_headers(
+parametrize_data = [
+    (
+        "chat/completions",
+        "POST",
+        {"messages": [{"role": "user", "content": "Hello"}]},
+    ),
+    ("configuration", "GET", None),
+    ("rate", "POST", {"responseId": "123", "rate": False}),
+    ("tokenize", "POST", {"inputs": []}),
+    ("truncate_prompt", "POST", {"inputs": []}),
+]
+
+
+@pytest.mark.parametrize("endpoint, method, request_body", parametrize_data)
+def test_request_without_app_props_and_id_headers(
+    endpoint: str,
+    method: str,
+    request_body: Any,
     client: TestClient,
     headers_without_app_properties_and_app_id: dict,
-    body: dict,
 ):
-    response = client.post(
-        f"/openai/deployments/{deployment_name}/chat/completions",
+    response = client.request(
+        url=endpoint,
         headers=headers_without_app_properties_and_app_id,
-        json=body,
+        json=request_body,
+        method=method,
     )
-    response_data = json.loads(response.content)
+    response_data = response.json()
     assert response_data["error"]["type"] == "invalid_request_error"
     assert (
         response_data["error"]["message"]
@@ -233,56 +273,76 @@ def test_chat_completion_request_without_app_props_and_id_headers(
     assert response.status_code == 400
 
 
-def test_chat_completion_request_app_properties_from_core(
-    client: TestClient, headers_with_app_id_only: dict, body: dict
+@pytest.mark.parametrize("endpoint, method, request_body", parametrize_data)
+def test_request_app_properties_from_core(
+    endpoint: str,
+    method: str,
+    request_body: Any,
+    client: TestClient,
+    headers_with_app_id_only: dict,
 ):
-    response = client.post(
-        f"/openai/deployments/{deployment_name}/chat/completions",
+    response = client.request(
+        url=endpoint,
         headers=headers_with_app_id_only,
-        json=body,
+        json=request_body,
+        method=method,
     )
     assert response.status_code == 200
 
 
-def test_chat_completion_invalid_application_properties_headers(
-    client: TestClient, invalid_headers: dict, body: dict
+@pytest.mark.parametrize("endpoint, method, request_body", parametrize_data)
+def test_invalid_application_properties_headers(
+    endpoint: str,
+    method: str,
+    request_body: Any,
+    client: TestClient,
+    invalid_headers: dict,
 ):
-    response = client.post(
-        f"/openai/deployments/{deployment_name}/chat/completions",
+    response = client.request(
+        url=endpoint,
         headers=invalid_headers,
-        json=body,
+        json=request_body,
+        method=method,
     )
-    response_data = json.loads(response.content)
+    response_data = response.json()
     assert response_data["error"]["type"] == "invalid_request_error"
     assert response.status_code == 400
 
 
-def test_chat_completion_core_request_error(
+@pytest.mark.parametrize("endpoint, method, request_body", parametrize_data)
+def test_core_request_error(
+    endpoint: str,
+    method: str,
+    request_body: Any,
     client_mock_error_core_response: TestClient,
     headers_with_app_id_only: dict,
-    body: dict,
 ):
-    response = client_mock_error_core_response.post(
-        f"/openai/deployments/{deployment_name}/chat/completions",
+    response = client_mock_error_core_response.request(
+        url=endpoint,
         headers=headers_with_app_id_only,
-        json=body,
+        json=request_body,
+        method=method,
     )
-    response_data = json.loads(response.content)
+    response_data = response.json()
     assert response_data["error"]["type"] == "internal_server_error"
     assert response.status_code == 500
 
 
-def test_chat_completion_request_dial_url_not_set(
+@pytest.mark.parametrize("endpoint, method, request_body", parametrize_data)
+def test_request_dial_url_not_set(
+    endpoint: str,
+    method: str,
+    request_body: Any,
     client_without_base_url: TestClient,
     headers_with_app_id_only: dict,
-    body: dict,
 ):
-    response = client_without_base_url.post(
-        f"/openai/deployments/{deployment_name}/chat/completions",
+    response = client_without_base_url.request(
+        url=endpoint,
         headers=headers_with_app_id_only,
-        json=body,
+        json=request_body,
+        method=method,
     )
-    response_data = json.loads(response.content)
+    response_data = response.json()
     assert response_data["error"]["type"] == "internal_server_error"
     assert response.status_code == 500
     assert (
@@ -291,248 +351,20 @@ def test_chat_completion_request_dial_url_not_set(
     )
 
 
-def test_configuration_request_without_app_props_and_id_headers(
-    client: TestClient, headers_without_app_properties_and_app_id: dict
-):
-    response = client.get(
-        f"/openai/deployments/{deployment_name}/configuration",
-        headers=headers_without_app_properties_and_app_id,
-    )
-    response_data = json.loads(response.content)
-    assert response_data["error"]["type"] == "invalid_request_error"
-    assert (
-        response_data["error"]["message"]
-        == "The X-DIAL-APPLICATION-ID header isn't set"
-    )
-    assert response.status_code == 400
-
-
-def test_configuration_request(client: TestClient, headers: dict):
-    response = client.get(
-        f"/openai/deployments/{deployment_name}/configuration", headers=headers
-    )
-    assert response.status_code == 200
-
-
-def test_configuration_request_app_properties_from_core(
-    client: TestClient, headers_with_app_id_only: dict
-):
-    response = client.get(
-        f"/openai/deployments/{deployment_name}/configuration",
-        headers=headers_with_app_id_only,
-    )
-    assert response.status_code == 200
-
-
-def test_configuration_request_invalid_application_properties_headers(
-    client: TestClient, invalid_headers: dict
-):
-    response = client.get(
-        f"/openai/deployments/{deployment_name}/configuration",
-        headers=invalid_headers,
-    )
-    response_data = json.loads(response.content)
-    assert response_data["error"]["type"] == "invalid_request_error"
-    assert response.status_code == 400
-
-
-def test_configuration_request_core_request_error(
-    client_mock_error_core_response: TestClient, headers_with_app_id_only: dict
-):
-    response = client_mock_error_core_response.get(
-        f"/openai/deployments/{deployment_name}/configuration",
-        headers=headers_with_app_id_only,
-    )
-    response_data = json.loads(response.content)
-    assert response_data["error"]["type"] == "internal_server_error"
-    assert response.status_code == 500
-
-
-def test_rate_response_request(client: TestClient, headers: dict):
-    response = client.post(
-        f"/openai/deployments/{deployment_name}/rate",
-        headers=headers,
-        json={"responseId": "123", "rate": False},
-    )
-    assert response.status_code == 200
-
-
-def test_rate_response_request_without_app_props_and_id_headers(
-    client: TestClient, headers_without_app_properties_and_app_id: dict
-):
-    response = client.post(
-        f"/openai/deployments/{deployment_name}/rate",
-        headers=headers_without_app_properties_and_app_id,
-        json={"responseId": "123", "rate": False},
-    )
-    response_data = json.loads(response.content)
-    assert response_data["error"]["type"] == "invalid_request_error"
-    assert (
-        response_data["error"]["message"]
-        == "The X-DIAL-APPLICATION-ID header isn't set"
-    )
-    assert response.status_code == 400
-
-
-def test_rate_response_request_invalid_application_properties_headers(
-    client: TestClient, invalid_headers: dict
-):
-    response = client.post(
-        f"/openai/deployments/{deployment_name}/rate",
-        headers=invalid_headers,
-        json={"responseId": "123", "rate": False},
-    )
-    response_data = json.loads(response.content)
-    assert response_data["error"]["type"] == "invalid_request_error"
-    assert response.status_code == 400
-
-
-def test_rate_response_request_core_request_error(
-    client_mock_error_core_response: TestClient, headers_with_app_id_only: dict
-):
-    response = client_mock_error_core_response.post(
-        f"/openai/deployments/{deployment_name}/rate",
-        headers=headers_with_app_id_only,
-        json={"responseId": "123", "rate": False},
-    )
-    response_data = json.loads(response.content)
-    assert response_data["error"]["type"] == "internal_server_error"
-    assert response.status_code == 500
-
-
-def test_tokenize_request(client: TestClient, headers: dict):
-    response = client.post(
-        f"/openai/deployments/{deployment_name}/tokenize",
-        headers=headers,
-        json={"inputs": []},
-    )
-    assert response.status_code == 200
-
-
-def test_tokenize_request_without_app_props_and_id_headers(
-    client: TestClient, headers_without_app_properties_and_app_id: dict
-):
-    response = client.post(
-        f"/openai/deployments/{deployment_name}/tokenize",
-        headers=headers_without_app_properties_and_app_id,
-        json={"inputs": []},
-    )
-    response_data = json.loads(response.content)
-    assert response_data["error"]["type"] == "invalid_request_error"
-    assert (
-        response_data["error"]["message"]
-        == "The X-DIAL-APPLICATION-ID header isn't set"
-    )
-    assert response.status_code == 400
-
-
 def test_tokenize_request__app_properties_from_core(
     client: TestClient, headers_with_app_id_only: dict
 ):
     response = client.post(
-        f"/openai/deployments/{deployment_name}/tokenize",
+        "tokenize",
         headers=headers_with_app_id_only,
         json={"inputs": []},
     )
     assert response.status_code == 200
-
-
-def test_tokenize_request_invalid_application_properties_headers(
-    client: TestClient, invalid_headers: dict
-):
-    response = client.post(
-        f"/openai/deployments/{deployment_name}/tokenize",
-        headers=invalid_headers,
-        json={"inputs": []},
-    )
-    response_data = json.loads(response.content)
-    assert response_data["error"]["type"] == "invalid_request_error"
-    assert response.status_code == 400
-
-
-def test_tokenize_request_core_request_error(
-    client_mock_error_core_response: TestClient, headers_with_app_id_only: dict
-):
-    response = client_mock_error_core_response.post(
-        f"/openai/deployments/{deployment_name}/tokenize",
-        headers=headers_with_app_id_only,
-        json={"inputs": []},
-    )
-    response_data = json.loads(response.content)
-    assert response_data["error"]["type"] == "internal_server_error"
-    assert response.status_code == 500
-
-
-def test_truncate_prompt_request(client: TestClient, headers: dict):
-    response = client.post(
-        f"/openai/deployments/{deployment_name}/truncate_prompt",
-        json={"inputs": []},
-        headers=headers,
-    )
-    assert response.status_code == 200
-
-
-def test_truncate_prompt_request_without_app_props_and_id_headers(
-    client: TestClient, headers_without_app_properties_and_app_id: dict
-):
-    response = client.post(
-        f"/openai/deployments/{deployment_name}/truncate_prompt",
-        json={"inputs": []},
-        headers=headers_without_app_properties_and_app_id,
-    )
-    response_data = json.loads(response.content)
-    assert response_data["error"]["type"] == "invalid_request_error"
-    assert (
-        response_data["error"]["message"]
-        == "The X-DIAL-APPLICATION-ID header isn't set"
-    )
-    assert response.status_code == 400
-
-
-def test_truncate_prompt_request_app_properties_from_core(
-    client: TestClient, headers_with_app_id_only: dict
-):
-    response = client.post(
-        f"/openai/deployments/{deployment_name}/truncate_prompt",
-        json={"inputs": []},
-        headers=headers_with_app_id_only,
-    )
-    assert response.status_code == 200
-
-
-def test_truncate_prompt_request_invalid_application_properties_headers(
-    client: TestClient, invalid_headers: dict
-):
-    response = client.post(
-        f"/openai/deployments/{deployment_name}/truncate_prompt",
-        headers=invalid_headers,
-        json={"inputs": []},
-    )
-    response_data = json.loads(response.content)
-    assert response_data["error"]["type"] == "invalid_request_error"
-    assert response.status_code == 400
-
-
-def test_truncate_prompt_core_request_error(
-    client_mock_error_core_response: TestClient, headers_with_app_id_only: dict
-):
-    response = client_mock_error_core_response.post(
-        f"/openai/deployments/{deployment_name}/truncate_prompt",
-        headers=headers_with_app_id_only,
-        json={"inputs": []},
-    )
-    response_data = json.loads(response.content)
-    assert response_data["error"]["type"] == "internal_server_error"
-    assert response.status_code == 500
-
-
-class TestFromRequestDeploymentMixin(FromRequestDeploymentMixin):
-    pass
 
 
 async def test_import_error_handling():
     with patch.dict("sys.modules", {"httpx": None}):
-        testable_class = TestFromRequestDeploymentMixin(
+        testable_class = FromRequestDeploymentMixin(
             headers=MutableHeaders({"X-DIAL-APPLICATION-ID": "123"}),
             base_url="https://test.com",
             api_key_secret=SecretStr("123"),
@@ -553,7 +385,7 @@ async def test_import_error_handling():
 
 
 async def test_base_url_required_if_need_to_get_application_properties_from_core():
-    testable_class = TestFromRequestDeploymentMixin(
+    testable_class = FromRequestDeploymentMixin(
         headers=MutableHeaders({"X-DIAL-APPLICATION-ID": "123"}),
         api_key_secret=SecretStr("123"),
         jwt_secret=None,
@@ -580,7 +412,7 @@ async def test_base_url_required_if_need_to_get_application_properties_from_core
 
 
 async def test_return_unreliable_dial_application_properties_from_headers_on_reqeust_to_core():
-    testable_class = TestFromRequestDeploymentMixin(
+    testable_class = FromRequestDeploymentMixin(
         api_key_secret=SecretStr("123"),
         jwt_secret=None,
         api_version=None,
