@@ -7,6 +7,7 @@ from aidial_sdk.deployment.from_request_mixin import (
 )
 from aidial_sdk.exceptions import HTTPException as DIALException
 from aidial_sdk.pydantic_v1 import StrictStr
+from aidial_sdk.utils.logging import log_debug, log_exception, log_error
 
 
 class SchemaRichApplicationsMixin(
@@ -47,6 +48,7 @@ class SchemaRichApplicationsMixin(
             )
 
         if not self.base_url:
+            log_error("Base url should be set to perform request_dial_application_properties invocation")
             raise DIALException(
                 status_code=500,
                 type="dependency_error",
@@ -55,7 +57,7 @@ class SchemaRichApplicationsMixin(
 
         try:
             import httpx
-
+            log_debug("Requesting application properties for {}".format(self.dial_application_id))
             async with httpx.AsyncClient() as client:
                 response = await client.request(
                     method="GET",
@@ -67,15 +69,16 @@ class SchemaRichApplicationsMixin(
                 )
                 response.raise_for_status()
                 return response.json().get("application_properties")
-        except ImportError:
+        except ImportError as ex:
+            log_exception("Httpx is not installed but required.", exc_info=ex)
             raise DIALException(
                 status_code=500,
                 type="dependency_error",
-                message="Httpx is not installed. Please install it as extras dependency.",
+                message="Httpx is not installed. Please install it as extra dependency.",
             )
-        except Exception as e:
+        except Exception as ex:
             raise DIALException(
                 status_code=500,
                 type="internal_request_error",
-                message=f"Error while fetching application (app_id {self.dial_application_id})properties: {e}",
+                message=f"Error while fetching application (app_id {self.dial_application_id})properties: {ex}",
             )
