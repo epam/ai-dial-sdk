@@ -81,7 +81,7 @@ class SchemaRichApplicationsMixin(
             raise DIALException(
                 status_code=500,
                 type="dependency_error",
-                message="Httpx is not installed. Please install it as extra dependency.",
+                message="Httpx is not installed. Please install it as extra dependency",
             )
         except Exception as ex:
             raise DIALException(

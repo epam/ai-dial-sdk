@@ -551,7 +551,7 @@ async def test_import_error_handling():
         assert ex_type == "dependency_error"
         assert (
             message
-            == "Httpx is not installed. Please install it as extras dependency."
+            == "Httpx is not installed. Please install it as extra dependency"
         )
 
 
