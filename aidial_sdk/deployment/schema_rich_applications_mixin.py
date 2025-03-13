@@ -5,34 +5,38 @@ from urllib.parse import urljoin
 from aidial_sdk.deployment.from_request_mixin import (
     ExtraForbidRequestWithAuthAndApplicationProperties,
 )
-from aidial_sdk.exceptions import HTTPException as DIALException
+from aidial_sdk.exceptions import InternalServerError, InvalidRequestError
 from aidial_sdk.pydantic_v1 import StrictStr
-from aidial_sdk.utils.logging import log_debug, log_error, log_exception
+from aidial_sdk.utils.logging import log_debug
 
 
 class SchemaRichApplicationsMixin(
     ExtraForbidRequestWithAuthAndApplicationProperties
 ):
+
+    _DIAL_APPLICATION_PROPERTIES_HEADER = StrictStr(
+        "X-DIAL-APPLICATION-PROPERTIES"
+    )
+    _DIAL_APPLICATION_ID_HEADER = StrictStr("X-DIAL-APPLICATION-ID")
+
     @property
     def unreliable_dial_application_properties(
         self,
     ) -> Optional[Dict[str, Any]]:
         props_header = self.headers.get(
-            StrictStr("X-DIAL-APPLICATION-PROPERTIES")
+            self._DIAL_APPLICATION_PROPERTIES_HEADER
         )
         if props_header:
             try:
                 return loads(props_header)
-            except JSONDecodeError as e:
-                raise DIALException(
-                    status_code=400,
-                    type="invalid_request_error",
-                    message=f"The X-APPLICATION-PROPERTIES header isn't valid JSON: {e.msg}",
+            except JSONDecodeError:
+                raise InvalidRequestError(
+                    f"The value of {self._DIAL_APPLICATION_PROPERTIES_HEADER} header isn't valid JSON"
                 )
 
     @property
     def dial_application_id(self) -> Optional[str]:
-        return self.headers.get(StrictStr("X-DIAL-APPLICATION-ID"))
+        return self.headers.get(self._DIAL_APPLICATION_ID_HEADER)
 
     async def request_dial_application_properties(
         self,
@@ -41,29 +45,26 @@ class SchemaRichApplicationsMixin(
             return self.unreliable_dial_application_properties
 
         if not self.dial_application_id:
-            raise DIALException(
-                status_code=400,
-                type="invalid_request_error",
-                message="The X-DIAL-APPLICATION-ID header isn't set",
+            raise InvalidRequestError(
+                f"The {self._DIAL_APPLICATION_ID_HEADER} header isn't set"
             )
 
         if not self.base_url:
-            log_error(
-                "Base url should be set to perform request_dial_application_properties invocation"
-            )
-            raise DIALException(
-                status_code=500,
-                type="dependency_error",
-                message="Base url should be set to perform request_dial_application_properties invocation",
+            raise InternalServerError(
+                f"Base DIALApp dial_url should be set to perform request_dial_application_properties invocation"
             )
 
         try:
             import httpx
+        except ImportError:
+            raise ValueError(
+                "Missing httpx dependencies. "
+                "Install the package with the extras: aidial-sdk[httpx]"
+            )
 
+        try:
             log_debug(
-                "Requesting application properties for {}".format(
-                    self.dial_application_id
-                )
+                f"Requesting application properties for {self.dial_application_id}"
             )
             async with httpx.AsyncClient() as client:
                 response = await client.request(
@@ -75,17 +76,14 @@ class SchemaRichApplicationsMixin(
                     headers={"api-key": self.api_key_secret.get_secret_value()},
                 )
                 response.raise_for_status()
-                return response.json().get("application_properties")
-        except ImportError as ex:
-            log_exception("Httpx is not installed but required.", exc_info=ex)
-            raise DIALException(
-                status_code=500,
-                type="dependency_error",
-                message="Httpx is not installed. Please install it as extra dependency",
-            )
+                properties_dictionary = response.json().get(
+                    "application_properties"
+                )
+                log_debug(
+                    f"Received application properties for {self.dial_application_id!r}: {properties_dictionary}"
+                )
+                return properties_dictionary
         except Exception as ex:
-            raise DIALException(
-                status_code=500,
-                type="internal_request_error",
-                message=f"Error while fetching application (app_id {self.dial_application_id})properties: {ex}",
+            raise InternalServerError(
+                f"Unable to retrieve application properties for the application {self.dial_application_id!r}: {ex}",
             )

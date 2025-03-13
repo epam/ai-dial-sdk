@@ -268,7 +268,7 @@ def test_chat_completion_core_request_error(
         json=body,
     )
     response_data = json.loads(response.content)
-    assert response_data["error"]["type"] == "internal_request_error"
+    assert response_data["error"]["type"] == "internal_server_error"
     assert response.status_code == 500
 
 
@@ -283,11 +283,11 @@ def test_chat_completion_request_dial_url_not_set(
         json=body,
     )
     response_data = json.loads(response.content)
-    assert response_data["error"]["type"] == "dependency_error"
+    assert response_data["error"]["type"] == "internal_server_error"
     assert response.status_code == 500
     assert (
         response_data["error"]["message"]
-        == "Base url should be set to perform request_dial_application_properties invocation"
+        == "Base DIALApp dial_url should be set to perform request_dial_application_properties invocation"
     )
 
 
@@ -344,7 +344,7 @@ def test_configuration_request_core_request_error(
         headers=headers_with_app_id_only,
     )
     response_data = json.loads(response.content)
-    assert response_data["error"]["type"] == "internal_request_error"
+    assert response_data["error"]["type"] == "internal_server_error"
     assert response.status_code == 500
 
 
@@ -396,7 +396,7 @@ def test_rate_response_request_core_request_error(
         json={"responseId": "123", "rate": False},
     )
     response_data = json.loads(response.content)
-    assert response_data["error"]["type"] == "internal_request_error"
+    assert response_data["error"]["type"] == "internal_server_error"
     assert response.status_code == 500
 
 
@@ -459,7 +459,7 @@ def test_tokenize_request_core_request_error(
         json={"inputs": []},
     )
     response_data = json.loads(response.content)
-    assert response_data["error"]["type"] == "internal_request_error"
+    assert response_data["error"]["type"] == "internal_server_error"
     assert response.status_code == 500
 
 
@@ -522,7 +522,7 @@ def test_truncate_prompt_core_request_error(
         json={"inputs": []},
     )
     response_data = json.loads(response.content)
-    assert response_data["error"]["type"] == "internal_request_error"
+    assert response_data["error"]["type"] == "internal_server_error"
     assert response.status_code == 500
 
 
@@ -542,16 +542,12 @@ async def test_import_error_handling():
         )
         try:
             await testable_class.request_dial_application_properties()
-        except HTTPException as exc_info:
-            code = exc_info.status_code
-            ex_type = exc_info.type
-            message = exc_info.message
+        except ValueError as exc_info:
+            message = str(exc_info)
 
-        assert code == 500
-        assert ex_type == "dependency_error"
         assert (
             message
-            == "Httpx is not installed. Please install it as extra dependency"
+            == "Missing httpx dependencies. Install the package with the extras: aidial-sdk[httpx]"
         )
 
 
@@ -574,10 +570,10 @@ async def test_base_url_required_if_need_to_get_application_properties_from_core
         message = exc_info.message
 
     assert code == 500
-    assert ex_type == "dependency_error"
+    assert ex_type == "internal_server_error"
     assert (
         message
-        == "Base url should be set to perform request_dial_application_properties invocation"
+        == "Base DIALApp dial_url should be set to perform request_dial_application_properties invocation"
     )
 
 

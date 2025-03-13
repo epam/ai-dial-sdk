@@ -78,7 +78,6 @@ class FromRequestDeploymentMixin(
         request: fastapi.Request,
         deployment_id: StrictStr,
         base_url: Optional[str],
-        **kwargs: Any,
     ):
 
         headers = request.headers.mutablecopy()

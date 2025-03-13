@@ -54,7 +54,7 @@ class PathFilter(Filter):
 
 
 class DIALApp(FastAPI):
-    __dial_url: Optional[str]
+    _dial_url: Optional[str]
 
     def __init__(
         self,
@@ -75,7 +75,7 @@ class DIALApp(FastAPI):
 
         super().__init__(**kwargs)
 
-        self.__dial_url = dial_url
+        self._dial_url = dial_url
 
         if telemetry_config is not None:
             self.configure_telemetry(telemetry_config)
@@ -193,7 +193,7 @@ class DIALApp(FastAPI):
             set_log_deployment(deployment_id)
 
             request = await request_type.from_request(
-                original_request, deployment_id, self.__dial_url
+                original_request, deployment_id, self._dial_url
             )
             log_debug(f"request[{endpoint}]: {request}")
 
@@ -219,7 +219,7 @@ class DIALApp(FastAPI):
             set_log_deployment(deployment_id)
 
             request = await RateRequest.from_request(
-                original_request, deployment_id, self.__dial_url
+                original_request, deployment_id, self._dial_url
             )
 
             await impl.rate_response(request)
@@ -238,7 +238,7 @@ class DIALApp(FastAPI):
             set_log_deployment(deployment_id)
 
             request = await ChatCompletionRequest.from_request(
-                original_request, deployment_id, self.__dial_url
+                original_request, deployment_id, self._dial_url
             )
 
             response = ChatCompletionResponse(request)
@@ -270,7 +270,7 @@ class DIALApp(FastAPI):
         async def _handler(original_request: Request):
             set_log_deployment(deployment_id)
             request = await EmbeddingsRequest.from_request(
-                original_request, deployment_id, self.__dial_url
+                original_request, deployment_id, self._dial_url
             )
             response = await impl.embeddings(request)
             response_json = response.dict()
