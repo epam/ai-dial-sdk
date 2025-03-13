@@ -318,7 +318,7 @@ async def test_base_url_required_if_need_to_get_application_properties_from_core
     )
 
 
-async def test_return_unreliable_dial_application_properties_from_headers_on_reqeust_to_core():
+async def test_return_unreliable_dial_application_properties_from_headers_on_request_to_core():
     testable_class = FromRequestDeploymentMixin(
         api_key_secret=SecretStr("123"),
         jwt_secret=None,

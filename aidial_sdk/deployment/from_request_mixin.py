@@ -1,5 +1,5 @@
+import json
 from abc import ABC, abstractmethod
-from json import JSONDecodeError, loads
 from typing import Any, Dict, Mapping, Optional, Type, TypeVar
 from urllib.parse import urljoin
 
@@ -151,8 +151,8 @@ class FromRequestDeploymentMixin(FromRequestMixin):
         props_header = headers.get(cls._DIAL_APPLICATION_PROPERTIES_HEADER)
         if props_header:
             try:
-                application_properties = loads(props_header)
-            except JSONDecodeError:
+                application_properties = json.loads(props_header)
+            except json.JSONDecodeError:
                 raise InvalidRequestError(
                     f"The value of {cls._DIAL_APPLICATION_PROPERTIES_HEADER} header isn't valid JSON"
                 )
@@ -180,7 +180,7 @@ class FromRequestDeploymentMixin(FromRequestMixin):
 async def _get_request_json_body(request: fastapi.Request) -> dict:
     try:
         return await request.json()
-    except JSONDecodeError as e:
+    except json.JSONDecodeError as e:
         raise DIALException(
             status_code=400,
             type="invalid_request_error",
