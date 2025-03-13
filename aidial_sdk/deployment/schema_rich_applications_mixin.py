@@ -51,7 +51,7 @@ class SchemaRichApplicationsMixin(
 
         if not self.base_url:
             raise InternalServerError(
-                f"Base DIALApp dial_url should be set to perform request_dial_application_properties invocation"
+                "Base DIALApp dial_url should be set to perform request_dial_application_properties invocation"
             )
 
         try:
