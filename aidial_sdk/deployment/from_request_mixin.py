@@ -43,31 +43,13 @@ class FromRequestDeploymentMixin(FromRequestMixin):
     jwt_secret: Optional[SecretStr] = None
     deployment_id: StrictStr
     api_version: Optional[StrictStr] = None
+    unreliable_dial_application_properties: Optional[Dict[str, Any]] = None
+    dial_application_id: Optional[str] = None
 
     class Config:
         arbitrary_types_allowed = True
 
     original_request: fastapi.Request = Field(..., exclude=True)
-
-    @property
-    def unreliable_dial_application_properties(
-        self,
-    ) -> Optional[Dict[str, Any]]:
-        props_header = self.headers.get(
-            self._DIAL_APPLICATION_PROPERTIES_HEADER
-        )
-        if not props_header:
-            return None
-        try:
-            return loads(props_header)
-        except JSONDecodeError:
-            raise InvalidRequestError(
-                f"The value of {self._DIAL_APPLICATION_PROPERTIES_HEADER} header isn't valid JSON"
-            )
-
-    @property
-    def dial_application_id(self) -> Optional[str]:
-        return self.headers.get(self._DIAL_APPLICATION_ID_HEADER)
 
     async def request_dial_application_properties(
         self,
@@ -167,6 +149,18 @@ class FromRequestDeploymentMixin(FromRequestMixin):
         jwt = headers.get("Authorization")
         del headers["Authorization"]
 
+        application_properties = None
+        props_header = headers.get(cls._DIAL_APPLICATION_PROPERTIES_HEADER)
+        if props_header:
+            try:
+                application_properties = loads(props_header)
+            except JSONDecodeError:
+                raise InvalidRequestError(
+                    f"The value of {cls._DIAL_APPLICATION_PROPERTIES_HEADER} header isn't valid JSON"
+                )
+
+        application_id = headers.get(cls._DIAL_APPLICATION_ID_HEADER)
+
         return cls(
             **(await cls.get_request_body(request)),
             api_key_secret=SecretStr(api_key),
@@ -176,6 +170,8 @@ class FromRequestDeploymentMixin(FromRequestMixin):
             headers=headers,
             original_request=request,
             base_url=base_url,
+            unreliable_dial_application_properties=application_properties,
+            dial_application_id=application_id,
         )
 
     @staticmethod
