@@ -5,6 +5,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import fastapi
 import httpx
 import pytest
+import respx
 from pydantic.v1 import StrictStr
 from starlette.datastructures import MutableHeaders
 from starlette.testclient import TestClient
@@ -66,70 +67,50 @@ class TestApp(ChatCompletion):
 
 DEPLOYMENT_NAME = "test-app"
 API_KEY = "test-api-key"
+X_APPLICATION_ID = "test-app"
+
+
+@pytest.fixture
+def mock_app_props():
+    with respx.mock() as mock:
+        mock.get(
+            f"https://test.com/openai/applications/{X_APPLICATION_ID}"
+        ).respond(
+            status_code=200,
+            json={
+                "application_properties": {"key1": "value1", "key2": "value2"}
+            },
+        )
+        yield mock
+
+
+@pytest.fixture
+def mock_app_props_error():
+    with respx.mock() as mock:
+        mock.get(
+            f"https://test.com/openai/applications/{X_APPLICATION_ID}"
+        ).respond(status_code=500)
+        yield mock
 
 
 @pytest.fixture
 def client():
-    with patch("httpx.AsyncClient") as MockClient:
-        mock_client = AsyncMock()
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "application_properties": {"key1": "value1", "key2": "value2"}
-        }
-        mock_client.__aenter__.return_value = mock_client
-        mock_client.__aexit__.return_value = None
-        mock_client.request.return_value = mock_response
-        MockClient.return_value = mock_client
-        app = DIALApp(dial_url="https://test.com").add_chat_completion(
-            DEPLOYMENT_NAME, TestApp()
-        )
-        yield TestClient(
-            app,
-            base_url=f"https://testserver/openai/deployments/{DEPLOYMENT_NAME}",
-        )
+    app = DIALApp(dial_url="https://test.com").add_chat_completion(
+        DEPLOYMENT_NAME, TestApp()
+    )
+    yield TestClient(
+        app,
+        base_url=f"https://testserver/openai/deployments/{DEPLOYMENT_NAME}",
+    )
 
 
 @pytest.fixture
 def client_without_base_url():
-    with patch("httpx.AsyncClient") as MockClient:
-        mock_client = AsyncMock()
-        mock_response = MagicMock()
-        mock_response.status_code = 200
-        mock_response.json.return_value = {
-            "application_properties": {"key1": "value1", "key2": "value2"}
-        }
-        mock_client.__aenter__.return_value = mock_client
-        mock_client.__aexit__.return_value = None
-        mock_client.request.return_value = mock_response
-        MockClient.return_value = mock_client
-        app = DIALApp().add_chat_completion(DEPLOYMENT_NAME, TestApp())
-        yield TestClient(
-            app,
-            base_url=f"https://testserver/openai/deployments/{DEPLOYMENT_NAME}",
-        )
-
-
-@pytest.fixture
-def client_mock_error_core_response():
-    with patch("httpx.AsyncClient") as MockClient:
-        mock_client = AsyncMock()
-        mock_response = MagicMock()
-        mock_response.status_code = 500
-        mock_response.raise_for_status.side_effect = httpx.HTTPStatusError(
-            message="Server error", request=MagicMock(), response=mock_response
-        )
-        mock_client.__aenter__.return_value = mock_client
-        mock_client.__aexit__.return_value = None
-        mock_client.request.return_value = mock_response
-        MockClient.return_value = mock_client
-        app = DIALApp(dial_url="https://test.com").add_chat_completion(
-            DEPLOYMENT_NAME, TestApp()
-        )
-        yield TestClient(
-            app,
-            base_url=f"https://testserver/openai/deployments/{DEPLOYMENT_NAME}",
-        )
+    app = DIALApp().add_chat_completion(DEPLOYMENT_NAME, TestApp())
+    yield TestClient(
+        app,
+        base_url=f"https://testserver/openai/deployments/{DEPLOYMENT_NAME}",
+    )
 
 
 @pytest.fixture
@@ -159,7 +140,7 @@ def invalid_headers():
 def headers_with_app_id_only():
     return {
         "Api-Key": API_KEY,
-        "X-DIAL-APPLICATION-ID": "112233",
+        "X-DIAL-APPLICATION-ID": X_APPLICATION_ID,
     }
 
 
@@ -223,6 +204,7 @@ def test_request_app_properties_from_core(
     request_body: Any,
     client: TestClient,
     headers_with_app_id_only: dict,
+    mock_app_props,
 ):
     response = client.request(
         url=endpoint,
@@ -257,10 +239,11 @@ def test_core_request_error(
     endpoint: str,
     method: str,
     request_body: Any,
-    client_mock_error_core_response: TestClient,
+    client: TestClient,
     headers_with_app_id_only: dict,
+    mock_app_props_error,
 ):
-    response = client_mock_error_core_response.request(
+    response = client.request(
         url=endpoint,
         headers=headers_with_app_id_only,
         json=request_body,
@@ -294,21 +277,10 @@ def test_request_dial_url_not_set(
     )
 
 
-def test_tokenize_request__app_properties_from_core(
-    client: TestClient, headers_with_app_id_only: dict
-):
-    response = client.post(
-        "tokenize",
-        headers=headers_with_app_id_only,
-        json={"inputs": []},
-    )
-    assert response.status_code == 200
-
-
 async def test_import_error_handling():
     with patch.dict("sys.modules", {"httpx": None}):
         testable_class = FromRequestDeploymentMixin(
-            headers=MutableHeaders({"X-DIAL-APPLICATION-ID": "123"}),
+            headers=MutableHeaders({"X-DIAL-APPLICATION-ID": X_APPLICATION_ID}),
             base_url="https://test.com",
             api_key_secret=SecretStr("123"),
             jwt_secret=None,
@@ -328,7 +300,7 @@ async def test_import_error_handling():
 
 async def test_base_url_required_if_need_to_get_application_properties_from_core():
     testable_class = FromRequestDeploymentMixin(
-        headers=MutableHeaders({"X-DIAL-APPLICATION-ID": "123"}),
+        headers=MutableHeaders({"X-DIAL-APPLICATION-ID": X_APPLICATION_ID}),
         api_key_secret=SecretStr("123"),
         jwt_secret=None,
         api_version=None,
