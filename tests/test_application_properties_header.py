@@ -1,9 +1,8 @@
 import json
 from typing import Any
-from unittest.mock import AsyncMock, MagicMock, patch
+from unittest.mock import MagicMock, patch
 
 import fastapi
-import httpx
 import pytest
 import respx
 from pydantic.v1 import StrictStr
