@@ -2225,9 +2225,10 @@ doc = ["furo", "jaraco.packaging (>=9.3)", "jaraco.tidelift (>=1.4)", "rst.linke
 test = ["big-O", "jaraco.functools", "jaraco.itertools", "jaraco.test", "more-itertools", "pytest (>=6,!=8.1.*)", "pytest-checkdocs (>=2.4)", "pytest-cov", "pytest-enabler (>=2.2)", "pytest-ignore-flaky", "pytest-mypy", "pytest-ruff (>=0.2.1)"]
 
 [extras]
+httpx = ["httpx"]
 telemetry = ["opentelemetry-api", "opentelemetry-exporter-otlp-proto-grpc", "opentelemetry-exporter-prometheus", "opentelemetry-instrumentation-aiohttp-client", "opentelemetry-instrumentation-fastapi", "opentelemetry-instrumentation-httpx", "opentelemetry-instrumentation-logging", "opentelemetry-instrumentation-requests", "opentelemetry-instrumentation-system-metrics", "opentelemetry-instrumentation-urllib", "opentelemetry-sdk", "prometheus-client"]
 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8.1,<4.0"
-content-hash = "2bdd54439c7591438b217b445670d50ba35681a3e5b1e4bcb8b0236bc0351e7a"
+content-hash = "0483fe4316299ccdccf01f5b7cbe3c141b8ba518300bbcd61f3d8de8b5f98c57"

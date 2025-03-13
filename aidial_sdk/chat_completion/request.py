@@ -244,7 +244,6 @@ class AzureChatCompletionRequest(ExtraForbidModel):
 
 class ChatCompletionRequestCustomFields(ExtraForbidModel):
     configuration: Optional[Dict[str, Any]] = None
-    application_properties: Optional[Dict[str, Any]] = None
 
 
 class ChatCompletionRequest(AzureChatCompletionRequest):
