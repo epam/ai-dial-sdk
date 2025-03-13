@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 from json import JSONDecodeError, loads
-from typing import Any, Dict, Optional, Type, TypeVar, Mapping
+from typing import Any, Dict, Mapping, Optional, Type, TypeVar
 from urllib.parse import urljoin
 
 import fastapi
