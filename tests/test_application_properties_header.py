@@ -237,20 +237,20 @@ def test_valid_request(
     assert response.status_code == 200
 
 
-@pytest.mark.parametrize(
-    "endpoint, method, request_body",
-    [
-        (
-            "chat/completions",
-            "POST",
-            {"messages": [{"role": "user", "content": "Hello"}]},
-        ),
-        ("configuration", "GET", None),
-        ("rate", "POST", {"responseId": "123", "rate": False}),
-        ("tokenize", "POST", {"inputs": []}),
-        ("truncate_prompt", "POST", {"inputs": []}),
-    ],
-)
+parametrize_data = [
+    (
+        "chat/completions",
+        "POST",
+        {"messages": [{"role": "user", "content": "Hello"}]},
+    ),
+    ("configuration", "GET", None),
+    ("rate", "POST", {"responseId": "123", "rate": False}),
+    ("tokenize", "POST", {"inputs": []}),
+    ("truncate_prompt", "POST", {"inputs": []}),
+]
+
+
+@pytest.mark.parametrize("endpoint, method, request_body", parametrize_data)
 def test_request_without_app_props_and_id_headers(
     endpoint: str,
     method: str,
@@ -273,20 +273,7 @@ def test_request_without_app_props_and_id_headers(
     assert response.status_code == 400
 
 
-@pytest.mark.parametrize(
-    "endpoint, method, request_body",
-    [
-        (
-            "chat/completions",
-            "POST",
-            {"messages": [{"role": "user", "content": "Hello"}]},
-        ),
-        ("configuration", "GET", None),
-        ("rate", "POST", {"responseId": "123", "rate": False}),
-        ("tokenize", "POST", {"inputs": []}),
-        ("truncate_prompt", "POST", {"inputs": []}),
-    ],
-)
+@pytest.mark.parametrize("endpoint, method, request_body", parametrize_data)
 def test_request_app_properties_from_core(
     endpoint: str,
     method: str,
@@ -303,20 +290,7 @@ def test_request_app_properties_from_core(
     assert response.status_code == 200
 
 
-@pytest.mark.parametrize(
-    "endpoint, method, request_body",
-    [
-        (
-            "chat/completions",
-            "POST",
-            {"messages": [{"role": "user", "content": "Hello"}]},
-        ),
-        ("configuration", "GET", None),
-        ("rate", "POST", {"responseId": "123", "rate": False}),
-        ("tokenize", "POST", {"inputs": []}),
-        ("truncate_prompt", "POST", {"inputs": []}),
-    ],
-)
+@pytest.mark.parametrize("endpoint, method, request_body", parametrize_data)
 def test_invalid_application_properties_headers(
     endpoint: str,
     method: str,
@@ -335,20 +309,7 @@ def test_invalid_application_properties_headers(
     assert response.status_code == 400
 
 
-@pytest.mark.parametrize(
-    "endpoint, method, request_body",
-    [
-        (
-            "chat/completions",
-            "POST",
-            {"messages": [{"role": "user", "content": "Hello"}]},
-        ),
-        ("configuration", "GET", None),
-        ("rate", "POST", {"responseId": "123", "rate": False}),
-        ("tokenize", "POST", {"inputs": []}),
-        ("truncate_prompt", "POST", {"inputs": []}),
-    ],
-)
+@pytest.mark.parametrize("endpoint, method, request_body", parametrize_data)
 def test_core_request_error(
     endpoint: str,
     method: str,
@@ -367,20 +328,7 @@ def test_core_request_error(
     assert response.status_code == 500
 
 
-@pytest.mark.parametrize(
-    "endpoint, method, request_body",
-    [
-        (
-            "chat/completions",
-            "POST",
-            {"messages": [{"role": "user", "content": "Hello"}]},
-        ),
-        ("configuration", "GET", None),
-        ("rate", "POST", {"responseId": "123", "rate": False}),
-        ("tokenize", "POST", {"inputs": []}),
-        ("truncate_prompt", "POST", {"inputs": []}),
-    ],
-)
+@pytest.mark.parametrize("endpoint, method, request_body", parametrize_data)
 def test_request_dial_url_not_set(
     endpoint: str,
     method: str,
