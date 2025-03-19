@@ -10,4 +10,4 @@ jobs:
     secrets: inherit
     with:
       python_version: 3.8
-      test_python_versions: '["3.8", "3.9", "3.10", "3.11", "3.12"]'
+      test_python_versions: '["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"]'
