@@ -56,6 +56,7 @@ class PathFilter(Filter):
 
 class DIALApp(FastAPI):
     _allow_extra_request_fields: bool
+    _dial_url: Optional[str]
 
     def __init__(
         self,
@@ -79,6 +80,7 @@ class DIALApp(FastAPI):
         super().__init__(**kwargs)
 
         self._allow_extra_request_fields = allow_extra_request_fields
+        self._dial_url = dial_url
 
         if telemetry_config is not None:
             self.configure_telemetry(telemetry_config)
@@ -236,7 +238,9 @@ class DIALApp(FastAPI):
         original_request: Request,
         deployment_id: str,
     ) -> RequestType:
-        ret = await request.from_request(original_request, deployment_id)
+        ret = await request.from_request(
+            original_request, deployment_id, self._dial_url
+        )
         if not self._allow_extra_request_fields:
             model_validate_extra_fields(ret)
         return ret

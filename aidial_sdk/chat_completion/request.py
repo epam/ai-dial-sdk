@@ -58,6 +58,7 @@ class ToolCall(BaseModel):
 
 class Role(str, Enum):
     SYSTEM = "system"
+    DEVELOPER = "developer"
     USER = "user"
     ASSISTANT = "assistant"
     FUNCTION = "function"
@@ -212,10 +213,6 @@ ResponseFormat = Union[
 ]
 
 
-class StreamOptions(BaseModel):
-    include_usage: Optional[StrictBool] = None
-
-
 class AzureChatCompletionRequest(BaseModel):
     model: Optional[StrictStr] = None
     messages: List[Message]
@@ -247,7 +244,6 @@ class AzureChatCompletionRequest(BaseModel):
 
 class ChatCompletionRequestCustomFields(BaseModel):
     configuration: Optional[Dict[str, Any]] = None
-    application_properties: Optional[Dict[str, Any]] = None
 
 
 class ChatCompletionRequest(AzureChatCompletionRequest):
