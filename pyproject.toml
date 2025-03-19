@@ -53,7 +53,10 @@ httpx = ["httpx"]
 pytest = "^8.2"
 pytest-asyncio = "^0.24.0"
 nox = "^2023.4.22"
-pillow = "^10.2.0"
+pillow = [
+    {version = "11.1.0", python = ">=3.12"},
+    {version = "10.2.0", python = "<3.12"}
+]
 httpx = "^0.25.0"
 respx = "^0.21.1"
 aiohttp = "^3.8.3"
@@ -76,6 +79,11 @@ testpaths = [
 ]
 markers = [
     "slow: marker for slow running tests",
+]
+filterwarnings = [
+    "error",
+    # muting deprecation warnings coming from old pydantic
+    "ignore::DeprecationWarning:pydantic.typing",
 ]
 
 [tool.pyright]
