@@ -36,10 +36,9 @@ def _model_iterate_fields(
     elif isinstance(obj, (str, int, float, bool, type(None), Enum)):
         pass
 
-    elif not any_types:
-        raise ValueError(
-            f"Cannot iterate model fields within an object with the unexpected type: {type(obj)}, loc: {loc}"
-        )
+    else:
+        err_message = f"Cannot iterate model fields within an object with the unexpected type: {type(obj)}, loc: {loc}"
+        assert any_types, err_message
 
 
 def model_validate_extra_fields(root_model: BaseModel) -> None:
