@@ -12,12 +12,12 @@ class ExtraAllowModel(BaseModel):
         extra = "allow"
 
 
-Loc = Tuple[Union[int, str], ...]
+_Loc = Tuple[Union[int, str], ...]
 
 
 def _model_iterate_fields(
-    obj: Any, any_types: bool, loc: Loc
-) -> Iterator[Tuple[BaseModel, Loc]]:
+    obj: Any, any_types: bool, loc: _Loc
+) -> Iterator[Tuple[BaseModel, _Loc]]:
     if isinstance(obj, BaseModel):
         yield (obj, loc)
         any_types = getattr(obj.Config, "arbitrary_types_allowed", False)
