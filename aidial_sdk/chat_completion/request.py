@@ -16,10 +16,10 @@ from aidial_sdk.pydantic_v1 import (
     StrictInt,
     StrictStr,
 )
-from aidial_sdk.utils.pydantic import ExtraForbidModel
+from aidial_sdk.utils.pydantic import ExtraAllowModel
 
 
-class Attachment(ExtraForbidModel):
+class Attachment(ExtraAllowModel):
     type: Optional[StrictStr] = "text/markdown"
     title: Optional[StrictStr] = None
     data: Optional[StrictStr] = None
@@ -28,14 +28,14 @@ class Attachment(ExtraForbidModel):
     reference_url: Optional[StrictStr] = None
 
 
-class Stage(ExtraForbidModel):
+class Stage(ExtraAllowModel):
     name: StrictStr
     status: Status
     content: Optional[StrictStr] = None
     attachments: Optional[List[Attachment]] = None
 
 
-class CustomContent(ExtraForbidModel):
+class CustomContent(ExtraAllowModel):
     stages: Optional[List[Stage]] = None
     attachments: Optional[List[Attachment]] = None
     state: Optional[Any] = None
@@ -43,12 +43,12 @@ class CustomContent(ExtraForbidModel):
     form_schema: Optional[Any] = None
 
 
-class FunctionCall(ExtraForbidModel):
+class FunctionCall(ExtraAllowModel):
     name: str
     arguments: str
 
 
-class ToolCall(ExtraForbidModel):
+class ToolCall(ExtraAllowModel):
     # OpenAI API doesn't strictly specify existence of the index field
     index: Optional[int]
     id: StrictStr
@@ -65,22 +65,22 @@ class Role(str, Enum):
     TOOL = "tool"
 
 
-class ImageURL(ExtraForbidModel):
+class ImageURL(ExtraAllowModel):
     url: StrictStr
     detail: Optional[Literal["auto", "low", "high"]] = None
 
 
-class MessageContentImagePart(ExtraForbidModel):
+class MessageContentImagePart(ExtraAllowModel):
     type: Literal["image_url"]
     image_url: ImageURL
 
 
-class MessageContentTextPart(ExtraForbidModel):
+class MessageContentTextPart(ExtraAllowModel):
     type: Literal["text"]
     text: StrictStr
 
 
-class MessageContentRefusalPart(ExtraForbidModel):
+class MessageContentRefusalPart(ExtraAllowModel):
     type: Literal["refusal"]
     refusal: StrictStr
 
@@ -92,7 +92,7 @@ MessageContentPart = Union[
 ]
 
 
-class Message(ExtraForbidModel):
+class Message(ExtraAllowModel):
     role: Role
     content: Optional[Union[StrictStr, List[MessageContentPart]]] = None
     custom_content: Optional[CustomContent] = None
@@ -121,12 +121,12 @@ class Message(ExtraForbidModel):
             assert_never(self.content)
 
 
-class Addon(ExtraForbidModel):
+class Addon(ExtraAllowModel):
     name: Optional[StrictStr] = None
     url: Optional[StrictStr] = None
 
 
-class Function(ExtraForbidModel):
+class Function(ExtraAllowModel):
     name: StrictStr
     description: Optional[StrictStr] = None
     parameters: Optional[Dict] = None
@@ -157,40 +157,40 @@ class Penalty(ConstrainedFloat):
     le = 2
 
 
-class Tool(ExtraForbidModel):
+class Tool(ExtraAllowModel):
     type: Literal["function"]
     function: Function
 
 
-class StaticFunction(ExtraForbidModel):
+class StaticFunction(ExtraAllowModel):
     name: str
     description: Optional[str] = None
     configuration: Optional[Dict[str, Any]] = None
 
 
-class StaticTool(ExtraForbidModel):
+class StaticTool(ExtraAllowModel):
     type: Literal["static_function"]
     static_function: StaticFunction
 
 
-class FunctionChoice(ExtraForbidModel):
+class FunctionChoice(ExtraAllowModel):
     name: StrictStr
 
 
-class ToolChoice(ExtraForbidModel):
+class ToolChoice(ExtraAllowModel):
     type: Literal["function"]
     function: FunctionChoice
 
 
-class ResponseFormatText(ExtraForbidModel):
+class ResponseFormatText(ExtraAllowModel):
     type: Literal["text"]
 
 
-class ResponseFormatJsonObject(ExtraForbidModel):
+class ResponseFormatJsonObject(ExtraAllowModel):
     type: Literal["json_object"]
 
 
-class ResponseFormatJsonSchemaObject(ExtraForbidModel):
+class ResponseFormatJsonSchemaObject(ExtraAllowModel):
     description: Optional[StrictStr] = None
     name: StrictStr
     schema_: Dict[str, Any] = Field(..., alias="schema")
@@ -201,7 +201,7 @@ class ResponseFormatJsonSchemaObject(ExtraForbidModel):
         return super().dict(*args, **kwargs)
 
 
-class ResponseFormatJsonSchema(ExtraForbidModel):
+class ResponseFormatJsonSchema(ExtraAllowModel):
     type: Literal["json_schema"]
     json_schema: ResponseFormatJsonSchemaObject
 
@@ -213,7 +213,7 @@ ResponseFormat = Union[
 ]
 
 
-class AzureChatCompletionRequest(ExtraForbidModel):
+class AzureChatCompletionRequest(ExtraAllowModel):
     model: Optional[StrictStr] = None
     messages: List[Message]
     functions: Optional[List[Function]] = None
@@ -242,7 +242,7 @@ class AzureChatCompletionRequest(ExtraForbidModel):
     parallel_tool_calls: Optional[StrictBool] = None
 
 
-class ChatCompletionRequestCustomFields(ExtraForbidModel):
+class ChatCompletionRequestCustomFields(ExtraAllowModel):
     configuration: Optional[Dict[str, Any]] = None
 
 

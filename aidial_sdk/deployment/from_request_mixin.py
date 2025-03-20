@@ -9,12 +9,12 @@ from aidial_sdk.exceptions import HTTPException as DIALException
 from aidial_sdk.exceptions import InternalServerError, InvalidRequestError
 from aidial_sdk.pydantic_v1 import Field, SecretStr, StrictStr, root_validator
 from aidial_sdk.utils.logging import log_debug
-from aidial_sdk.utils.pydantic import ExtraForbidModel
+from aidial_sdk.utils.pydantic import ExtraAllowModel
 
 T = TypeVar("T", bound="FromRequestMixin")
 
 
-class FromRequestMixin(ABC, ExtraForbidModel):
+class FromRequestMixin(ABC, ExtraAllowModel):
     @classmethod
     @abstractmethod
     async def from_request(
@@ -137,11 +137,7 @@ class FromRequestDeploymentMixin(FromRequestMixin):
 
         api_key = headers.get("Api-Key")
         if api_key is None:
-            raise DIALException(
-                status_code=400,
-                type="invalid_request_error",
-                message="Api-Key header is required",
-            )
+            raise InvalidRequestError("Api-Key header is required")
         del headers["Api-Key"]
 
         jwt = headers.get("Authorization")
