@@ -1,3 +1,4 @@
+from enum import Enum
 from typing import Any, Iterator, List, Tuple, Union
 
 from pydantic.v1.error_wrappers import ErrorWrapper, ValidationError
@@ -15,25 +16,36 @@ Loc = Tuple[Union[int, str], ...]
 
 
 def _model_iterate_fields(
-    obj: Any, loc: Loc
+    obj: Any, any_types: bool, loc: Loc
 ) -> Iterator[Tuple[BaseModel, Loc]]:
     if isinstance(obj, BaseModel):
         yield (obj, loc)
+        any_types = getattr(obj.Config, "arbitrary_types_allowed", False)
         for field in obj.__fields__:
             value = getattr(obj, field)
-            yield from _model_iterate_fields(value, loc + (field,))
-    elif isinstance(obj, (list, tuple)):
+            yield from _model_iterate_fields(value, any_types, loc + (field,))
+
+    elif isinstance(obj, list):
         for idx, item in enumerate(obj):
-            yield from _model_iterate_fields(item, loc + (idx,))
+            yield from _model_iterate_fields(item, any_types, loc + (idx,))
+
     elif isinstance(obj, dict):
         for key, val in obj.items():
-            yield from _model_iterate_fields(val, loc + (key,))
+            yield from _model_iterate_fields(val, any_types, loc + (key,))
+
+    elif isinstance(obj, (str, int, float, bool, type(None), Enum)):
+        pass
+
+    elif not any_types:
+        raise ValueError(
+            f"Cannot iterate model fields within an object with the unexpected type: {type(obj)}, loc: {loc}"
+        )
 
 
 def model_validate_extra_fields(root_model: BaseModel) -> None:
     errors: List[ErrorWrapper] = []
 
-    for model, loc in _model_iterate_fields(root_model, ()):
+    for model, loc in _model_iterate_fields(root_model, False, ()):
         declared = set(model.__fields__.keys())
         for key in model.__dict__:
             if key not in declared:

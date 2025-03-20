@@ -16,10 +16,10 @@ from aidial_sdk.pydantic_v1 import (
     StrictInt,
     StrictStr,
 )
-from aidial_sdk.utils.pydantic import ExtraAllowModel as BaseModel
+from aidial_sdk.utils.pydantic import ExtraAllowModel
 
 
-class Attachment(BaseModel):
+class Attachment(ExtraAllowModel):
     type: Optional[StrictStr] = "text/markdown"
     title: Optional[StrictStr] = None
     data: Optional[StrictStr] = None
@@ -28,14 +28,14 @@ class Attachment(BaseModel):
     reference_url: Optional[StrictStr] = None
 
 
-class Stage(BaseModel):
+class Stage(ExtraAllowModel):
     name: StrictStr
     status: Status
     content: Optional[StrictStr] = None
     attachments: Optional[List[Attachment]] = None
 
 
-class CustomContent(BaseModel):
+class CustomContent(ExtraAllowModel):
     stages: Optional[List[Stage]] = None
     attachments: Optional[List[Attachment]] = None
     state: Optional[Any] = None
@@ -43,12 +43,12 @@ class CustomContent(BaseModel):
     form_schema: Optional[Any] = None
 
 
-class FunctionCall(BaseModel):
+class FunctionCall(ExtraAllowModel):
     name: str
     arguments: str
 
 
-class ToolCall(BaseModel):
+class ToolCall(ExtraAllowModel):
     # OpenAI API doesn't strictly specify existence of the index field
     index: Optional[int]
     id: StrictStr
@@ -65,22 +65,22 @@ class Role(str, Enum):
     TOOL = "tool"
 
 
-class ImageURL(BaseModel):
+class ImageURL(ExtraAllowModel):
     url: StrictStr
     detail: Optional[Literal["auto", "low", "high"]] = None
 
 
-class MessageContentImagePart(BaseModel):
+class MessageContentImagePart(ExtraAllowModel):
     type: Literal["image_url"]
     image_url: ImageURL
 
 
-class MessageContentTextPart(BaseModel):
+class MessageContentTextPart(ExtraAllowModel):
     type: Literal["text"]
     text: StrictStr
 
 
-class MessageContentRefusalPart(BaseModel):
+class MessageContentRefusalPart(ExtraAllowModel):
     type: Literal["refusal"]
     refusal: StrictStr
 
@@ -92,7 +92,7 @@ MessageContentPart = Union[
 ]
 
 
-class Message(BaseModel):
+class Message(ExtraAllowModel):
     role: Role
     content: Optional[Union[StrictStr, List[MessageContentPart]]] = None
     custom_content: Optional[CustomContent] = None
@@ -121,12 +121,12 @@ class Message(BaseModel):
             assert_never(self.content)
 
 
-class Addon(BaseModel):
+class Addon(ExtraAllowModel):
     name: Optional[StrictStr] = None
     url: Optional[StrictStr] = None
 
 
-class Function(BaseModel):
+class Function(ExtraAllowModel):
     name: StrictStr
     description: Optional[StrictStr] = None
     parameters: Optional[Dict] = None
@@ -157,40 +157,40 @@ class Penalty(ConstrainedFloat):
     le = 2
 
 
-class Tool(BaseModel):
+class Tool(ExtraAllowModel):
     type: Literal["function"]
     function: Function
 
 
-class StaticFunction(BaseModel):
+class StaticFunction(ExtraAllowModel):
     name: str
     description: Optional[str] = None
     configuration: Optional[Dict[str, Any]] = None
 
 
-class StaticTool(BaseModel):
+class StaticTool(ExtraAllowModel):
     type: Literal["static_function"]
     static_function: StaticFunction
 
 
-class FunctionChoice(BaseModel):
+class FunctionChoice(ExtraAllowModel):
     name: StrictStr
 
 
-class ToolChoice(BaseModel):
+class ToolChoice(ExtraAllowModel):
     type: Literal["function"]
     function: FunctionChoice
 
 
-class ResponseFormatText(BaseModel):
+class ResponseFormatText(ExtraAllowModel):
     type: Literal["text"]
 
 
-class ResponseFormatJsonObject(BaseModel):
+class ResponseFormatJsonObject(ExtraAllowModel):
     type: Literal["json_object"]
 
 
-class ResponseFormatJsonSchemaObject(BaseModel):
+class ResponseFormatJsonSchemaObject(ExtraAllowModel):
     description: Optional[StrictStr] = None
     name: StrictStr
     schema_: Dict[str, Any] = Field(..., alias="schema")
@@ -201,7 +201,7 @@ class ResponseFormatJsonSchemaObject(BaseModel):
         return super().dict(*args, **kwargs)
 
 
-class ResponseFormatJsonSchema(BaseModel):
+class ResponseFormatJsonSchema(ExtraAllowModel):
     type: Literal["json_schema"]
     json_schema: ResponseFormatJsonSchemaObject
 
@@ -213,7 +213,7 @@ ResponseFormat = Union[
 ]
 
 
-class AzureChatCompletionRequest(BaseModel):
+class AzureChatCompletionRequest(ExtraAllowModel):
     model: Optional[StrictStr] = None
     messages: List[Message]
     functions: Optional[List[Function]] = None
@@ -242,7 +242,7 @@ class AzureChatCompletionRequest(BaseModel):
     parallel_tool_calls: Optional[StrictBool] = None
 
 
-class ChatCompletionRequestCustomFields(BaseModel):
+class ChatCompletionRequestCustomFields(ExtraAllowModel):
     configuration: Optional[Dict[str, Any]] = None
 
 

@@ -9,12 +9,12 @@ from aidial_sdk.exceptions import HTTPException as DIALException
 from aidial_sdk.exceptions import InternalServerError, InvalidRequestError
 from aidial_sdk.pydantic_v1 import Field, SecretStr, StrictStr, root_validator
 from aidial_sdk.utils.logging import log_debug
-from aidial_sdk.utils.pydantic import ExtraAllowModel as BaseModel
+from aidial_sdk.utils.pydantic import ExtraAllowModel
 
 T = TypeVar("T", bound="FromRequestMixin")
 
 
-class FromRequestMixin(ABC, BaseModel):
+class FromRequestMixin(ABC, ExtraAllowModel):
     @classmethod
     @abstractmethod
     async def from_request(
