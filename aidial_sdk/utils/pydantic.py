@@ -71,16 +71,15 @@ if PYDANTIC_V2:
         )
 
         for model, loc in _model_iterate_fields(root_model, False, ()):
-            declared = set(_get_model_fields(model).keys())
-            for key, value in model.__dict__.items():
-                if key not in declared:
-                    errors.append(
-                        {
-                            "type": extra_error_type,
-                            "loc": loc + (key,),
-                            "input": value,
-                        }
-                    )
+
+            for key, value in (model.model_extra or {}).items():
+                errors.append(
+                    {
+                        "type": extra_error_type,
+                        "loc": loc + (key,),
+                        "input": value,
+                    }
+                )
 
         if errors:
             raise ValidationError.from_exception_data(
