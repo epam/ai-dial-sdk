@@ -33,10 +33,11 @@ class FromRequestMixin(ABC, ExtraAllowModel):
         pass
 
 
-class FromRequestDeploymentMixin(FromRequestMixin):
+_DIAL_APPLICATION_PROPERTIES_HEADER = "X-DIAL-APPLICATION-PROPERTIES"
+_DIAL_APPLICATION_ID_HEADER = "X-DIAL-APPLICATION-ID"
 
-    _DIAL_APPLICATION_PROPERTIES_HEADER = "X-DIAL-APPLICATION-PROPERTIES"
-    _DIAL_APPLICATION_ID_HEADER = "X-DIAL-APPLICATION-ID"
+
+class FromRequestDeploymentMixin(FromRequestMixin):
 
     headers: Mapping[str, str]
     base_url: Optional[str] = None
@@ -63,7 +64,7 @@ class FromRequestDeploymentMixin(FromRequestMixin):
 
         if not self.dial_application_id:
             raise InvalidRequestError(
-                f"The {self._DIAL_APPLICATION_ID_HEADER} header isn't set"
+                f"The {_DIAL_APPLICATION_ID_HEADER} header isn't set"
             )
 
         if not self.base_url:
@@ -151,16 +152,16 @@ class FromRequestDeploymentMixin(FromRequestMixin):
         del headers["Authorization"]
 
         application_properties = None
-        props_header = headers.get(cls._DIAL_APPLICATION_PROPERTIES_HEADER)
+        props_header = headers.get(_DIAL_APPLICATION_PROPERTIES_HEADER)
         if props_header:
             try:
                 application_properties = json.loads(props_header)
             except json.JSONDecodeError:
                 raise InvalidRequestError(
-                    f"The value of {cls._DIAL_APPLICATION_PROPERTIES_HEADER} header isn't valid JSON"
+                    f"The value of {_DIAL_APPLICATION_PROPERTIES_HEADER} header isn't valid JSON"
                 )
 
-        application_id = headers.get(cls._DIAL_APPLICATION_ID_HEADER)
+        application_id = headers.get(_DIAL_APPLICATION_ID_HEADER)
 
         return cls(
             **(await cls.get_request_body(request)),
