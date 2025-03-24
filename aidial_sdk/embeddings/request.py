@@ -4,10 +4,10 @@ from pydantic import StrictInt, StrictStr
 
 from aidial_sdk.chat_completion.request import Attachment
 from aidial_sdk.deployment.from_request_mixin import FromRequestDeploymentMixin
-from aidial_sdk.utils.pydantic import ExtraForbidModel
+from aidial_sdk.utils.pydantic import ExtraAllowModel
 
 
-class AzureEmbeddingsRequest(ExtraForbidModel):
+class AzureEmbeddingsRequest(ExtraAllowModel):
     model: Optional[StrictStr] = None
     input: Union[
         StrictStr, List[StrictStr], List[StrictInt], List[List[StrictInt]]
@@ -17,7 +17,7 @@ class AzureEmbeddingsRequest(ExtraForbidModel):
     user: Optional[StrictStr] = None
 
 
-class EmbeddingsRequestCustomFields(ExtraForbidModel):
+class EmbeddingsRequestCustomFields(ExtraAllowModel):
     type: Optional[StrictStr] = None
     instruction: Optional[StrictStr] = None
 

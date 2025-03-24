@@ -24,7 +24,7 @@ if not PYDANTIC_V2:
         raise ImportError("The Field helper is only supported in Pydantic v2")
 
 else:
-    from pydantic.fields import AliasChoices, AliasPath
+    from pydantic.aliases import AliasChoices, AliasPath
     from pydantic.fields import Field as PydanticField
     from pydantic_core import PydanticUndefined
 

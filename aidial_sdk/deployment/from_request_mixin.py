@@ -1,6 +1,7 @@
+import json
 from abc import ABC, abstractmethod
-from json import JSONDecodeError
-from typing import Any, Mapping, Optional, Type, TypeVar
+from typing import Any, Dict, Mapping, Optional, Type, TypeVar
+from urllib.parse import urljoin
 
 import fastapi
 from pydantic import Field, SecretStr, StrictStr
@@ -8,16 +9,21 @@ from pydantic import Field, SecretStr, StrictStr
 from aidial_sdk._pydantic import PYDANTIC_V2, ConfigDict
 from aidial_sdk._pydantic._compat import model_validator
 from aidial_sdk.exceptions import HTTPException as DIALException
-from aidial_sdk.utils.pydantic import ExtraForbidModel
+from aidial_sdk.exceptions import InternalServerError, InvalidRequestError
+from aidial_sdk.utils.logging import log_debug
+from aidial_sdk.utils.pydantic import ExtraAllowModel
 
 T = TypeVar("T", bound="FromRequestMixin")
 
 
-class FromRequestMixin(ABC, ExtraForbidModel):
+class FromRequestMixin(ABC, ExtraAllowModel):
     @classmethod
     @abstractmethod
     async def from_request(
-        cls: Type[T], request: fastapi.Request, deployment_id: str
+        cls: Type[T],
+        request: fastapi.Request,
+        deployment_id: str,
+        base_url: Optional[str],
     ) -> T:
         pass
 
@@ -27,33 +33,77 @@ class FromRequestMixin(ABC, ExtraForbidModel):
         pass
 
 
-class FromRequestBasicMixin(FromRequestMixin):
-    @classmethod
-    async def from_request(cls, request: fastapi.Request, deployment_id: str):
-        return cls(**(await cls.get_request_body(request)))
-
-    @staticmethod
-    async def get_request_body(request: fastapi.Request) -> dict:
-        return await _get_request_json_body(request)
-
-
 class FromRequestDeploymentMixin(FromRequestMixin):
+
+    _DIAL_APPLICATION_PROPERTIES_HEADER = "X-DIAL-APPLICATION-PROPERTIES"
+    _DIAL_APPLICATION_ID_HEADER = "X-DIAL-APPLICATION-ID"
+
+    headers: Mapping[str, str]
+    base_url: Optional[str] = None
     api_key_secret: SecretStr
     jwt_secret: Optional[SecretStr] = None
-
     deployment_id: StrictStr
     api_version: Optional[StrictStr] = None
-    headers: Mapping[StrictStr, StrictStr]
-
+    unreliable_dial_application_properties: Optional[Dict[str, Any]] = None
+    dial_application_id: Optional[str] = None
     original_request: fastapi.Request = Field(..., exclude=True)
 
     if PYDANTIC_V2:
-
         model_config = ConfigDict(arbitrary_types_allowed=True)
     else:
 
         class Config:
             arbitrary_types_allowed = True
+
+    async def request_dial_application_properties(
+        self,
+    ) -> Optional[Dict[str, Any]]:
+        if self.unreliable_dial_application_properties:
+            return self.unreliable_dial_application_properties
+
+        if not self.dial_application_id:
+            raise InvalidRequestError(
+                f"The {self._DIAL_APPLICATION_ID_HEADER} header isn't set"
+            )
+
+        if not self.base_url:
+            raise InternalServerError(
+                "DIALApp dial_url should be set to perform request_dial_application_properties invocation"
+            )
+
+        try:
+            import httpx
+        except ImportError:
+            raise InternalServerError(
+                "Missing httpx dependencies. "
+                "Install the package with the extras: aidial-sdk[httpx]"
+            )
+
+        try:
+            log_debug(
+                f"Requesting application properties for {self.dial_application_id!r}"
+            )
+            async with httpx.AsyncClient() as client:
+                response = await client.request(
+                    method="GET",
+                    url=urljoin(
+                        self.base_url,
+                        f"/openai/applications/{self.dial_application_id}",
+                    ),
+                    headers={"api-key": self.api_key_secret.get_secret_value()},
+                )
+                response.raise_for_status()
+                properties_dictionary = response.json().get(
+                    "application_properties"
+                )
+                log_debug(
+                    f"Received application properties for {self.dial_application_id!r}: {properties_dictionary}"
+                )
+                return properties_dictionary
+        except Exception as ex:
+            raise InternalServerError(
+                f"Unable to retrieve application properties for the application {self.dial_application_id!r}: {ex}",
+            )
 
     @model_validator(mode="before")
     @classmethod
@@ -83,20 +133,34 @@ class FromRequestDeploymentMixin(FromRequestMixin):
         return self.jwt_secret.get_secret_value() if self.jwt_secret else None
 
     @classmethod
-    async def from_request(cls, request: fastapi.Request, deployment_id: str):
+    async def from_request(
+        cls,
+        request: fastapi.Request,
+        deployment_id: StrictStr,
+        base_url: Optional[str],
+    ):
+
         headers = request.headers.mutablecopy()
 
         api_key = headers.get("Api-Key")
         if api_key is None:
-            raise DIALException(
-                status_code=400,
-                type="invalid_request_error",
-                message="Api-Key header is required",
-            )
+            raise InvalidRequestError("Api-Key header is required")
         del headers["Api-Key"]
 
         jwt = headers.get("Authorization")
         del headers["Authorization"]
+
+        application_properties = None
+        props_header = headers.get(cls._DIAL_APPLICATION_PROPERTIES_HEADER)
+        if props_header:
+            try:
+                application_properties = json.loads(props_header)
+            except json.JSONDecodeError:
+                raise InvalidRequestError(
+                    f"The value of {cls._DIAL_APPLICATION_PROPERTIES_HEADER} header isn't valid JSON"
+                )
+
+        application_id = headers.get(cls._DIAL_APPLICATION_ID_HEADER)
 
         return cls(
             **(await cls.get_request_body(request)),
@@ -106,6 +170,9 @@ class FromRequestDeploymentMixin(FromRequestMixin):
             api_version=request.query_params.get("api-version"),
             headers=headers,
             original_request=request,
+            base_url=base_url,
+            unreliable_dial_application_properties=application_properties,
+            dial_application_id=application_id,
         )
 
     @staticmethod
@@ -116,7 +183,7 @@ class FromRequestDeploymentMixin(FromRequestMixin):
 async def _get_request_json_body(request: fastapi.Request) -> dict:
     try:
         return await request.json()
-    except JSONDecodeError as e:
+    except json.JSONDecodeError as e:
         raise DIALException(
             status_code=400,
             type="invalid_request_error",

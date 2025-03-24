@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "aidial-sdk"
-version = "0.19.0rc"
+version = "0.21.0rc"
 description = "Framework to create applications and model adapters for AI DIAL"
 authors = ["EPAM RAIL <SpecialEPM-DIALDevTeam@epam.com>"]
 homepage = "https://epam-rail.com"
@@ -29,6 +29,9 @@ opentelemetry-instrumentation-urllib = {version = ">=0.43b0", optional = true}
 opentelemetry-exporter-prometheus = {version = ">=0.43b0", optional = true}
 prometheus-client = {version = ">=0.17.1,<=0.21", optional = true}
 
+# Extras
+httpx = {version = ">=0.25.0,<1", optional = true}
+
 [tool.poetry.extras]
 telemetry = [
     "opentelemetry-sdk",
@@ -44,12 +47,16 @@ telemetry = [
     "opentelemetry-exporter-prometheus",
     "prometheus-client",
 ]
+httpx = ["httpx"]
 
 [tool.poetry.group.test.dependencies]
 pytest = "^8.2"
 pytest-asyncio = "^0.24.0"
 nox = "^2023.4.22"
-pillow = "^10.2.0"
+pillow = [
+    {version = "11.1.0", python = ">=3.12"},
+    {version = "10.3.0", python = "<3.12"}
+]
 httpx = "^0.25.0"
 respx = "^0.21.1"
 aiohttp = "^3.8.3"
@@ -71,7 +78,9 @@ testpaths = [
     "tests"
 ]
 filterwarnings = [
-    "error"
+    "error",
+    # muting deprecation warnings coming from old pydantic
+    "ignore::DeprecationWarning:pydantic.typing",
 ]
 markers = [
     "slow: marker for slow running tests",

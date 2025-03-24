@@ -17,3 +17,5 @@ class ValidatorApplication(ChatCompletion):
         result = self.request_validator(request)
         if result is not None:
             assert result
+        with response.create_single_choice():
+            pass

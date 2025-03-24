@@ -32,6 +32,7 @@ from aidial_sdk.telemetry.types import TelemetryConfig
 from aidial_sdk.utils._reflection import get_method_implementation
 from aidial_sdk.utils.log_config import LogConfig
 from aidial_sdk.utils.logging import log_debug, set_log_deployment
+from aidial_sdk.utils.pydantic import model_validate_extra_fields
 from aidial_sdk.utils.streaming import (
     add_heartbeat,
     to_block_response,
@@ -55,6 +56,8 @@ class PathFilter(Filter):
 
 
 class DIALApp(FastAPI):
+    _allow_extra_request_fields: bool
+    _dial_url: Optional[str]
 
     def __init__(
         self,
@@ -62,6 +65,8 @@ class DIALApp(FastAPI):
         propagate_auth_headers: bool = False,
         telemetry_config: Optional[TelemetryConfig] = None,
         add_healthcheck: bool = False,
+        *,
+        allow_extra_request_fields: bool = False,
         **kwargs,
     ):
         if "propagation_auth_headers" in kwargs:
@@ -74,6 +79,9 @@ class DIALApp(FastAPI):
             propagate_auth_headers = kwargs.pop("propagation_auth_headers")
 
         super().__init__(**kwargs)
+
+        self._allow_extra_request_fields = allow_extra_request_fields
+        self._dial_url = dial_url
 
         if telemetry_config is not None:
             self.configure_telemetry(telemetry_config)
@@ -190,8 +198,8 @@ class DIALApp(FastAPI):
         async def _handler(original_request: Request) -> Response:
             set_log_deployment(deployment_id)
 
-            request = await request_type.from_request(
-                original_request, deployment_id
+            request = await self._parse_request(
+                request_type, original_request, deployment_id
             )
             log_debug(f"request[{endpoint}]: {request}")
 
@@ -216,14 +224,27 @@ class DIALApp(FastAPI):
         async def _handler(original_request: Request):
             set_log_deployment(deployment_id)
 
-            request = await RateRequest.from_request(
-                original_request, deployment_id
+            request = await self._parse_request(
+                RateRequest, original_request, deployment_id
             )
 
             await impl.rate_response(request)
             return Response(status_code=200)
 
         return _handler
+
+    async def _parse_request(
+        self,
+        request: Type[RequestType],
+        original_request: Request,
+        deployment_id: str,
+    ) -> RequestType:
+        ret = await request.from_request(
+            original_request, deployment_id, self._dial_url
+        )
+        if not self._allow_extra_request_fields:
+            model_validate_extra_fields(ret)
+        return ret
 
     def _chat_completion(
         self,
@@ -235,8 +256,8 @@ class DIALApp(FastAPI):
         async def _handler(original_request: Request):
             set_log_deployment(deployment_id)
 
-            request = await ChatCompletionRequest.from_request(
-                original_request, deployment_id
+            request = await self._parse_request(
+                ChatCompletionRequest, original_request, deployment_id
             )
 
             response = ChatCompletionResponse(request)
@@ -267,8 +288,8 @@ class DIALApp(FastAPI):
     def _embeddings(self, deployment_id: str, impl: Embeddings):
         async def _handler(original_request: Request):
             set_log_deployment(deployment_id)
-            request = await EmbeddingsRequest.from_request(
-                original_request, deployment_id
+            request = await self._parse_request(
+                EmbeddingsRequest, original_request, deployment_id
             )
             response = await impl.embeddings(request)
             response_json = response.model_dump()
