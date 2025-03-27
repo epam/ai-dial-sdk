@@ -1,6 +1,6 @@
 import asyncio
 from time import time
-from typing import Any, Callable, Coroutine, List
+from typing import Any, Callable, Coroutine, Dict, List, Mapping
 from uuid import uuid4
 
 from typing_extensions import assert_never
@@ -42,6 +42,7 @@ class Response:
     _usage_generated: bool
 
     _default_chunk: DefaultChunk
+    _headers: Dict[str, str]
 
     def __init__(self, request: Request):
         self._queue = asyncio.Queue()
@@ -63,6 +64,8 @@ class Response:
             ),
         )
 
+        self._headers = {}
+
     @property
     def n(self) -> int:
         return self.request.n or 1
@@ -70,6 +73,10 @@ class Response:
     @property
     def stream(self) -> int:
         return self.request.stream
+
+    @property
+    def headers(self) -> Mapping[str, str]:
+        return self._headers
 
     async def _run_producer(self, producer: _Producer):
         try:
@@ -240,3 +247,9 @@ class Response:
             )
 
         self._default_chunk["id"] = response_id
+
+    def add_headers(self, headers: Mapping[str, str]):
+        self._headers.update(headers)
+
+    def add_header(self, key: str, value: str):
+        self._headers[key] = value

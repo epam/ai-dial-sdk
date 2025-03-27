@@ -275,12 +275,16 @@ class DIALApp(FastAPI):
                 return StreamingResponse(
                     await to_streaming_response(stream),
                     media_type="text/event-stream",
+                    headers=response.headers,
                 )
             else:
                 response_json = await to_block_response(stream)
 
                 log_debug(f"response: {response_json}")
-                return JSONResponse(content=response_json)
+                return JSONResponse(
+                    content=response_json,
+                    headers=response.headers,
+                )
 
         return _handler
 
