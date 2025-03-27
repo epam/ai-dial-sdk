@@ -1,3 +1,7 @@
+from aidial_sdk.chat_completion._cache import (
+    CacheBreakpointPath,
+    CachePolicyHeader,
+)
 from aidial_sdk.chat_completion.base import ChatCompletion
 from aidial_sdk.chat_completion.choice import Choice
 from aidial_sdk.chat_completion.enums import FinishReason, Status
@@ -5,7 +9,10 @@ from aidial_sdk.chat_completion.form import Button, FormMetaclass
 from aidial_sdk.chat_completion.request import (
     Addon,
     Attachment,
+    CacheBreakpoint,
     CustomContent,
+    CustomMessageFields,
+    CustomToolFields,
     Function,
     FunctionCall,
     FunctionChoice,

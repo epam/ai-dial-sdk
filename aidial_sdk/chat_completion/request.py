@@ -92,10 +92,19 @@ MessageContentPart = Union[
 ]
 
 
+class CacheBreakpoint(ExtraAllowModel):
+    expire_at: Optional[StrictStr] = None
+
+
+class CustomMessageFields(ExtraAllowModel):
+    cache_breakpoint: Optional[CacheBreakpoint] = None
+
+
 class Message(ExtraAllowModel):
     role: Role
     content: Optional[Union[StrictStr, List[MessageContentPart]]] = None
     custom_content: Optional[CustomContent] = None
+    custom_fields: Optional[CustomMessageFields] = None
     name: Optional[StrictStr] = None
     tool_calls: Optional[List[ToolCall]] = None
     tool_call_id: Optional[StrictStr] = None
@@ -157,9 +166,14 @@ class Penalty(ConstrainedFloat):
     le = 2
 
 
+class CustomToolFields(ExtraAllowModel):
+    cache_breakpoint: Optional[CacheBreakpoint] = None
+
+
 class Tool(ExtraAllowModel):
     type: Literal["function"]
     function: Function
+    custom_fields: Optional[CustomToolFields] = None
 
 
 class StaticFunction(ExtraAllowModel):

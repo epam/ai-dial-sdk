@@ -1,10 +1,11 @@
 import asyncio
 from time import time
-from typing import Any, Callable, Coroutine, Dict, List, Mapping
+from typing import Any, Callable, Coroutine, Dict, List, Mapping, Optional
 from uuid import uuid4
 
 from typing_extensions import assert_never
 
+from aidial_sdk.chat_completion._cache import CacheBreakpointPath
 from aidial_sdk.chat_completion._types import ChunkQueue
 from aidial_sdk.chat_completion.choice import Choice
 from aidial_sdk.chat_completion.chunks import (
@@ -20,6 +21,11 @@ from aidial_sdk.chat_completion.chunks import (
     UsagePerModelChunk,
 )
 from aidial_sdk.chat_completion.request import Request
+from aidial_sdk.deployment._headers import (
+    DIAL_CACHE_BREAKPOINT_PATH,
+    DIAL_CACHE_EXPIRE_AT,
+    DIAL_CACHE_EXTRA_METADATA,
+)
 from aidial_sdk.exceptions import HTTPException as DIALException
 from aidial_sdk.exceptions import RequestValidationError, RuntimeServerError
 from aidial_sdk.utils._cancel_scope import CancelScope
@@ -248,8 +254,22 @@ class Response:
 
         self._default_chunk["id"] = response_id
 
-    def add_headers(self, headers: Mapping[str, str]):
-        self._headers.update(headers)
-
-    def add_header(self, key: str, value: str):
+    def set_header(self, key: str, value: str):
+        if key in self._headers:
+            raise runtime_error(
+                f"Trying to set the response header {key!r} twice"
+            )
         self._headers[key] = value
+
+    def set_cache_breakpoint(
+        self,
+        *,
+        cache_breakpoint_path: CacheBreakpointPath,
+        cache_expire_at: Optional[str] = None,
+        cache_metadata: Optional[str] = None,
+    ):
+        self.set_header(DIAL_CACHE_BREAKPOINT_PATH, cache_breakpoint_path.path)
+        if cache_expire_at is not None:
+            self.set_header(DIAL_CACHE_EXPIRE_AT, cache_expire_at)
+        if cache_metadata is not None:
+            self.set_header(DIAL_CACHE_EXTRA_METADATA, cache_metadata)

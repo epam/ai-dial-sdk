@@ -5,7 +5,17 @@ from urllib.parse import urljoin
 
 import fastapi
 
-from aidial_sdk.exceptions import HTTPException as DIALException
+from aidial_sdk.deployment._headers import (
+    DIAL_APPLICATION_ID,
+    DIAL_APPLICATION_PROPERTIES,
+    DIAL_CACHE_BREAKPOINT_PATH,
+    DIAL_CACHE_EXTRA_METADATA,
+    DIAL_CONVERSATION_ID,
+    DIAL_JOB_TITLE,
+    DIAL_UPSTREAM_ENDPOINT,
+    DIAL_UPSTREAM_EXTRA_DATA,
+    DIAL_UPSTREAM_KEY,
+)
 from aidial_sdk.exceptions import InternalServerError, InvalidRequestError
 from aidial_sdk.pydantic_v1 import Field, SecretStr, StrictStr, root_validator
 from aidial_sdk.utils.logging import log_debug
@@ -32,18 +42,26 @@ class FromRequestMixin(ABC, ExtraAllowModel):
 
 
 class FromRequestDeploymentMixin(FromRequestMixin):
-
-    _DIAL_APPLICATION_PROPERTIES_HEADER = "X-DIAL-APPLICATION-PROPERTIES"
-    _DIAL_APPLICATION_ID_HEADER = "X-DIAL-APPLICATION-ID"
-
-    headers: Mapping[str, str]
     base_url: Optional[str] = None
+    deployment_id: str
+
+    # Extracted from query parameters
+    api_version: Optional[str] = None
+
+    # Extracted from headers
     api_key_secret: SecretStr
     jwt_secret: Optional[SecretStr] = None
-    deployment_id: StrictStr
-    api_version: Optional[StrictStr] = None
-    unreliable_dial_application_properties: Optional[Dict[str, Any]] = None
     dial_application_id: Optional[str] = None
+    cache_breakpoint_path: Optional[str] = None
+    cache_extra_metadata: Optional[str] = None
+    conversation_id: Optional[str] = None
+    job_title: Optional[str] = None
+    upstream_endpoint: Optional[str] = None
+    upstream_key: Optional[str] = None
+    upstream_extra_data: Optional[str] = None
+    unreliable_dial_application_properties: Optional[Dict[str, Any]] = None
+
+    headers: Mapping[str, str]
     original_request: fastapi.Request = Field(..., exclude=True)
 
     class Config:
@@ -57,7 +75,7 @@ class FromRequestDeploymentMixin(FromRequestMixin):
 
         if not self.dial_application_id:
             raise InvalidRequestError(
-                f"The {self._DIAL_APPLICATION_ID_HEADER} header isn't set"
+                f"The {DIAL_APPLICATION_ID} header isn't set"
             )
 
         if not self.base_url:
@@ -144,16 +162,14 @@ class FromRequestDeploymentMixin(FromRequestMixin):
         del headers["Authorization"]
 
         application_properties = None
-        props_header = headers.get(cls._DIAL_APPLICATION_PROPERTIES_HEADER)
+        props_header = headers.get(DIAL_APPLICATION_PROPERTIES)
         if props_header:
             try:
                 application_properties = json.loads(props_header)
             except json.JSONDecodeError:
                 raise InvalidRequestError(
-                    f"The value of {cls._DIAL_APPLICATION_PROPERTIES_HEADER} header isn't valid JSON"
+                    f"The value of {DIAL_APPLICATION_PROPERTIES} header isn't valid JSON"
                 )
-
-        application_id = headers.get(cls._DIAL_APPLICATION_ID_HEADER)
 
         return cls(
             **(await cls.get_request_body(request)),
@@ -165,7 +181,14 @@ class FromRequestDeploymentMixin(FromRequestMixin):
             original_request=request,
             base_url=base_url,
             unreliable_dial_application_properties=application_properties,
-            dial_application_id=application_id,
+            dial_application_id=headers.get(DIAL_APPLICATION_ID),
+            conversation_id=headers.get(DIAL_CONVERSATION_ID),
+            job_title=headers.get(DIAL_JOB_TITLE),
+            cache_breakpoint_path=headers.get(DIAL_CACHE_BREAKPOINT_PATH),
+            cache_extra_metadata=headers.get(DIAL_CACHE_EXTRA_METADATA),
+            upstream_endpoint=headers.get(DIAL_UPSTREAM_ENDPOINT),
+            upstream_key=headers.get(DIAL_UPSTREAM_KEY),
+            upstream_extra_data=headers.get(DIAL_UPSTREAM_EXTRA_DATA),
         )
 
     @staticmethod
@@ -177,8 +200,4 @@ async def _get_request_json_body(request: fastapi.Request) -> dict:
     try:
         return await request.json()
     except json.JSONDecodeError as e:
-        raise DIALException(
-            status_code=400,
-            type="invalid_request_error",
-            message=f"The request body isn't valid JSON: {e.msg}",
-        )
+        raise InvalidRequestError(f"The request body isn't valid JSON: {e.msg}")
