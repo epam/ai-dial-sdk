@@ -19,6 +19,7 @@ from aidial_sdk.chat_completion.request import (
     Message,
     MessageContentImagePart,
     MessageContentPart,
+    MessageContentRefusalPart,
     MessageContentTextPart,
     Request,
     ResponseFormat,
