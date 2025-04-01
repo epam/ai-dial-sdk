@@ -17,6 +17,7 @@ from aidial_sdk.chat_completion.chunks import (
     EndChoiceChunk,
     EndChunk,
     ExceptionChunk,
+    PromptTokensDetails,
     UsageChunk,
     UsagePerModelChunk,
 )
@@ -214,7 +215,13 @@ class Response:
         self._discarded_messages_generated = True
         self._queue.put_nowait(DiscardedMessagesChunk(discarded_messages))
 
-    def set_usage(self, prompt_tokens: int = 0, completion_tokens: int = 0):
+    def set_usage(
+        self,
+        prompt_tokens: int = 0,
+        completion_tokens: int = 0,
+        *,
+        prompt_tokens_details: Optional[PromptTokensDetails] = None,
+    ):
         self._generation_started = True
 
         if self._usage_generated:
@@ -225,7 +232,9 @@ class Response:
             )
 
         self._usage_generated = True
-        self._queue.put_nowait(UsageChunk(prompt_tokens, completion_tokens))
+        self._queue.put_nowait(
+            UsageChunk(prompt_tokens, completion_tokens, prompt_tokens_details)
+        )
 
     async def aflush(self):
         await self._queue.join()
