@@ -476,7 +476,11 @@ class UsageChunk(BaseChunk):
                 "prompt_tokens": self.prompt_tokens,
                 "completion_tokens": self.completion_tokens,
                 "total_tokens": self.prompt_tokens + self.completion_tokens,
-                **(self.prompt_tokens_details or {}),
+                **(
+                    {"prompt_tokens_details": self.prompt_tokens_details}
+                    if self.prompt_tokens_details
+                    else {}
+                ),
             }
         }
 
