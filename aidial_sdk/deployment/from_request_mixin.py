@@ -5,7 +5,6 @@ from urllib.parse import urljoin
 
 import fastapi
 
-from aidial_sdk.exceptions import HTTPException as DIALException
 from aidial_sdk.exceptions import InternalServerError, InvalidRequestError
 from aidial_sdk.pydantic_v1 import Field, SecretStr, StrictStr, root_validator
 from aidial_sdk.utils.logging import log_debug
@@ -177,8 +176,4 @@ async def _get_request_json_body(request: fastapi.Request) -> dict:
     try:
         return await request.json()
     except json.JSONDecodeError as e:
-        raise DIALException(
-            status_code=400,
-            type="invalid_request_error",
-            message=f"The request body isn't valid JSON: {e.msg}",
-        )
+        raise InvalidRequestError(f"The request body isn't valid JSON: {e.msg}")
