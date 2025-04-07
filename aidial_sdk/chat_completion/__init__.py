@@ -5,6 +5,7 @@ from aidial_sdk.chat_completion.form import Button, FormMetaclass
 from aidial_sdk.chat_completion.request import (
     Addon,
     Attachment,
+    CacheBreakpoint,
     CustomContent,
     Function,
     FunctionCall,
@@ -12,7 +13,9 @@ from aidial_sdk.chat_completion.request import (
     Message,
     MessageContentImagePart,
     MessageContentPart,
+    MessageContentRefusalPart,
     MessageContentTextPart,
+    MessageCustomFields,
     Request,
     ResponseFormat,
     ResponseFormatJsonObject,
@@ -22,7 +25,12 @@ from aidial_sdk.chat_completion.request import (
     Role,
 )
 from aidial_sdk.chat_completion.request import Stage as RequestStage
-from aidial_sdk.chat_completion.request import Tool, ToolCall, ToolChoice
+from aidial_sdk.chat_completion.request import (
+    Tool,
+    ToolCall,
+    ToolChoice,
+    ToolCustomFields,
+)
 from aidial_sdk.chat_completion.response import Response
 from aidial_sdk.chat_completion.stage import Stage
 from aidial_sdk.deployment.configuration import (
