@@ -1,9 +1,9 @@
 import os
-from typing import List
+from typing import List, Optional
 
 
-def env_var_list(name: str) -> List[str]:
+def env_var_list(name: str, default: Optional[List[str]] = None) -> List[str]:
     value = os.getenv(name)
     if value is None:
-        return []
+        return default or []
     return value.split(",")

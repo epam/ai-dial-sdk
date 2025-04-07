@@ -10,7 +10,7 @@ from aidial_sdk.utils.env import env_var_list
 
 OTEL_LOGS_EXPORTER = env_var_list("OTEL_LOGS_EXPORTER")
 OTEL_TRACES_EXPORTER = env_var_list("OTEL_TRACES_EXPORTER")
-OTEL_METRICS_EXPORTER = env_var_list("OTEL_METRICS_EXPORTER")
+OTEL_METRICS_EXPORTER = env_var_list("OTEL_METRICS_EXPORTER", ["prometheus"])
 OTEL_EXPORTER_PROMETHEUS_PORT = int(
     os.getenv("OTEL_EXPORTER_PROMETHEUS_PORT", 9464)
 )
