@@ -74,6 +74,21 @@ def create_tool_call_chunk(
     )
 
 
+def create_function_call_chunk(
+    *,
+    name: Optional[str] = None,
+    arguments: Optional[str] = None,
+):
+    return create_chunk(
+        delta={
+            "content": None,
+            "function_call": remove_nones(
+                {"name": name, "arguments": arguments}
+            ),
+        }
+    )
+
+
 def _check_sse_line(actual: str, expected: Union[str, dict]):
     if isinstance(expected, str):
         assert actual == expected
