@@ -4,6 +4,7 @@ from typing import Any, Dict, Mapping, Optional, Type, TypeVar
 from urllib.parse import urljoin
 
 import fastapi
+from fastapi.security import HTTPBearer
 
 from aidial_sdk.exceptions import InternalServerError, InvalidRequestError
 from aidial_sdk.pydantic_v1 import Field, SecretStr, StrictStr, root_validator
@@ -34,6 +35,7 @@ class FromRequestDeploymentMixin(FromRequestMixin):
 
     _DIAL_APPLICATION_PROPERTIES_HEADER = "X-DIAL-APPLICATION-PROPERTIES"
     _DIAL_APPLICATION_ID_HEADER = "X-DIAL-APPLICATION-ID"
+    _bearer = HTTPBearer(auto_error=False)
 
     headers: Mapping[str, str]
     base_url: Optional[str] = None
@@ -139,7 +141,8 @@ class FromRequestDeploymentMixin(FromRequestMixin):
             raise InvalidRequestError("Api-Key header is required")
         del headers["Api-Key"]
 
-        jwt = headers.get("Authorization")
+        auth_credentials = await cls._bearer(request)
+        jwt = auth_credentials.credentials if auth_credentials else None
         del headers["Authorization"]
 
         application_properties = None
