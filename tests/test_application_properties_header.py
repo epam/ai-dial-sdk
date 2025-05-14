@@ -6,8 +6,6 @@ import fastapi
 import pytest
 import respx
 from pydantic import SecretStr
-from pydantic.v1 import StrictStr
-from starlette.datastructures import MutableHeaders
 from starlette.testclient import TestClient
 
 from aidial_sdk import DIALApp, HTTPException
@@ -30,18 +28,12 @@ class TestApp(ChatCompletion):
     @staticmethod
     async def assert_request_data(request: FromRequestDeploymentMixin) -> None:
         if request.unreliable_dial_application_properties is not None:
-            assert request.unreliable_dial_application_properties == {
-                "key1": "value1",
-                "key2": "value2",
-            }
+            assert request.unreliable_dial_application_properties == TEST_PROPS
         else:
             application_properties = (
                 await request.request_dial_application_properties()
             )
-            assert application_properties == {
-                "key1": "value1",
-                "key2": "value2",
-            }
+            assert application_properties == TEST_PROPS
 
     async def chat_completion(self, request: Request, response: Response):
         await self.assert_request_data(request)
@@ -64,21 +56,20 @@ class TestApp(ChatCompletion):
         return TruncatePromptResponse(outputs=[])
 
 
-DEPLOYMENT_NAME = "test-app"
+DEPLOYMENT_NAME = "test-app-name"
+APPLICATION_ID = "test-app-id"
 API_KEY = "test-api-key"
-X_APPLICATION_ID = "test-app"
+TEST_PROPS = {"key1": "value1", "key2": "value2"}
 
 
 @pytest.fixture
 def mock_app_props():
     with respx.mock() as mock:
         mock.get(
-            f"https://test.com/openai/applications/{X_APPLICATION_ID}"
+            f"https://test.com/openai/applications/{APPLICATION_ID}"
         ).respond(
             status_code=200,
-            json={
-                "application_properties": {"key1": "value1", "key2": "value2"}
-            },
+            json={"application_properties": TEST_PROPS},
         )
         yield mock
 
@@ -87,7 +78,7 @@ def mock_app_props():
 def mock_app_props_error():
     with respx.mock() as mock:
         mock.get(
-            f"https://test.com/openai/applications/{X_APPLICATION_ID}"
+            f"https://test.com/openai/applications/{APPLICATION_ID}"
         ).respond(status_code=500)
         yield mock
 
@@ -116,11 +107,7 @@ def client_without_base_url():
 
 @pytest.fixture
 def headers():
-    return {
-        "X-DIAL-APPLICATION-PROPERTIES": json.dumps(
-            {"key1": "value1", "key2": "value2"}
-        ),
-    }
+    return {"X-DIAL-APPLICATION-PROPERTIES": json.dumps(TEST_PROPS)}
 
 
 @pytest.fixture
@@ -130,16 +117,12 @@ def headers_without_app_properties_and_app_id():
 
 @pytest.fixture
 def invalid_headers():
-    return {
-        "X-DIAL-APPLICATION-PROPERTIES": "invalid header",
-    }
+    return {"X-DIAL-APPLICATION-PROPERTIES": "invalid header"}
 
 
 @pytest.fixture
 def headers_with_app_id_only():
-    return {
-        "X-DIAL-APPLICATION-ID": X_APPLICATION_ID,
-    }
+    return {"X-DIAL-APPLICATION-ID": APPLICATION_ID}
 
 
 parametrize_data = [
@@ -278,14 +261,12 @@ def test_request_dial_url_not_set(
 async def test_import_error_handling():
     with patch.dict("sys.modules", {"httpx": None}):
         testable_class = FromRequestDeploymentMixin(
-            headers=MutableHeaders({"X-DIAL-APPLICATION-ID": X_APPLICATION_ID}),
-            base_url="https://test.com",
-            api_key_secret=SecretStr("123"),
-            jwt_secret=None,
-            api_version=None,
-            deployment_id=StrictStr("123"),
+            base_url="any",
+            api_key_secret=SecretStr("any"),
+            deployment_id="any",
+            dial_application_id="any",
             original_request=MagicMock(fastapi.Request),
-            dial_application_id="123",
+            headers={},
         )
         with pytest.raises(InternalServerError) as exc_info:
             await testable_class.request_dial_application_properties()
@@ -298,13 +279,11 @@ async def test_import_error_handling():
 
 async def test_base_url_required_if_need_to_get_application_properties_from_core():
     testable_class = FromRequestDeploymentMixin(
-        headers=MutableHeaders({"X-DIAL-APPLICATION-ID": X_APPLICATION_ID}),
-        api_key_secret=SecretStr("123"),
-        jwt_secret=None,
-        api_version=None,
-        deployment_id=StrictStr("123"),
+        api_key_secret=SecretStr("any"),
+        deployment_id="any",
+        dial_application_id="any",
         original_request=MagicMock(fastapi.Request),
-        dial_application_id="123",
+        headers={},
     )
     with pytest.raises(HTTPException) as exc_info:
         await testable_class.request_dial_application_properties()
@@ -319,26 +298,14 @@ async def test_base_url_required_if_need_to_get_application_properties_from_core
 
 async def test_return_unreliable_dial_application_properties_from_headers_on_request_to_core():
     testable_class = FromRequestDeploymentMixin(
-        api_key_secret=SecretStr("123"),
-        jwt_secret=None,
-        api_version=None,
-        deployment_id=StrictStr("123"),
-        headers=MutableHeaders(
-            {
-                "X-DIAL-APPLICATION-PROPERTIES": json.dumps(
-                    {"key1": "value1", "key2": "value2"}
-                )
-            }
-        ),
-        dial_application_id="123",
-        unreliable_dial_application_properties={
-            "key1": "value1",
-            "key2": "value2",
-        },
-        base_url="https://test.com",
+        base_url="any",
+        api_key_secret=SecretStr("any"),
+        deployment_id="any",
+        unreliable_dial_application_properties=TEST_PROPS,
         original_request=MagicMock(fastapi.Request),
+        headers={},
     )
     application_properties = (
         await testable_class.request_dial_application_properties()
     )
-    assert application_properties == {"key1": "value1", "key2": "value2"}
+    assert application_properties == TEST_PROPS
