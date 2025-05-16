@@ -15,13 +15,17 @@ class FunctionCall:
     def create_and_send(
         cls, choice: ChoiceBase, name: str, arguments: Optional[str]
     ) -> "FunctionCall":
-        return cls(choice)._send_function_call(name=name, arguments=arguments)
+        return cls(choice)._send_function_call(
+            create=True, name=name, arguments=arguments
+        )
 
     def append_arguments(self, arguments: str) -> "FunctionCall":
-        return self._send_function_call(name=None, arguments=arguments)
+        return self._send_function_call(
+            create=False, name=None, arguments=arguments
+        )
 
     def _send_function_call(
-        self, name: Optional[str], arguments: Optional[str]
+        self, *, create: bool, name: Optional[str], arguments: Optional[str]
     ) -> "FunctionCall":
         if not self._choice.opened:
             raise runtime_error(
@@ -31,7 +35,7 @@ class FunctionCall:
             raise runtime_error(
                 "Trying to add function call to a closed choice"
             )
-        if self._choice.has_function_call:
+        if create and self._choice.has_function_call:
             raise runtime_error(
                 "Trying to add function call to a choice which already has a function call"
             )

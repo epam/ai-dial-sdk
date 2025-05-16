@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Optional, TypedDict
+from typing import Any, Dict, List, Literal, Optional, TypedDict
 
 from aidial_sdk.chat_completion.enums import FinishReason, Status
 from aidial_sdk.exceptions import HTTPException as DIALException
@@ -100,6 +100,7 @@ class FunctionToolCallChunk(BaseChunk):
     choice_index: int
     call_index: int
     id: Optional[str]
+    type: Optional[Literal["function"]]
     name: Optional[str]
     arguments: Optional[str]
 
@@ -108,12 +109,14 @@ class FunctionToolCallChunk(BaseChunk):
         choice_index: int,
         call_index: int,
         id: Optional[str],
+        type: Optional[Literal["function"]],
         name: Optional[str],
         arguments: Optional[str],
     ):
         self.choice_index = choice_index
         self.call_index = call_index
         self.id = id
+        self.type = type
         self.name = name
         self.arguments = arguments
 
@@ -122,6 +125,7 @@ class FunctionToolCallChunk(BaseChunk):
             "choices": [
                 {
                     "index": self.choice_index,
+                    "finish_reason": None,
                     "delta": {
                         "content": None,
                         "tool_calls": [
@@ -129,7 +133,7 @@ class FunctionToolCallChunk(BaseChunk):
                                 {
                                     "index": self.call_index,
                                     "id": self.id,
-                                    "type": "function",
+                                    "type": self.type,
                                     "function": remove_nones(
                                         {
                                             "name": self.name,
@@ -166,6 +170,7 @@ class FunctionCallChunk(BaseChunk):
             "choices": [
                 {
                     "index": self.choice_index,
+                    "finish_reason": None,
                     "delta": {
                         "content": None,
                         "function_call": remove_nones(

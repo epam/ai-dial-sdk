@@ -2,19 +2,20 @@ import itertools
 import json
 from typing import Iterable, Literal, Optional, Union
 
+from aidial_sdk.utils.json import remove_nones
+
 
 def create_chunk(
     *,
     choice_idx: int = 0,
     delta: dict = {},
     finish_reason: Optional[str] = None,
+    **kwargs,
 ):
     return {
-        "id": "chatcmpl-AQws8iVykPBIQJfnmCQnMEkTLLUUA",
+        "id": "test_id",
         "object": "chat.completion.chunk",
-        "created": 1730986196,
-        "model": "gpt-4o-2024-05-13",
-        "system_fingerprint": "fp_67802d9a6d",
+        "created": 0,
         "choices": [
             {
                 "index": choice_idx,
@@ -22,6 +23,8 @@ def create_chunk(
                 "finish_reason": finish_reason,
             }
         ],
+        "usage": None,
+        **kwargs,
     }
 
 
@@ -54,23 +57,41 @@ def create_tool_call_chunk(
 ):
     return create_chunk(
         delta={
+            "content": None,
             "tool_calls": [
-                {
-                    "index": idx,
-                    "id": id,
-                    "type": type,
-                    "function": {"name": name, "arguments": arguments},
-                }
-            ]
+                remove_nones(
+                    {
+                        "index": idx,
+                        "id": id,
+                        "type": type,
+                        "function": remove_nones(
+                            {"name": name, "arguments": arguments}
+                        ),
+                    }
+                )
+            ],
+        }
+    )
+
+
+def create_function_call_chunk(
+    *,
+    name: Optional[str] = None,
+    arguments: Optional[str] = None,
+):
+    return create_chunk(
+        delta={
+            "content": None,
+            "function_call": remove_nones(
+                {"name": name, "arguments": arguments}
+            ),
         }
     )
 
 
 def _check_sse_line(actual: str, expected: Union[str, dict]):
     if isinstance(expected, str):
-        assert (
-            actual == expected
-        ), f"actual line != expected line: {actual!r} != {expected!r}"
+        assert actual == expected
         return
 
     assert actual.startswith("data: "), f"Invalid data SSE entry: {actual!r}"
@@ -80,9 +101,8 @@ def _check_sse_line(actual: str, expected: Union[str, dict]):
         actual_dict = json.loads(actual)
     except json.JSONDecodeError:
         raise AssertionError(f"Invalid JSON in data SSE entry: {actual!r}")
-    assert (
-        actual_dict == expected
-    ), f"actual json != expected json: {actual_dict!r} != {expected!r}"
+
+    assert actual_dict == expected
 
 
 ExpectedSSEStream = Iterable[Union[str, dict]]
