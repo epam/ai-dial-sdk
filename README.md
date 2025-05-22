@@ -93,7 +93,7 @@ You will see the JSON response as:
 
 ## Developer environment
 
-This project uses [Python>=3.8](https://www.python.org/downloads/) and [Poetry>=1.6.1](https://python-poetry.org/) as a dependency manager.
+This project uses [Python>=3.9](https://www.python.org/downloads/) and [Poetry>=1.6.1](https://python-poetry.org/) as a dependency manager.
 
 Check out Poetry's [documentation on how to install it](https://python-poetry.org/docs/#installation) on your system before proceeding.
 

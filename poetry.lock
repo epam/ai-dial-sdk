@@ -162,9 +162,6 @@ files = [
     {file = "annotated_types-0.5.0.tar.gz", hash = "sha256:47cdc3490d9ac1506ce92c7aaa76c579dc3509ff11e098fc867e5130ab7be802"},
 ]
 
-[package.dependencies]
-typing-extensions = {version = ">=4.0.0", markers = "python_version < \"3.9\""}
-
 [[package]]
 name = "anyio"
 version = "3.7.1"
@@ -2335,5 +2332,5 @@ telemetry = ["opentelemetry-api", "opentelemetry-exporter-otlp-proto-grpc", "ope
 
 [metadata]
 lock-version = "2.0"
-python-versions = ">=3.8.1,<4.0"
-content-hash = "c3834229001f110e658690be91871ba5f6cc1bb4b49d547dea9ff158e78f52b5"
+python-versions = ">=3.9,<4.0"
+content-hash = "91827be2545febff31dcd5f7eaf6b22f4bdd75ada715861e3c107fa1146f8e0b"

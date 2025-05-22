@@ -33,7 +33,7 @@ def format(session: nox.Session):
     format_with_args(session, SRC)
 
 
-@nox.session(python=["3.8", "3.9", "3.10", "3.11", "3.12", "3.13"])
+@nox.session(python=["3.9", "3.10", "3.11", "3.12", "3.13"])
 # Testing against earliest and latest supported versions of the dependencies
 @nox.parametrize("pydantic", ["1.10.17", "2.8.2"])
 @nox.parametrize("httpx", ["0.25.0", "0.27.0"])
