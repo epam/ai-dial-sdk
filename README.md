@@ -116,6 +116,22 @@ app = DIALApp(telemetry_config=TelemetryConfig(service_name="my-app"))
 
 Exporters are controlled through standard `OTEL_` environment variables.
 
+### Healthcheck endpoint
+
+Use the `add_healthcheck` flag to automatically add a `/health` endpoint that
+returns `{"status": "ok"}`. This is useful for container orchestrators that
+poll a dedicated liveness endpoint.
+
+```python
+app = DIALApp(add_healthcheck=True)
+```
+
+### Allow extra request fields
+
+By default, requests with unexpected fields raise a validation error. Set
+`allow_extra_request_fields=True` when creating `DIALApp` to ignore unknown
+fields instead.
+
 ## Developer environment
 
 This project uses [Python>=3.9](https://www.python.org/downloads/) and [Poetry>=1.6.1](https://python-poetry.org/) as a dependency manager.
