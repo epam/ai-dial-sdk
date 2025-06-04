@@ -46,7 +46,7 @@ class EchoApplication(ChatCompletion):
 app = DIALApp()
 app.add_chat_completion("echo", EchoApplication())
 
-# Run built app
+# Run the application
 if __name__ == "__main__":
     uvicorn.run(app, port=5000)
 ```
@@ -91,6 +91,31 @@ You will see the JSON response as:
 }
 ```
 
+### Propagate authentication headers
+
+Applications can reuse the incoming `Api-Key` when they call other DIAL
+deployments.  Enable this behaviour when creating `DIALApp`:
+
+```python
+app = DIALApp(
+    dial_url="https://dial.example.com",
+    propagate_auth_headers=True,
+)
+```
+
+### Telemetry support
+
+`DIALApp` can publish traces, metrics and logs via
+OpenTelemetry. Pass a `TelemetryConfig` when creating the application:
+
+```python
+from aidial_sdk.telemetry.types import TelemetryConfig
+
+app = DIALApp(telemetry_config=TelemetryConfig(service_name="my-app"))
+```
+
+Exporters are controlled through standard `OTEL_` environment variables.
+
 ## Developer environment
 
 This project uses [Python>=3.9](https://www.python.org/downloads/) and [Poetry>=1.6.1](https://python-poetry.org/) as a dependency manager.
@@ -125,7 +150,7 @@ install PyCharm>=2023.2 with [built-in Black support](https://blog.jetbrains.com
 
 ## Lint
 
-Run the linting before committing:
+Run linting before committing:
 
 ```sh
 make lint
