@@ -37,7 +37,7 @@ class FunctionToolCall:
         id: Optional[str],
         type: Optional[Literal["function"]],
         name: Optional[str],
-        arguments: Optional[str]
+        arguments: Optional[str],
     ) -> "FunctionToolCall":
         if not self._choice.opened:
             raise runtime_error("Trying to add tool call to an unopened choice")
