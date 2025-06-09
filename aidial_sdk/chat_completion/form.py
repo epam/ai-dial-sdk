@@ -112,7 +112,6 @@ def _handle_config_extensions(config: Any, schema: Dict[str, Any]) -> None:
 
 
 def _handle_buttons_extension(schema: Dict[str, Any]) -> None:
-
     for prop_name, prop in schema.get("properties", {}).items():
         if buttons := prop.pop("buttons", None):
             button_schemas: List[dict] = []
