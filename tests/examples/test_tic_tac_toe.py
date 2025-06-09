@@ -19,7 +19,7 @@ def test_ttt_configuration():
                 "title": "Player",
                 "description": "Select tic-tac-toe player",
                 "enum": [1, 2],
-                "type": "number",
+                "type": "integer",
                 "dial:widget": "buttons",
                 "oneOf": [
                     {

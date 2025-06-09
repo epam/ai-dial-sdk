@@ -109,6 +109,8 @@ def _handle_config_extensions(config: Any, schema: Dict[str, Any]) -> None:
 
 
 def _handle_buttons_extension(schema: Dict[str, Any]) -> None:
+    supported_button_types = {"number", "integer", "boolean", "string"}
+
     for prop_name, prop in schema.get("properties", {}).items():
         if buttons := prop.pop("buttons", None):
             button_schemas: List[dict] = []
@@ -118,17 +120,11 @@ def _handle_buttons_extension(schema: Dict[str, Any]) -> None:
             prop["dial:widget"] = "buttons"
             prop["oneOf"] = button_schemas
 
-            # NOTE: The meta schema of the DIAL forms only supports
-            # 'number' type, so we convert 'integer' to 'number'.
-            # Could be removed once this restriction is lifted.
-            if prop["type"] == "integer":
-                prop["type"] = "number"
-
-            # NOTE: The meta schema of the DIAL forms only supports 'number' type.
-            # Could be removed once this restriction is lifted.
-            if prop["type"] != "number":
+            if prop["type"] not in supported_button_types:
+                ts = ", ".join(f"{t!r}" for t in sorted(supported_button_types))
                 raise ValueError(
-                    f"Button value must be a number. However, field {schema['title']}.{prop_name} has type {prop['type']!r}."
+                    f"Button value must be a one of the following types: {ts}. "
+                    f"However, field {schema['title']}.{prop_name} has type {prop['type']!r}."
                 )
 
 
