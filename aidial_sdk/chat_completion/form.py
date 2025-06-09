@@ -21,6 +21,9 @@ from aidial_sdk.pydantic_v1 import BaseModel, ModelMetaclass, validator
 _T = TypeVar("_T")
 
 
+_SUPPORTED_BUTTON_TYPES = ["number", "integer", "boolean", "string"]
+
+
 @dataclass
 class Button(Generic[_T]):
     const: _T
@@ -109,7 +112,6 @@ def _handle_config_extensions(config: Any, schema: Dict[str, Any]) -> None:
 
 
 def _handle_buttons_extension(schema: Dict[str, Any]) -> None:
-    supported_button_types = {"number", "integer", "boolean", "string"}
 
     for prop_name, prop in schema.get("properties", {}).items():
         if buttons := prop.pop("buttons", None):
@@ -120,8 +122,8 @@ def _handle_buttons_extension(schema: Dict[str, Any]) -> None:
             prop["dial:widget"] = "buttons"
             prop["oneOf"] = button_schemas
 
-            if prop["type"] not in supported_button_types:
-                ts = ", ".join(f"{t!r}" for t in sorted(supported_button_types))
+            if prop["type"] not in _SUPPORTED_BUTTON_TYPES:
+                ts = ", ".join(f"{ty!r}" for ty in _SUPPORTED_BUTTON_TYPES)
                 raise ValueError(
                     f"Button value must be a one of the following types: {ts}. "
                     f"However, field {schema['title']}.{prop_name} has type {prop['type']!r}."
