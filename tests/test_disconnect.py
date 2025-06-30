@@ -13,8 +13,23 @@ class WaitingApp(ChatCompletion):
         self.non_empty_stream = non_empty_stream
 
         self.is_cancelled = False
-        self.started = asyncio.Event()
-        self.cancelled = asyncio.Event()
+        self._started = None
+        self._cancelled = None
+
+    @property
+    def started(self) -> asyncio.Event:
+        # NOTE: lazily init events to ensure that they are
+        # attached to the event loop inside the uvicorn thread,
+        # instead of the test's event loop.
+        if self._started is None:
+            self._started = asyncio.Event()
+        return self._started
+
+    @property
+    def cancelled(self) -> asyncio.Event:
+        if self._cancelled is None:
+            self._cancelled = asyncio.Event()
+        return self._cancelled
 
     async def _wait(self):
         for _ in range(1000):
@@ -26,8 +41,6 @@ class WaitingApp(ChatCompletion):
 
             if self.non_empty_stream:
                 with response.create_single_choice():
-                    for _ in range(1000):
-                        await asyncio.sleep(1)
                     await self._wait()
             else:
                 await self._wait()
