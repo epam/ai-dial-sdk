@@ -82,7 +82,7 @@ def test_configuration_optional_button_schema():
         "properties": {
             "int_button_field": {
                 "title": "Int Button Field",
-                "type": "number",
+                "type": "integer",
                 "dial:widget": "buttons",
                 "oneOf": [
                     {
@@ -147,7 +147,7 @@ def test_configuration_one_button_schema():
             "int_button_field": {
                 "title": "Integer Button field",
                 "description": "Pick a button",
-                "type": "number",
+                "type": "integer",
                 "dial:widget": "buttons",
                 "oneOf": [
                     {
@@ -197,6 +197,42 @@ def test_configuration_parsing_success():
         list_field=["a", "b", "c"],
         int_button_field=10,
     )
+
+
+def test_configuration_string_type_parsing_success():
+    class _Conf(BaseModel, metaclass=FormMetaclass):
+        button_field: str = Field(
+            buttons=[
+                Button(const="10", title="Title1"),
+                Button(const="20", title="Title2"),
+            ],
+        )
+
+    assert model_parse(_Conf, {"button_field": "10"}) == _Conf(
+        button_field="10"
+    )
+
+
+def test_configuration_string_type_parsing_fail():
+    class _Conf(BaseModel, metaclass=FormMetaclass):
+        button_field: str = Field(
+            buttons=[
+                Button(const="10", title="Title1"),
+                Button(const="20", title="Title2"),
+            ],
+        )
+
+    with pytest.raises(ValidationError) as e:
+        model_parse(_Conf, {"button_field": "30"})
+
+    assert e.value.errors() == [
+        {
+            "ctx": {"given": "30", "permitted": ("10", "20")},
+            "loc": ("button_field",),
+            "msg": "unexpected value; permitted: '10', '20'",
+            "type": "value_error.const",
+        }
+    ]
 
 
 def test_configuration_parsing_one_button_fail():
@@ -352,7 +388,7 @@ def test_dynamic_configuration_existing_field():
                     },
                 ],
                 "title": "Buttons Field",
-                "type": "number",
+                "type": "integer",
             },
             "int_field": {
                 "title": "Int Field",
@@ -417,7 +453,7 @@ def test_dynamic_configuration_new_field():
                     },
                 ],
                 "title": "Buttons Field",
-                "type": "number",
+                "type": "integer",
             },
             "int_field": {
                 "title": "Int Field",
@@ -508,10 +544,12 @@ def test_dynamic_configuration_decorator_optional_type_parsing_success():
     assert parsed_conf.buttons_field == 10
 
 
-def test_dynamic_configuration_two_buttons():
+def test_dynamic_configuration_four_buttons():
     class Conf(BaseModel):
         int_button_field: int
         float_button_field: float
+        bool_button_field: bool
+        str_button_field: str
 
     conf = form(
         chat_message_input_disabled=True,
@@ -527,6 +565,20 @@ def test_dynamic_configuration_two_buttons():
             buttons=[
                 Button(const=30.1, title="Title3"),
                 Button(const=40.1, title="Title4"),
+            ],
+        ),
+        bool_button_field=Field(
+            description="Switch",
+            buttons=[
+                Button(const=True, title="On"),
+                Button(const=False, title="Off"),
+            ],
+        ),
+        str_button_field=Field(
+            description="Flavour",
+            buttons=[
+                Button(const="vanilla", title="Vanilla flavour"),
+                Button(const="chocolate", title="Chocolate flavour"),
             ],
         ),
     )(Conf)
@@ -561,7 +613,7 @@ def test_dynamic_configuration_two_buttons():
                     },
                 ],
                 "title": "Int Button Field",
-                "type": "number",
+                "type": "integer",
             },
             "float_button_field": {
                 "dial:widget": "buttons",
@@ -589,33 +641,68 @@ def test_dynamic_configuration_two_buttons():
                 "title": "Float Button Field",
                 "type": "number",
             },
+            "bool_button_field": {
+                "dial:widget": "buttons",
+                "description": "Switch",
+                "oneOf": [
+                    {
+                        "const": True,
+                        "dial:widgetOptions": {
+                            "confirmationMessage": None,
+                            "populateText": None,
+                            "submit": False,
+                        },
+                        "title": "On",
+                    },
+                    {
+                        "const": False,
+                        "dial:widgetOptions": {
+                            "confirmationMessage": None,
+                            "populateText": None,
+                            "submit": False,
+                        },
+                        "title": "Off",
+                    },
+                ],
+                "title": "Bool Button Field",
+                "type": "boolean",
+            },
+            "str_button_field": {
+                "dial:widget": "buttons",
+                "description": "Flavour",
+                "oneOf": [
+                    {
+                        "const": "vanilla",
+                        "dial:widgetOptions": {
+                            "confirmationMessage": None,
+                            "populateText": None,
+                            "submit": False,
+                        },
+                        "title": "Vanilla flavour",
+                    },
+                    {
+                        "const": "chocolate",
+                        "dial:widgetOptions": {
+                            "confirmationMessage": None,
+                            "populateText": None,
+                            "submit": False,
+                        },
+                        "title": "Chocolate flavour",
+                    },
+                ],
+                "title": "Str Button Field",
+                "type": "string",
+            },
         },
         "required": [
             "int_button_field",
             "float_button_field",
+            "bool_button_field",
+            "str_button_field",
         ],
         "title": "_Conf",
         "type": "object",
     }
-
-
-def test_configuration_invalid_button_type():
-    with pytest.raises(ValueError) as e:
-
-        class _Conf(BaseModel, metaclass=FormMetaclass):
-            button_field: str = Field(
-                buttons=[
-                    Button(const="10", title="Title1"),
-                    Button(const="20", title="Title2"),
-                ],
-            )
-
-        model_json_schema(_Conf)
-
-    assert (
-        str(e.value)
-        == "Button value must be a number. However, field _Conf.button_field has type 'string'."
-    )
 
 
 def test_configuration_missing_buttons():

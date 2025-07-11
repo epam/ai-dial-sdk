@@ -16,10 +16,6 @@ INCONSISTENT_INDEXED_LIST_ERROR_MESSAGE = (
     "All elements of a list must be either indexed or not indexed"
 )
 
-CANNOT_MERGE_NON_INDEXED_LISTS_ERROR_MESSAGE = (
-    "Cannot merge two non-indexed non-empty lists"
-)
-
 CANNOT_MERGE_NON_INDEXED_AND_INDEXED_LISTS_ERROR_MESSAGE = (
     "Cannot merge a non-indexed list with an indexed list"
 )
@@ -112,7 +108,8 @@ def merge_lists(target: list, source: list, path: Path) -> list:
             return copy.deepcopy(source)
 
     if not is_target_indexed and not is_source_indexed:
-        raise AssertionError(CANNOT_MERGE_NON_INDEXED_LISTS_ERROR_MESSAGE)
+        target.extend(copy.deepcopy(source))
+        return target
 
     assert (
         is_target_indexed and is_source_indexed

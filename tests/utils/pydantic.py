@@ -37,7 +37,7 @@ def model_copy(
     model: _ModelT,
     *,
     update: Optional[Dict[str, Any]] = None,
-    deep: bool = False
+    deep: bool = False,
 ) -> _ModelT:
     if PYDANTIC_V2:
         return model.model_copy(update=update, deep=deep)

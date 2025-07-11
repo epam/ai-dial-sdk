@@ -10,7 +10,6 @@ import pytest
 
 from aidial_sdk.utils.merge_chunks import (
     CANNOT_MERGE_NON_INDEXED_AND_INDEXED_LISTS_ERROR_MESSAGE,
-    CANNOT_MERGE_NON_INDEXED_LISTS_ERROR_MESSAGE,
     INCONSISTENT_INDEXED_LIST_ERROR_MESSAGE,
     cleanup_indices,
     merge,
@@ -187,12 +186,14 @@ merge_chunks_cases: List[Test] = [
     ),
     Test(
         chunks=[{"a": [1]}, {"a": [2]}],
-        expected=AssertionError(CANNOT_MERGE_NON_INDEXED_LISTS_ERROR_MESSAGE),
+        expected={"a": [1, 2]},
+        fixed_order=True,
         desc="Merge lists of non-dicts",
     ),
     Test(
-        chunks=[{"a": [{"b": 1}]}, {"a": [{"b": 2}]}],
-        expected=AssertionError(CANNOT_MERGE_NON_INDEXED_LISTS_ERROR_MESSAGE),
+        chunks=[{"a": [{"b": 1}]}, {"a": [{"c": 2}]}],
+        expected={"a": [{"b": 1}, {"c": 2}]},
+        fixed_order=True,
         desc="Merge lists of non-indexed dicts",
     ),
     Test(

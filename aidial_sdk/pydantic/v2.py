@@ -68,7 +68,7 @@ else:
         min_length: Optional[int] = _Unset,
         max_length: Optional[int] = _Unset,
         union_mode: Literal["smart", "left_to_right"] = _Unset,
-        buttons: Optional[List[Button]] = _Unset
+        buttons: Optional[List[Button]] = _Unset,
     ) -> Any:
 
         if buttons is not _Unset and buttons is not None:

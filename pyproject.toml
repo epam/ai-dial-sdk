@@ -1,53 +1,39 @@
-[tool.poetry]
+[project]
 name = "aidial-sdk"
-version = "0.22.0rc"
+version = "0.23.0rc"
 description = "Framework to create applications and model adapters for AI DIAL"
-authors = ["EPAM RAIL <SpecialEPM-DIALDevTeam@epam.com>"]
-homepage = "https://epam-rail.com"
+authors = [{ name = "EPAM RAIL", email = "SpecialEPM-DIALDevTeam@epam.com" }]
 license = "Apache-2.0"
 readme = "README.md"
-repository = "https://github.com/epam/ai-dial-sdk"
-
-[tool.poetry.dependencies]
-python = ">=3.8.1,<4.0"
-fastapi = ">=0.51,<1.0"
-uvicorn = ">=0.19,<1.0"
-pydantic = ">=1.10.17,<3"
-wrapt = ">=1.10,<2"
-
-# Telemetry extras
-opentelemetry-sdk = {version = "^1.22.0", optional = true}
-opentelemetry-api = {version = "^1.22.0", optional = true}
-opentelemetry-exporter-otlp-proto-grpc = {version = "^1.22.0", optional = true}
-opentelemetry-instrumentation-aiohttp-client = {version = ">=0.43b0", optional = true}
-opentelemetry-instrumentation-fastapi = {version = ">=0.43b0", optional = true}
-opentelemetry-instrumentation-httpx = {version = ">=0.43b0", optional = true}
-opentelemetry-instrumentation-logging = {version = ">=0.43b0", optional = true}
-opentelemetry-instrumentation-requests = {version = ">=0.43b0", optional = true}
-opentelemetry-instrumentation-system-metrics = {version = ">=0.43b0", optional = true}
-opentelemetry-instrumentation-urllib = {version = ">=0.43b0", optional = true}
-opentelemetry-exporter-prometheus = {version = ">=0.43b0", optional = true}
-prometheus-client = {version = ">=0.17.1,<=0.21", optional = true}
-
-# Extras
-httpx = {version = ">=0.25.0,<1", optional = true}
-
-[tool.poetry.extras]
-telemetry = [
-    "opentelemetry-sdk",
-    "opentelemetry-api",
-    "opentelemetry-exporter-otlp-proto-grpc",
-    "opentelemetry-instrumentation-aiohttp-client",
-    "opentelemetry-instrumentation-fastapi",
-    "opentelemetry-instrumentation-httpx",
-    "opentelemetry-instrumentation-logging",
-    "opentelemetry-instrumentation-requests",
-    "opentelemetry-instrumentation-system-metrics",
-    "opentelemetry-instrumentation-urllib",
-    "opentelemetry-exporter-prometheus",
-    "prometheus-client",
+requires-python = ">=3.9,<4.0"
+dependencies = [
+    "fastapi (>=0.51,<1.0)",
+    "uvicorn (>=0.19,<1.0)",
+    "pydantic (>=1.10.17,<3)",
+    "wrapt (>=1.10,<2)",
 ]
-httpx = ["httpx"]
+
+[project.urls]
+Homepage = "https://epam-rail.com"
+Documentation = "https://epam-rail.com/dial_api"
+Repository = "https://github.com/epam/ai-dial-sdk"
+
+[project.optional-dependencies]
+telemetry = [
+    "opentelemetry-sdk (>=1.22.0,<2.0)",
+    "opentelemetry-api (>=1.22.0,<2.0)",
+    "opentelemetry-exporter-otlp-proto-grpc (>=1.22.0,<2.0)",
+    "opentelemetry-instrumentation-aiohttp-client (>=0.43b0)",
+    "opentelemetry-instrumentation-fastapi (>=0.43b0)",
+    "opentelemetry-instrumentation-httpx (>=0.43b0)",
+    "opentelemetry-instrumentation-logging (>=0.43b0)",
+    "opentelemetry-instrumentation-requests (>=0.43b0)",
+    "opentelemetry-instrumentation-system-metrics (>=0.43b0)",
+    "opentelemetry-instrumentation-urllib (>=0.43b0)",
+    "opentelemetry-exporter-prometheus (>=0.43b0)",
+    "prometheus-client (>=0.17.1,<=0.21)",
+]
+httpx = ["httpx (>=0.25.0,<1)"]
 
 [tool.poetry.group.test.dependencies]
 pytest = "^8.2"
@@ -61,7 +47,7 @@ httpx = "^0.25.0"
 respx = "^0.21.1"
 aiohttp = "^3.8.3"
 aioresponses = "^0.7.6"
-requests = "^2.19"
+requests = "^2.32"
 responses = "^0.25.3"
 
 [tool.poetry.group.lint.dependencies]
@@ -70,6 +56,10 @@ black = ">=23.3,<25.0"
 isort = "^5.12.0"
 pyright = "1.1.385"
 autoflake = "^2.2.0"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
 
 [tool.pytest.ini_options]
 asyncio_default_fixture_loop_scope = "function"
