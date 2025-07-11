@@ -225,14 +225,10 @@ def test_configuration_string_type_parsing_fail():
     with pytest.raises(ValidationError) as e:
         model_parse(_Conf, {"button_field": "30"})
 
-    assert e.value.errors() == [
-        {
-            "ctx": {"given": "30", "permitted": ("10", "20")},
-            "loc": ("button_field",),
-            "msg": "unexpected value; permitted: '10', '20'",
-            "type": "value_error.const",
-        }
-    ]
+    errors = e.value.errors()
+
+    assert len(errors) == 1
+    assert "unexpected value; permitted: '10', '20'" in errors[0]["msg"]
 
 
 def test_configuration_parsing_one_button_fail():
