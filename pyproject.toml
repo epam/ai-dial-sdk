@@ -45,7 +45,7 @@ pillow = [
 ]
 httpx = "^0.25.0"
 respx = "^0.21.1"
-aiohttp = "^3.8.3"
+aiohttp = "^3.12.14"
 aioresponses = "^0.7.6"
 requests = "^2.32"
 responses = "^0.25.3"
