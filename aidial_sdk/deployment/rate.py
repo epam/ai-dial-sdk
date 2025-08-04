@@ -1,6 +1,4 @@
-from pydantic import StrictStr
-
-from aidial_sdk._pydantic import Field
+from aidial_sdk._pydantic import Field, StrictStr
 from aidial_sdk.deployment.from_request_mixin import FromRequestDeploymentMixin
 
 

@@ -4,9 +4,14 @@ from typing import Any, Dict, Mapping, Optional, Type, TypeVar
 from urllib.parse import urljoin
 
 import fastapi
-from pydantic import Field, SecretStr, StrictStr
 
-from aidial_sdk._pydantic import PYDANTIC_V2, ConfigDict
+from aidial_sdk._pydantic import (
+    PYDANTIC_V2,
+    ConfigDict,
+    Field,
+    SecretStr,
+    StrictStr,
+)
 from aidial_sdk._pydantic._compat import model_validator
 from aidial_sdk.exceptions import InternalServerError, InvalidRequestError
 from aidial_sdk.utils.logging import log_debug

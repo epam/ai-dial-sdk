@@ -16,13 +16,12 @@ from typing import (
     get_args,
 )
 
-from pydantic.v1.validators import make_literal_validator
-
 from aidial_sdk._pydantic import (
     PYDANTIC_V2,
     BaseModel,
     FieldInfo,
     ModelMetaclass,
+    make_literal_validator,
     validator,
 )
 from aidial_sdk._pydantic._model_config import ModelConfigWrapper
@@ -58,7 +57,7 @@ class FormMetaclass(ModelMetaclass):
         mcs,  # pyright: ignore[reportSelfClsParameterName]
         name,
         bases,
-        namespace: dict,
+        namespace: Dict,
         **kwargs,
     ):
         # Inject buttons validators

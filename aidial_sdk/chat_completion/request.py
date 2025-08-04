@@ -1,11 +1,16 @@
 from enum import Enum
 from typing import Any, Dict, List, Literal, Mapping, Optional, Union
 
-import pydantic
-from pydantic import PositiveInt, StrictBool, StrictInt, StrictStr
 from typing_extensions import Annotated, assert_never
 
-from aidial_sdk._pydantic import PYDANTIC_V2, Field
+from aidial_sdk._pydantic import (
+    PYDANTIC_V2,
+    Field,
+    PositiveInt,
+    StrictBool,
+    StrictInt,
+    StrictStr,
+)
 from aidial_sdk._pydantic._compat import model_validator
 from aidial_sdk.chat_completion.enums import Status
 from aidial_sdk.deployment.from_request_mixin import FromRequestDeploymentMixin
@@ -203,6 +208,7 @@ class ResponseFormatJsonSchemaObject(ExtraAllowModel):
     strict: Optional[StrictBool] = False
 
     if PYDANTIC_V2:
+        import pydantic
 
         @pydantic.model_serializer(mode="wrap")
         def serializer(

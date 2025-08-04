@@ -7,9 +7,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Any, Callable, Dict, Optional, Type, TypeVar
 
-from pydantic import BaseModel
-
-from aidial_sdk._pydantic import PYDANTIC_V2
+from aidial_sdk._pydantic import PYDANTIC_V2, BaseModel
 
 _Model = TypeVar("_Model", bound=BaseModel)
 
@@ -74,9 +72,9 @@ class ModelConfigBase(ABC):
 
 
 class _ConfigV1(ModelConfigBase):
-    config_cls: type
+    config_cls: Type
 
-    def __init__(self, config_cls: type):
+    def __init__(self, config_cls: Type):
         self.config_cls = config_cls
 
     def set_field(self, field: str, value: Any) -> None:
@@ -111,9 +109,9 @@ class _ConfigV1(ModelConfigBase):
 
 
 class _ConfigV2(ModelConfigBase):
-    model_config: dict
+    model_config: Dict
 
-    def __init__(self, model_config: dict):
+    def __init__(self, model_config: Dict):
         self.model_config = model_config
 
     def set_field(self, field: str, value: Any) -> None:

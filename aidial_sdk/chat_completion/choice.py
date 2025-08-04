@@ -2,8 +2,7 @@ import json
 from types import TracebackType
 from typing import Any, Optional, Type, overload
 
-from pydantic import ValidationError
-
+from aidial_sdk._pydantic import ValidationError
 from aidial_sdk.chat_completion._types import ChunkQueue
 from aidial_sdk.chat_completion.choice_base import ChoiceBase
 from aidial_sdk.chat_completion.chunks import (
