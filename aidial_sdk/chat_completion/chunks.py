@@ -1,7 +1,7 @@
-import dataclasses
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Literal, Optional, TypedDict
 
+from aidial_sdk._pydantic._compat import BaseModel
 from aidial_sdk.chat_completion.enums import FinishReason, Status
 from aidial_sdk.exceptions import HTTPException as DIALException
 from aidial_sdk.utils.json import remove_nones
@@ -344,8 +344,7 @@ class NameStageChunk(BaseChunk):
         }
 
 
-@dataclasses.dataclass
-class Attachment:
+class Attachment(BaseModel):
     choice_index: int
     attachment_index: int
 
@@ -379,7 +378,6 @@ class PromptTokensDetails(TypedDict, total=False):
     cached_tokens: int
 
 
-@dataclasses.dataclass
 class AttachmentChunk(Attachment, BaseChunk):
     def to_dict(self):
         return {
@@ -398,7 +396,6 @@ class AttachmentChunk(Attachment, BaseChunk):
         }
 
 
-@dataclasses.dataclass
 class AttachmentStageChunk(Attachment, BaseChunk):
     stage_index: int
 

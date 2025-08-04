@@ -2,7 +2,7 @@ import logging
 import os
 from typing import Optional
 
-from aidial_sdk._pydantic import BaseModel
+from aidial_sdk._pydantic._compat import BaseModel
 from aidial_sdk.utils.env import env_var_list
 
 # OpenTelemetry SDK configuration env vars:
