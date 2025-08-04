@@ -5,10 +5,10 @@ from unittest.mock import MagicMock, patch
 import fastapi
 import pytest
 import respx
-from pydantic import SecretStr
 from starlette.testclient import TestClient
 
 from aidial_sdk import DIALApp, HTTPException
+from aidial_sdk._pydantic import SecretStr
 from aidial_sdk.chat_completion import ChatCompletion, Request, Response
 from aidial_sdk.deployment.configuration import (
     ConfigurationRequest,

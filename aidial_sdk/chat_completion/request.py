@@ -201,6 +201,10 @@ class ResponseFormatJsonObject(ExtraAllowModel):
     type: Literal["json_object"]
 
 
+if PYDANTIC_V2:
+    import pydantic as pyd2
+
+
 class ResponseFormatJsonSchemaObject(ExtraAllowModel):
     description: Optional[StrictStr] = None
     name: StrictStr
@@ -208,11 +212,10 @@ class ResponseFormatJsonSchemaObject(ExtraAllowModel):
     strict: Optional[StrictBool] = False
 
     if PYDANTIC_V2:
-        import pydantic
 
-        @pydantic.model_serializer(mode="wrap")
+        @pyd2.model_serializer(mode="wrap")
         def serializer(
-            self, nxt: pydantic.SerializerFunctionWrapHandler
+            self, nxt: pyd2.SerializerFunctionWrapHandler
         ) -> Dict[str, Any]:
             ret = nxt(self)
             ret["schema"] = ret["schema_"]

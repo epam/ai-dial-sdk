@@ -10,11 +10,11 @@ are allowed in the DIAL SDK package.
 
 from typing import TYPE_CHECKING
 
-import pydantic
+from pydantic import VERSION
 
 from aidial_sdk.utils.env import env_bool
 
-INSTALLED_PYDANTIC_V2 = pydantic.VERSION.startswith("2.")
+INSTALLED_PYDANTIC_V2 = VERSION.startswith("2.")
 USE_PYDANTIC_V2 = env_bool("PYDANTIC_V2", False)
 PYDANTIC_V2 = INSTALLED_PYDANTIC_V2 and USE_PYDANTIC_V2
 
