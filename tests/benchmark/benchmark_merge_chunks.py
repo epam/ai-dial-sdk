@@ -5,7 +5,7 @@ from typing import Iterable, List
 from pydantic import BaseModel
 
 from aidial_sdk.utils.merge_chunks import merge_chat_completion_chunks
-from tests.utils.chunks import create_chunk
+from tests.utils.chunks import create_single_choice_chunk
 
 
 def _interleave(*iters):
@@ -37,7 +37,7 @@ class ChunkGenerator(BaseModel):
 
         def gen_content(choice_idx: int):
             for chunk_idx in range(self.n_chunks_per_choice):
-                yield create_chunk(
+                yield create_single_choice_chunk(
                     choice_idx=choice_idx,
                     delta={"content": f"{chunk_idx} "},
                 )
@@ -46,7 +46,7 @@ class ChunkGenerator(BaseModel):
             for attachment_idx in _range(
                 self.n_attachments_per_choice, self.reversed_attachments
             ):
-                yield create_chunk(
+                yield create_single_choice_chunk(
                     choice_idx=choice_idx,
                     delta={
                         "custom_content": {
@@ -60,7 +60,9 @@ class ChunkGenerator(BaseModel):
                     },
                 )
 
-        yield create_chunk(delta={"role": "assistant", "content": None})
+        yield create_single_choice_chunk(
+            delta={"role": "assistant", "content": None}
+        )
 
         for choice_idx in _range(self.n_choices, self.reversed_choices):
             yield from _interleave(
@@ -68,7 +70,9 @@ class ChunkGenerator(BaseModel):
                 gen_attachments(choice_idx),
             )
 
-            yield create_chunk(choice_idx=choice_idx, finish_reason="stop")
+            yield create_single_choice_chunk(
+                choice_idx=choice_idx, finish_reason="stop"
+            )
 
 
 def benchmark(gen: ChunkGenerator, *, repeat: int, number: int | None = None):

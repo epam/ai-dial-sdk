@@ -1,5 +1,5 @@
 import copy
-from typing import Any, List, TypeVar, Union, cast
+from typing import Any, List, Optional, TypeVar, Union, cast
 
 T = TypeVar("T")
 
@@ -56,22 +56,40 @@ def merge_dicts(target: dict, source: dict, path: Path) -> dict:
     return target
 
 
-def is_indexed_list(xs: list) -> bool:
+def get_list_max_index(xs: list) -> Optional[int]:
     if len(xs) == 0:
-        return False
+        return None
 
     all_indexed = True
     any_indexed = False
+    max_index = None
+
     for elem in xs:
-        if isinstance(elem, dict) and "index" in elem:
+        if isinstance(elem, dict) and (index := elem.get("index")) is not None:
             any_indexed = True
+            max_index = index if max_index is None else max(max_index, index)
         else:
             all_indexed = False
 
     if any_indexed and not all_indexed:
         raise AssertionError(INCONSISTENT_INDEXED_LIST_ERROR_MESSAGE)
 
-    return all_indexed
+    return max_index
+
+
+def _normalize_indexed_list(target: list, target_length: int):
+    if not target:
+        return
+
+    elems: dict = {elem.get("index"): elem for elem in target}
+
+    target.clear()
+    for index in range(target_length):
+        elem = elems.pop(index, None)
+        if elem is not None:
+            target.append(elem)
+        else:
+            target.append({"index": index})
 
 
 def merge_indexed_lists(target: list, source: list, path: Path) -> list:
@@ -95,8 +113,13 @@ def merge_indexed_lists(target: list, source: list, path: Path) -> list:
 
 
 def merge_lists(target: list, source: list, path: Path) -> list:
-    is_target_indexed = is_indexed_list(target)
-    is_source_indexed = is_indexed_list(source)
+    target_max_index = get_list_max_index(target)
+    source_max_index = get_list_max_index(source)
+    is_target_indexed = target_max_index is not None
+    is_source_indexed = source_max_index is not None
+
+    if target_max_index is not None and target_max_index + 1 != len(target):
+        _normalize_indexed_list(target, target_max_index + 1)
 
     if len(source) == 0:
         return target

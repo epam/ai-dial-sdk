@@ -63,8 +63,8 @@ def test_tool_call_streaming():
     check_sse_stream(
         response.iter_lines(),
         [
-            create_single_choice_chunk({"role": "assistant"}),
-            create_single_choice_chunk({"content": "Test content"}),
+            create_single_choice_chunk(delta={"role": "assistant"}),
+            create_single_choice_chunk(delta={"content": "Test content"}),
             create_tool_call_chunk(
                 0, type="function", id="tool_call_id1", name="tool_name"
             ),
@@ -78,6 +78,6 @@ def test_tool_call_streaming():
                 name="tool_name",
                 arguments='{"foo":"bar"}',
             ),
-            create_single_choice_chunk({}, "tool_calls"),
+            create_single_choice_chunk(delta={}, finish_reason="tool_calls"),
         ],
     )
