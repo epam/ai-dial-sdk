@@ -8,9 +8,11 @@ from typing import Any, Callable, Iterable, List, Sequence, Union
 
 import pytest
 
+from aidial_sdk.utils._indexed_list import (
+    INCONSISTENT_INDEXED_LIST_ERROR_MESSAGE,
+)
 from aidial_sdk.utils.merge_chunks import (
     CANNOT_MERGE_NON_INDEXED_AND_INDEXED_LISTS_ERROR_MESSAGE,
-    INCONSISTENT_INDEXED_LIST_ERROR_MESSAGE,
     cleanup_indices,
     merge,
     merge_chat_completion_chunks,
@@ -171,8 +173,12 @@ merge_chunks_cases: List[Test] = [
     Test(
         chunks=[{}, {"a": [{"index": 0}, {"value": 1}]}],
         expected=AssertionError(INCONSISTENT_INDEXED_LIST_ERROR_MESSAGE),
-        fixed_order=True,
-        desc="Inconsistent list indexing",
+        desc="Inconsistent list indexing #1",
+    ),
+    Test(
+        chunks=[{"a": [{"index": 0}, {"value": 1}]}],
+        expected=AssertionError(INCONSISTENT_INDEXED_LIST_ERROR_MESSAGE),
+        desc="Inconsistent list indexing #2",
     ),
     Test(
         chunks=[{"a": [2]}, {"a": [{"index": 0}]}],
@@ -225,7 +231,6 @@ merge_chunks_cases: List[Test] = [
             {"a": [{"index": 0, "value": 0}]},
             {"a": [{"index": 1, "value": 1}]},
         ],
-        fixed_order=True,
         expected={"a": [{"value": 0}, {"value": 1}]},
         desc="Merge lists with non-overlapping indices",
     ),
@@ -263,8 +268,41 @@ merge_chunks_cases: List[Test] = [
             {"a": [{"index": 2, "value": 2}]},
         ],
         expected={"a": [{"value": 0}, {}, {"value": 2}]},
-        fixed_order=True,
         desc="Merge lists with a forward gap",
+    ),
+    Test(
+        chunks=[
+            {"a": [{"index": 2, "value": 2}, {"index": 1, "value": 1}]},
+            {"a": [{"index": 3, "value": 3}, {"index": 0, "value": 0}]},
+        ],
+        expected={
+            "a": [{"value": 0}, {"value": 1}, {"value": 2}, {"value": 3}]
+        },
+        desc="Merge indexed lists. First list: with gaps and out-of-order",
+    ),
+    Test(
+        chunks=[
+            {"a": [{"index": 1, "value": 1}, {"index": 0, "value": 0}]},
+            {"a": [{"index": 3, "value": 3}, {"index": 2, "value": 2}]},
+        ],
+        expected={
+            "a": [{"value": 0}, {"value": 1}, {"value": 2}, {"value": 3}]
+        },
+        desc="Merge indexed lists. First list: no gaps and out-of-order",
+    ),
+    Test(
+        chunks=[
+            {"a": [{"index": 1, "value": 1}, {"index": 0, "value": 0}]},
+        ],
+        expected={"a": [{"value": 0}, {"value": 1}]},
+        desc="Remove indices from indexed out-of-order list without gaps",
+    ),
+    Test(
+        chunks=[
+            {"a": [{"index": 2, "value": 2}, {"index": 0, "value": 0}]},
+        ],
+        expected={"a": [{"value": 0}, {}, {"value": 2}]},
+        desc="Remove indices from indexed out-of-order list with gaps",
     ),
     Test(
         chunks=[{"a": "Hello "}, {"a": "world!"}],
@@ -365,7 +403,7 @@ merge_chat_completion_chunks_cases: List[Test] = [
     ),
     Test(
         chunks=[OPEN_CHUNK, CONTENT_CHUNK1, CONTENT_CHUNK2],
-        order_constraints=[BeforeValue(CONTENT_CHUNK1, CONTENT_CHUNK2)],
+        order_constraints=[BeforeIdx(1, 2)],
         expected=create_single_choice_chunk(
             delta={"role": "assistant", "content": "hello world"}
         ),

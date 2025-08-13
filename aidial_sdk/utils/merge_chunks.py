@@ -1,5 +1,10 @@
 import copy
-from typing import Any, List, Optional, TypeVar, Union, cast
+from typing import Any, List, TypeVar, Union, cast
+
+from aidial_sdk.utils._indexed_list import (
+    INDEX_ERROR_MESSAGE,
+    try_parse_indexed_list,
+)
 
 T = TypeVar("T")
 
@@ -8,12 +13,6 @@ Path = List[Union[int, str]]
 
 LIST_OF_DICTS_ERROR_MESSAGE = (
     "Lists could be merged only if their elements are dictionaries"
-)
-
-INDEX_ERROR_MESSAGE = "A list element must have 'index' field to identify position of the element in the list"
-
-INCONSISTENT_INDEXED_LIST_ERROR_MESSAGE = (
-    "All elements of a list must be either indexed or not indexed"
 )
 
 CANNOT_MERGE_NON_INDEXED_AND_INDEXED_LISTS_ERROR_MESSAGE = (
@@ -56,42 +55,6 @@ def merge_dicts(target: dict, source: dict, path: Path) -> dict:
     return target
 
 
-def get_list_max_index(xs: list) -> Optional[int]:
-    if len(xs) == 0:
-        return None
-
-    all_indexed = True
-    any_indexed = False
-    max_index = None
-
-    for elem in xs:
-        if isinstance(elem, dict) and (index := elem.get("index")) is not None:
-            any_indexed = True
-            max_index = index if max_index is None else max(max_index, index)
-        else:
-            all_indexed = False
-
-    if any_indexed and not all_indexed:
-        raise AssertionError(INCONSISTENT_INDEXED_LIST_ERROR_MESSAGE)
-
-    return max_index
-
-
-def _normalize_indexed_list(target: list, target_length: int):
-    if not target:
-        return
-
-    elems: dict = {elem.get("index"): elem for elem in target}
-
-    target.clear()
-    for index in range(target_length):
-        elem = elems.pop(index, None)
-        if elem is not None:
-            target.append(elem)
-        else:
-            target.append({"index": index})
-
-
 def merge_indexed_lists(target: list, source: list, path: Path) -> list:
     for elem in source:
         assert isinstance(elem, dict), LIST_OF_DICTS_ERROR_MESSAGE
@@ -113,13 +76,8 @@ def merge_indexed_lists(target: list, source: list, path: Path) -> list:
 
 
 def merge_lists(target: list, source: list, path: Path) -> list:
-    target_max_index = get_list_max_index(target)
-    source_max_index = get_list_max_index(source)
-    is_target_indexed = target_max_index is not None
-    is_source_indexed = source_max_index is not None
-
-    if target_max_index is not None and target_max_index + 1 != len(target):
-        _normalize_indexed_list(target, target_max_index + 1)
+    is_target_indexed = try_parse_indexed_list(target, normalize=True)
+    is_source_indexed = try_parse_indexed_list(source)
 
     if len(source) == 0:
         return target
@@ -199,6 +157,8 @@ def cleanup_indices(chunk: T) -> T:
     """
 
     if isinstance(chunk, list):
+        try_parse_indexed_list(chunk, normalize=True)
+
         ret = []
         for elem in chunk:
             if isinstance(elem, dict) and "index" in elem:
@@ -208,9 +168,8 @@ def cleanup_indices(chunk: T) -> T:
         return cast(T, ret)
 
     if isinstance(chunk, dict):
-        return cast(
-            T, {key: cleanup_indices(value) for key, value in chunk.items()}
-        )
+        ret = {key: cleanup_indices(value) for key, value in chunk.items()}
+        return cast(T, ret)
 
     return chunk
 
