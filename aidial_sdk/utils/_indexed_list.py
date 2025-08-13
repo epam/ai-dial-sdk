@@ -11,7 +11,9 @@ INCONSISTENT_INDEXED_LIST_ERROR_MESSAGE = (
 )
 
 
-def try_parse_indexed_list(xs: list, *, normalize: bool = False) -> bool:
+def try_parse_indexed_list(
+    xs: list, *, normalize_inplace: bool = False
+) -> bool:
     if len(xs) == 0:
         return False
 
@@ -43,7 +45,7 @@ def try_parse_indexed_list(xs: list, *, normalize: bool = False) -> bool:
     if max_index is None:
         return False
 
-    if not normalized and normalize:
+    if not normalized and normalize_inplace:
         _normalize_indexed_list(xs, max_index + 1)
 
     return True

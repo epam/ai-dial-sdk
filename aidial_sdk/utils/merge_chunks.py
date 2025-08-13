@@ -76,7 +76,7 @@ def merge_indexed_lists(target: list, source: list, path: Path) -> list:
 
 
 def merge_lists(target: list, source: list, path: Path) -> list:
-    is_target_indexed = try_parse_indexed_list(target, normalize=True)
+    is_target_indexed = try_parse_indexed_list(target, normalize_inplace=True)
     is_source_indexed = try_parse_indexed_list(source)
 
     if len(source) == 0:
@@ -157,7 +157,7 @@ def cleanup_indices(chunk: T) -> T:
     """
 
     if isinstance(chunk, list):
-        try_parse_indexed_list(chunk, normalize=True)
+        try_parse_indexed_list(chunk, normalize_inplace=True)
 
         ret = []
         for elem in chunk:
