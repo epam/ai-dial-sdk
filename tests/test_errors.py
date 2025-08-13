@@ -152,9 +152,9 @@ def test_runtime_streaming_error(test_case: ErrorTestCase):
     check_sse_stream(
         response.iter_lines(),
         [
-            create_single_choice_chunk({"role": "assistant"}),
-            create_single_choice_chunk({"content": "Test content"}),
-            create_single_choice_chunk({}, "stop"),
+            create_single_choice_chunk(delta={"role": "assistant"}),
+            create_single_choice_chunk(delta={"content": "Test content"}),
+            create_single_choice_chunk(delta={}, finish_reason="stop"),
             test_case.response_error,
         ],
     )

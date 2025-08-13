@@ -57,9 +57,9 @@ def test_discarded_messages_returned_as_last_chunk_in_stream():
     check_sse_stream(
         response.iter_lines(),
         [
-            create_single_choice_chunk({"role": "assistant"}),
+            create_single_choice_chunk(delta={"role": "assistant"}),
             create_single_choice_chunk(
-                {},
+                delta={},
                 finish_reason="stop",
                 statistics={"discarded_messages": DISCARDED_MESSAGES},
             ),
