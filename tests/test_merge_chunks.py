@@ -10,6 +10,8 @@ import pytest
 
 from aidial_sdk.utils._indexed_list import (
     INCONSISTENT_INDEXED_LIST_ERROR_MESSAGE,
+    INDEX_INTEGER_ERROR_MESSAGE,
+    INDEX_NON_NEGATIVE_ERROR_MESSAGE,
 )
 from aidial_sdk.utils.merge_chunks import (
     CANNOT_MERGE_NON_INDEXED_AND_INDEXED_LISTS_ERROR_MESSAGE,
@@ -193,6 +195,18 @@ merge_chunks_cases: List[Test] = [
             CANNOT_MERGE_NON_INDEXED_AND_INDEXED_LISTS_ERROR_MESSAGE
         ),
         desc="Merge indexed and non-indexed lists",
+    ),
+    Test(
+        chunks=[{"a": [{"index": -1}]}],
+        expected=AssertionError(
+            INDEX_NON_NEGATIVE_ERROR_MESSAGE.format(index=-1)
+        ),
+        desc="Negative index in a list element",
+    ),
+    Test(
+        chunks=[{"a": [{"index": "a"}]}],
+        expected=AssertionError(INDEX_INTEGER_ERROR_MESSAGE.format(ty="str")),
+        desc="Non-integer index in a list element",
     ),
     Test(
         chunks=[{"a": [1]}, {"a": [2]}],

@@ -1,7 +1,7 @@
 INDEX_ERROR_MESSAGE = "A list element must have 'index' field to identify position of the element in the list"
 
 INDEX_INTEGER_ERROR_MESSAGE = (
-    "A list element must have 'index' field of integer type, but got {ty}"
+    "A list element must have 'index' field of a integer type, but got {ty}"
 )
 
 INDEX_NON_NEGATIVE_ERROR_MESSAGE = "A list element must have 'index' field which a non-negative integer, but got {index}"
@@ -23,7 +23,7 @@ def try_parse_indexed_list(xs: list, *, normalize: bool = False) -> bool:
         if isinstance(elem, dict) and (index := elem.get("index")) is not None:
             if not isinstance(index, int):
                 raise AssertionError(
-                    INDEX_INTEGER_ERROR_MESSAGE.format(ty=type(int))
+                    INDEX_INTEGER_ERROR_MESSAGE.format(ty=type(index).__name__)
                 )
 
             if index < 0:
