@@ -1,6 +1,11 @@
 import copy
 from typing import Any, List, TypeVar, Union, cast
 
+from aidial_sdk.utils._indexed_list import (
+    INDEX_ERROR_MESSAGE,
+    try_parse_indexed_list,
+)
+
 T = TypeVar("T")
 
 Path = List[Union[int, str]]
@@ -8,12 +13,6 @@ Path = List[Union[int, str]]
 
 LIST_OF_DICTS_ERROR_MESSAGE = (
     "Lists could be merged only if their elements are dictionaries"
-)
-
-INDEX_ERROR_MESSAGE = "A list element must have 'index' field to identify position of the element in the list"
-
-INCONSISTENT_INDEXED_LIST_ERROR_MESSAGE = (
-    "All elements of a list must be either indexed or not indexed"
 )
 
 CANNOT_MERGE_NON_INDEXED_AND_INDEXED_LISTS_ERROR_MESSAGE = (
@@ -56,24 +55,6 @@ def merge_dicts(target: dict, source: dict, path: Path) -> dict:
     return target
 
 
-def is_indexed_list(xs: list) -> bool:
-    if len(xs) == 0:
-        return False
-
-    all_indexed = True
-    any_indexed = False
-    for elem in xs:
-        if isinstance(elem, dict) and "index" in elem:
-            any_indexed = True
-        else:
-            all_indexed = False
-
-    if any_indexed and not all_indexed:
-        raise AssertionError(INCONSISTENT_INDEXED_LIST_ERROR_MESSAGE)
-
-    return all_indexed
-
-
 def merge_indexed_lists(target: list, source: list, path: Path) -> list:
     for elem in source:
         assert isinstance(elem, dict), LIST_OF_DICTS_ERROR_MESSAGE
@@ -95,8 +76,8 @@ def merge_indexed_lists(target: list, source: list, path: Path) -> list:
 
 
 def merge_lists(target: list, source: list, path: Path) -> list:
-    is_target_indexed = is_indexed_list(target)
-    is_source_indexed = is_indexed_list(source)
+    is_target_indexed = try_parse_indexed_list(target, normalize_inplace=True)
+    is_source_indexed = try_parse_indexed_list(source)
 
     if len(source) == 0:
         return target
@@ -176,6 +157,8 @@ def cleanup_indices(chunk: T) -> T:
     """
 
     if isinstance(chunk, list):
+        try_parse_indexed_list(chunk, normalize_inplace=True)
+
         ret = []
         for elem in chunk:
             if isinstance(elem, dict) and "index" in elem:
@@ -185,9 +168,8 @@ def cleanup_indices(chunk: T) -> T:
         return cast(T, ret)
 
     if isinstance(chunk, dict):
-        return cast(
-            T, {key: cleanup_indices(value) for key, value in chunk.items()}
-        )
+        ret = {key: cleanup_indices(value) for key, value in chunk.items()}
+        return cast(T, ret)
 
     return chunk
 

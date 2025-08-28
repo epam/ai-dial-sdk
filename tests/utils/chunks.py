@@ -1,50 +1,44 @@
 import itertools
 import json
-from typing import Iterable, Literal, Optional, Union
+from typing import Iterable, List, Literal, Optional, Union
 
 from aidial_sdk.utils.json import remove_nones
 
 
 def create_chunk(
     *,
-    choice_idx: int = 0,
-    delta: dict = {},
-    finish_reason: Optional[str] = None,
+    id: str = "test_id",
+    model: Optional[str] = None,
+    created: int = 0,
+    choices: List[dict],
+    usage: Optional[dict] = None,
     **kwargs,
 ):
     return {
-        "id": "test_id",
+        "id": id,
+        **({} if model is None else {"model": model}),
+        "created": created,
         "object": "chat.completion.chunk",
-        "created": 0,
-        "choices": [
-            {
-                "index": choice_idx,
-                "delta": delta,
-                "finish_reason": finish_reason,
-            }
-        ],
-        "usage": None,
+        "choices": choices,
+        "usage": usage,
         **kwargs,
     }
 
 
 def create_single_choice_chunk(
-    delta: dict = {}, finish_reason: Optional[str] = None, **kwargs
+    *,
+    choice_idx: int = 0,
+    delta: dict = {},
+    finish_reason: Optional[str] = None,
+    **kwargs,
 ):
-    return {
-        "choices": [
-            {
-                "index": 0,
-                "finish_reason": finish_reason,
-                "delta": delta,
-            }
-        ],
-        "usage": None,
-        "id": "test_id",
-        "created": 0,
-        "object": "chat.completion.chunk",
-        **kwargs,
+    choice = {
+        "index": choice_idx,
+        "delta": delta,
+        "finish_reason": finish_reason,
     }
+
+    return create_chunk(choices=[choice], **kwargs)
 
 
 def create_tool_call_chunk(
@@ -55,7 +49,7 @@ def create_tool_call_chunk(
     name: Optional[str] = None,
     arguments: Optional[str] = None,
 ):
-    return create_chunk(
+    return create_single_choice_chunk(
         delta={
             "content": None,
             "tool_calls": [
@@ -79,7 +73,7 @@ def create_function_call_chunk(
     name: Optional[str] = None,
     arguments: Optional[str] = None,
 ):
-    return create_chunk(
+    return create_single_choice_chunk(
         delta={
             "content": None,
             "function_call": remove_nones(

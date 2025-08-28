@@ -43,12 +43,12 @@ def test_function_call_streaming():
     check_sse_stream(
         response.iter_lines(),
         [
-            create_single_choice_chunk({"role": "assistant"}),
-            create_single_choice_chunk({"content": "Test content"}),
+            create_single_choice_chunk(delta={"role": "assistant"}),
+            create_single_choice_chunk(delta={"content": "Test content"}),
             create_function_call_chunk(name="function_name"),
             create_function_call_chunk(arguments='{"key'),
             create_function_call_chunk(arguments='":"'),
             create_function_call_chunk(arguments='val"}'),
-            create_single_choice_chunk({}, "function_call"),
+            create_single_choice_chunk(delta={}, finish_reason="function_call"),
         ],
     )

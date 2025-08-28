@@ -8,14 +8,22 @@ from typing import Any, Callable, Iterable, List, Sequence, Union
 
 import pytest
 
+from aidial_sdk.utils._indexed_list import (
+    INCONSISTENT_INDEXED_LIST_ERROR_MESSAGE,
+    INDEX_INTEGER_ERROR_MESSAGE,
+    INDEX_NON_NEGATIVE_ERROR_MESSAGE,
+)
 from aidial_sdk.utils.merge_chunks import (
     CANNOT_MERGE_NON_INDEXED_AND_INDEXED_LISTS_ERROR_MESSAGE,
-    INCONSISTENT_INDEXED_LIST_ERROR_MESSAGE,
     cleanup_indices,
     merge,
     merge_chat_completion_chunks,
 )
-from tests.utils.chunks import create_chunk, create_tool_call_chunk
+from tests.utils.chunks import (
+    create_chunk,
+    create_single_choice_chunk,
+    create_tool_call_chunk,
+)
 from tests.utils.sharing import collect_shared_mutable_objects
 
 
@@ -167,8 +175,12 @@ merge_chunks_cases: List[Test] = [
     Test(
         chunks=[{}, {"a": [{"index": 0}, {"value": 1}]}],
         expected=AssertionError(INCONSISTENT_INDEXED_LIST_ERROR_MESSAGE),
-        fixed_order=True,
-        desc="Inconsistent list indexing",
+        desc="Inconsistent list indexing #1",
+    ),
+    Test(
+        chunks=[{"a": [{"index": 0}, {"value": 1}]}],
+        expected=AssertionError(INCONSISTENT_INDEXED_LIST_ERROR_MESSAGE),
+        desc="Inconsistent list indexing #2",
     ),
     Test(
         chunks=[{"a": [2]}, {"a": [{"index": 0}]}],
@@ -183,6 +195,18 @@ merge_chunks_cases: List[Test] = [
             CANNOT_MERGE_NON_INDEXED_AND_INDEXED_LISTS_ERROR_MESSAGE
         ),
         desc="Merge indexed and non-indexed lists",
+    ),
+    Test(
+        chunks=[{"a": [{"index": -1}]}],
+        expected=AssertionError(
+            INDEX_NON_NEGATIVE_ERROR_MESSAGE.format(index=-1)
+        ),
+        desc="Negative index in a list element",
+    ),
+    Test(
+        chunks=[{"a": [{"index": "a"}]}],
+        expected=AssertionError(INDEX_INTEGER_ERROR_MESSAGE.format(ty="str")),
+        desc="Non-integer index in a list element",
     ),
     Test(
         chunks=[{"a": [1]}, {"a": [2]}],
@@ -221,7 +245,6 @@ merge_chunks_cases: List[Test] = [
             {"a": [{"index": 0, "value": 0}]},
             {"a": [{"index": 1, "value": 1}]},
         ],
-        fixed_order=True,
         expected={"a": [{"value": 0}, {"value": 1}]},
         desc="Merge lists with non-overlapping indices",
     ),
@@ -231,13 +254,11 @@ merge_chunks_cases: List[Test] = [
             {"a": [{"index": 1, "value": 1}]},
             {"a": [{"index": 0, "value": 0}]},
         ],
-        order_constraints=[Fixed(0)],
         expected={"a": [{"value": 0}, {"value": 1}]},
         desc="Merge lists out-of-order",
     ),
     Test(
         chunks=[
-            {},
             {"a": [{"index": 5, "value": 5}]},
             {"a": [{"index": 4, "value": 4}]},
             {"a": [{"index": 2, "value": 2}]},
@@ -253,7 +274,6 @@ merge_chunks_cases: List[Test] = [
                 {"value": 5},
             ]
         },
-        order_constraints=[Fixed(0)],
         desc="Merge lists out-of-order (no starting point)",
     ),
     Test(
@@ -262,8 +282,41 @@ merge_chunks_cases: List[Test] = [
             {"a": [{"index": 2, "value": 2}]},
         ],
         expected={"a": [{"value": 0}, {}, {"value": 2}]},
-        fixed_order=True,
         desc="Merge lists with a forward gap",
+    ),
+    Test(
+        chunks=[
+            {"a": [{"index": 2, "value": 2}, {"index": 1, "value": 1}]},
+            {"a": [{"index": 3, "value": 3}, {"index": 0, "value": 0}]},
+        ],
+        expected={
+            "a": [{"value": 0}, {"value": 1}, {"value": 2}, {"value": 3}]
+        },
+        desc="Merge indexed lists. First list: with gaps and out-of-order",
+    ),
+    Test(
+        chunks=[
+            {"a": [{"index": 1, "value": 1}, {"index": 0, "value": 0}]},
+            {"a": [{"index": 3, "value": 3}, {"index": 2, "value": 2}]},
+        ],
+        expected={
+            "a": [{"value": 0}, {"value": 1}, {"value": 2}, {"value": 3}]
+        },
+        desc="Merge indexed lists. First list: no gaps and out-of-order",
+    ),
+    Test(
+        chunks=[
+            {"a": [{"index": 1, "value": 1}, {"index": 0, "value": 0}]},
+        ],
+        expected={"a": [{"value": 0}, {"value": 1}]},
+        desc="Remove indices from indexed out-of-order list without gaps",
+    ),
+    Test(
+        chunks=[
+            {"a": [{"index": 2, "value": 2}, {"index": 0, "value": 0}]},
+        ],
+        expected={"a": [{"value": 0}, {}, {"value": 2}]},
+        desc="Remove indices from indexed out-of-order list with gaps",
     ),
     Test(
         chunks=[{"a": "Hello "}, {"a": "world!"}],
@@ -328,9 +381,11 @@ def test_deep_copy_for_dict_values():
     assert chunk == {"a": {"b": "c"}}
 
 
-OPEN_CHUNK = create_chunk(delta={"role": "assistant", "content": None})
-CONTENT_CHUNK1 = create_chunk(delta={"content": "hello"})
-CONTENT_CHUNK2 = create_chunk(delta={"content": " world"})
+OPEN_CHUNK = create_single_choice_chunk(
+    delta={"role": "assistant", "content": None}
+)
+CONTENT_CHUNK1 = create_single_choice_chunk(delta={"content": "hello"})
+CONTENT_CHUNK2 = create_single_choice_chunk(delta={"content": " world"})
 
 
 merge_chat_completion_chunks_cases: List[Test] = [
@@ -355,13 +410,15 @@ merge_chat_completion_chunks_cases: List[Test] = [
     ),
     Test(
         chunks=[OPEN_CHUNK, CONTENT_CHUNK1],
-        expected=create_chunk(delta={"role": "assistant", "content": "hello"}),
+        expected=create_single_choice_chunk(
+            delta={"role": "assistant", "content": "hello"}
+        ),
         desc="Merge open with one content chunk",
     ),
     Test(
         chunks=[OPEN_CHUNK, CONTENT_CHUNK1, CONTENT_CHUNK2],
-        order_constraints=[BeforeValue(CONTENT_CHUNK1, CONTENT_CHUNK2)],
-        expected=create_chunk(
+        order_constraints=[BeforeIdx(1, 2)],
+        expected=create_single_choice_chunk(
             delta={"role": "assistant", "content": "hello world"}
         ),
         desc="Merge open with two content chunks",
@@ -369,7 +426,9 @@ merge_chat_completion_chunks_cases: List[Test] = [
     Test(
         chunks=[
             OPEN_CHUNK,  # 0
-            create_chunk(delta={"content": "sure, I'm calling the tools"}),  # 1
+            create_single_choice_chunk(
+                delta={"content": "sure, I'm calling the tools"}
+            ),  # 1
             create_tool_call_chunk(
                 0,
                 id="tool_call_1",
@@ -384,7 +443,7 @@ merge_chat_completion_chunks_cases: List[Test] = [
             create_tool_call_chunk(1, arguments="{}"),  # 6
         ],
         order_constraints=[Fixed(0), BeforeIdx(3, 4)],
-        expected=create_chunk(
+        expected=create_single_choice_chunk(
             delta={
                 "role": "assistant",
                 "content": "sure, I'm calling the tools",
@@ -408,6 +467,39 @@ merge_chat_completion_chunks_cases: List[Test] = [
             }
         ),
         desc="Merge with tool calls",
+    ),
+    Test(
+        chunks=[
+            create_single_choice_chunk(
+                choice_idx=1, delta={"content": "5", "role": "assistant"}
+            ),
+            create_single_choice_chunk(
+                choice_idx=0, delta={"content": "5", "role": "assistant"}
+            ),
+            create_single_choice_chunk(
+                choice_idx=1,
+                delta={},
+                finish_reason="stop",
+            ),
+            create_single_choice_chunk(
+                choice_idx=0,
+                delta={},
+                finish_reason="stop",
+            ),
+        ],
+        expected=create_chunk(
+            id="test_id",
+            created=0,
+            choices=[
+                {
+                    "index": i,
+                    "delta": {"role": "assistant", "content": "5"},
+                    "finish_reason": "stop",
+                }
+                for i in range(2)
+            ],
+        ),
+        desc="Multiple choices",
     ),
 ]
 
