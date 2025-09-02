@@ -137,6 +137,7 @@ class Addon(ExtraAllowModel):
 
 class Function(ExtraAllowModel):
     name: StrictStr
+    strict: bool = False
     description: Optional[StrictStr] = None
     parameters: Optional[Dict] = None
 
