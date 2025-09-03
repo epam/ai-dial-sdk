@@ -19,7 +19,8 @@ def _raise_exception(exception_type: str):
         raise DIALException(
             "Test error",
             503,
-            extra_error_fields={"status": 503, "details": "error details"},
+            status=503,
+            details="error details",
         )
     elif exception_type == "sdk_exception_with_headers":
         raise DIALException(

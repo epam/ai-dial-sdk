@@ -3,6 +3,7 @@ from typing import Any, Dict, List
 
 import pytest
 
+from aidial_sdk.exceptions import HTTPException
 from tests.applications.broken import (
     ImmediatelyBrokenApplication,
     RuntimeBrokenApplication,
@@ -186,3 +187,20 @@ def test_no_api_key():
 
     assert response.status_code == 400
     assert response.json() == API_KEY_IS_MISSING
+
+
+def test_error_repr():
+    assert (
+        repr(
+            HTTPException(
+                message="a",
+                status_code=404,
+                type="c",
+                param="d",
+                code="e",
+                display_message="f",
+                g="h",
+            )
+        )
+        == "HTTPException(message='a', status_code=404, type='c', param='d', code='e', display_message='f', g='h')"
+    )
