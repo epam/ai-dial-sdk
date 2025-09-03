@@ -15,6 +15,12 @@ def _raise_exception(exception_type: str):
         return 1 / 0
     elif exception_type == "sdk_exception_with_display_message":
         raise DIALException("Test error", 503, display_message="I'm broken")
+    elif exception_type == "sdk_exception_with_extra_fields":
+        raise DIALException(
+            "Test error",
+            503,
+            extra_error_fields={"status": 503, "details": "error details"},
+        )
     elif exception_type == "sdk_exception_with_headers":
         raise DIALException(
             "Too many requests", 429, headers={"Retry-After": "42"}

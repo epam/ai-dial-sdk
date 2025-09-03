@@ -19,6 +19,7 @@ class HTTPException(Exception):
         code: Optional[str] = None,
         display_message: Optional[str] = None,
         headers: Optional[Dict[str, str]] = None,
+        extra_error_fields: Optional[dict] = None,
     ) -> None:
         super().__init__(message)
         status_code = int(status_code)
@@ -30,12 +31,13 @@ class HTTPException(Exception):
         self.code = code or str(status_code)
         self.display_message = display_message
         self.headers = headers
+        self.extra_error = extra_error_fields or {}
 
     def __repr__(self):
         # headers field is omitted deliberately
         # since it may contain sensitive information
         return (
-            "%s(message=%r, status_code=%r, type=%r, param=%r, code=%r, display_message=%r)"
+            "%s(message=%r, status_code=%r, type=%r, param=%r, code=%r, display_message=%r, extra_error=%r)"
             % (
                 self.__class__.__name__,
                 self.message,
@@ -44,6 +46,7 @@ class HTTPException(Exception):
                 self.param,
                 self.code,
                 self.display_message,
+                self.extra_error,
             )
         )
 
@@ -56,6 +59,7 @@ class HTTPException(Exception):
                     "param": self.param,
                     "code": self.code,
                     "display_message": self.display_message,
+                    **self.extra_error,
                 }
             )
         }

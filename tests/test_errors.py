@@ -64,6 +64,19 @@ error_testcases: List[ErrorTestCase] = [
         },
     ),
     ErrorTestCase(
+        "sdk_exception_with_extra_fields",
+        503,
+        {
+            "error": {
+                "message": "Test error",
+                "type": "runtime_error",
+                "details": "error details",
+                "status": 503,
+                "code": "503",
+            }
+        },
+    ),
+    ErrorTestCase(
         None,
         400,
         {
