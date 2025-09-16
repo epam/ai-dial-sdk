@@ -1,6 +1,6 @@
 import asyncio
 from time import time
-from typing import Any, Callable, Coroutine, Dict, List, Mapping, Optional
+from typing import Any, Callable, Coroutine, List, Optional, Tuple
 from uuid import uuid4
 
 from typing_extensions import assert_never
@@ -43,7 +43,7 @@ class Response:
     _usage_generated: bool
 
     _default_chunk: DefaultChunk
-    _headers: Dict[str, str]
+    _headers: List[Tuple[str, str]]
 
     def __init__(self, request: Request):
         self._queue = asyncio.Queue()
@@ -65,7 +65,7 @@ class Response:
             ),
         )
 
-        self._headers = {}
+        self._headers = []
 
     @property
     def n(self) -> int:
@@ -76,7 +76,7 @@ class Response:
         return self.request.stream
 
     @property
-    def headers(self) -> Mapping[str, str]:
+    def headers(self) -> List[Tuple[str, str]]:
         return self._headers
 
     async def _run_producer(self, producer: _Producer):
@@ -257,9 +257,9 @@ class Response:
 
         self._default_chunk["id"] = response_id
 
-    def set_header(self, key: str, value: str):
-        if key in self._headers:
+    def append_header(self, key: str, value: str):
+        if self._generation_started:
             raise runtime_error(
-                f"Trying to set the response header {key!r} twice"
+                "Trying to set a header after start of generation",
             )
-        self._headers[key] = value
+        self._headers.append((key, value))

@@ -272,19 +272,19 @@ class DIALApp(FastAPI):
                         heartbeat_object=": heartbeat\n\n",
                     )
 
-                return StreamingResponse(
+                resp = StreamingResponse(
                     await to_streaming_response(stream),
                     media_type="text/event-stream",
-                    headers=response.headers,
                 )
             else:
                 response_json = await to_block_response(stream)
-
                 log_debug(f"response: {response_json}")
-                return JSONResponse(
-                    content=response_json,
-                    headers=response.headers,
-                )
+                resp = JSONResponse(content=response_json)
+
+            for key, value in response.headers:
+                resp.headers.append(key, value)
+
+            return resp
 
         return _handler
 
