@@ -62,20 +62,17 @@ def test_append_response_header_after_generation(stream: bool, caplog):
     )
 
     assert response.headers.get("missing-header") is None
-    assert "Trying to set a header after start of generation" in caplog.text
+    assert response.status_code == 200
 
     if stream:
-        assert response.status_code == 200
+        assert response.headers.get("header1") is None
+        assert response.headers.get("header2") is None
+
+        assert "Trying to set a header after start of generation" in caplog.text
         assert (
             'data: {"error":{"message":"Error during processing the request","type":"runtime_error","code":"500"}}'
             in response.text
         )
     else:
-        assert response.status_code == 500
-        assert response.json() == {
-            "error": {
-                "message": "Error during processing the request",
-                "type": "runtime_error",
-                "code": "500",
-            }
-        }
+        assert response.headers.get("header1") == "value1"
+        assert response.headers.get("header2") == "value2-1, value2-2"
