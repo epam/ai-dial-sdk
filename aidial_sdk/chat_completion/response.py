@@ -258,7 +258,7 @@ class Response:
         self._default_chunk["id"] = response_id
 
     def append_header(self, key: str, value: str):
-        if self._generation_started:
+        if self._generation_started and self.stream:
             raise runtime_error(
                 "Trying to set a header after start of generation",
             )
