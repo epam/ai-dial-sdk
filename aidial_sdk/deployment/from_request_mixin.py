@@ -144,7 +144,6 @@ class FromRequestDeploymentMixin(FromRequestMixin):
         deployment_id: StrictStr,
         base_url: Optional[str],
     ):
-
         headers = request.headers.mutablecopy()
 
         api_key = headers.get("Api-Key")

@@ -124,7 +124,6 @@ def test_error(test_case: ErrorTestCase):
             "messages": [{"role": "user", "content": test_case.content}],
             "stream": False,
         },
-        headers={"Api-Key": "TEST_API_KEY"},
     )
 
     assert response.status_code == test_case.response_code
@@ -144,7 +143,6 @@ def test_streaming_error(test_case: ErrorTestCase):
             "messages": [{"role": "user", "content": test_case.content}],
             "stream": True,
         },
-        headers={"Api-Key": "TEST_API_KEY"},
     )
 
     assert response.status_code == test_case.response_code
