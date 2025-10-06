@@ -1,8 +1,8 @@
 from typing import List, Literal, Optional, Union
 
+from aidial_sdk._pydantic import StrictInt, StrictStr
 from aidial_sdk.chat_completion.request import Attachment
 from aidial_sdk.deployment.from_request_mixin import FromRequestDeploymentMixin
-from aidial_sdk.pydantic_v1 import StrictInt, StrictStr
 from aidial_sdk.utils.pydantic import ExtraAllowModel
 
 

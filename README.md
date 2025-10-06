@@ -122,6 +122,7 @@ install PyCharm>=2023.2 with [built-in Black support](https://blog.jetbrains.com
 |Variable|Default|Description|
 |---|---|---|
 |DIAL_SDK_LOG|WARNING|DIAL SDK log level|
+|PYDANTIC_V2|False|When `True` and Pydantic V2 is installed, DIAL SDK classes for requests/responses will be based on Pydantic V2 `BaseModel`. Otherwise, they will be based on Pydantic V1 `BaseModel`.|
 
 ## Lint
 

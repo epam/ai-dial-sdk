@@ -12,6 +12,8 @@ from aidial_sdk._errors import (
     fastapi_exception_handler,
     pydantic_validation_exception_handler,
 )
+from aidial_sdk._pydantic import ValidationError
+from aidial_sdk._pydantic._compat import BaseModel
 from aidial_sdk.chat_completion.base import ChatCompletion
 from aidial_sdk.chat_completion.request import Request as ChatCompletionRequest
 from aidial_sdk.chat_completion.response import (
@@ -26,7 +28,6 @@ from aidial_sdk.embeddings.base import Embeddings
 from aidial_sdk.embeddings.request import Request as EmbeddingsRequest
 from aidial_sdk.exceptions import HTTPException as DIALException
 from aidial_sdk.header_propagator import HeaderPropagator
-from aidial_sdk.pydantic_v1 import BaseModel, ValidationError
 from aidial_sdk.telemetry.types import TelemetryConfig
 from aidial_sdk.utils._reflection import get_method_implementation
 from aidial_sdk.utils.log_config import LogConfig
@@ -38,7 +39,7 @@ from aidial_sdk.utils.streaming import (
     to_streaming_response,
 )
 
-logging.config.dictConfig(LogConfig().dict())
+logging.config.dictConfig(LogConfig().model_dump())
 
 RequestType = TypeVar("RequestType", bound=FromRequestMixin)
 
@@ -207,7 +208,7 @@ class DIALApp(FastAPI):
             if isinstance(response, dict):
                 response_json = response
             elif isinstance(response, BaseModel):
-                response_json = response.dict()
+                response_json = response.model_dump()
             else:
                 raise ValueError(
                     f"Unexpected response type from {endpoint}: {type(response)}"
@@ -295,7 +296,7 @@ class DIALApp(FastAPI):
                 EmbeddingsRequest, original_request, deployment_id
             )
             response = await impl.embeddings(request)
-            response_json = response.dict()
+            response_json = response.model_dump()
             return JSONResponse(content=response_json)
 
         return _handler

@@ -5,8 +5,15 @@ from urllib.parse import urljoin
 
 import fastapi
 
+from aidial_sdk._pydantic import (
+    PYDANTIC_V2,
+    ConfigDict,
+    Field,
+    SecretStr,
+    StrictStr,
+)
+from aidial_sdk._pydantic._compat import model_validator
 from aidial_sdk.exceptions import InternalServerError, InvalidRequestError
-from aidial_sdk.pydantic_v1 import Field, SecretStr, StrictStr, root_validator
 from aidial_sdk.utils.logging import log_debug
 from aidial_sdk.utils.pydantic import ExtraAllowModel
 
@@ -30,10 +37,11 @@ class FromRequestMixin(ABC, ExtraAllowModel):
         pass
 
 
-class FromRequestDeploymentMixin(FromRequestMixin):
+_DIAL_APPLICATION_PROPERTIES_HEADER = "X-DIAL-APPLICATION-PROPERTIES"
+_DIAL_APPLICATION_ID_HEADER = "X-DIAL-APPLICATION-ID"
 
-    _DIAL_APPLICATION_PROPERTIES_HEADER = "X-DIAL-APPLICATION-PROPERTIES"
-    _DIAL_APPLICATION_ID_HEADER = "X-DIAL-APPLICATION-ID"
+
+class FromRequestDeploymentMixin(FromRequestMixin):
 
     headers: Mapping[str, str]
     base_url: Optional[str] = None
@@ -45,8 +53,12 @@ class FromRequestDeploymentMixin(FromRequestMixin):
     dial_application_id: Optional[str] = None
     original_request: fastapi.Request = Field(..., exclude=True)
 
-    class Config:
-        arbitrary_types_allowed = True
+    if PYDANTIC_V2:
+        model_config = ConfigDict(arbitrary_types_allowed=True)
+    else:
+
+        class Config:
+            arbitrary_types_allowed = True
 
     async def request_dial_application_properties(
         self,
@@ -56,7 +68,7 @@ class FromRequestDeploymentMixin(FromRequestMixin):
 
         if not self.dial_application_id:
             raise InvalidRequestError(
-                f"The {self._DIAL_APPLICATION_ID_HEADER} header isn't set"
+                f"The {_DIAL_APPLICATION_ID_HEADER} header isn't set"
             )
 
         if not self.base_url:
@@ -98,7 +110,8 @@ class FromRequestDeploymentMixin(FromRequestMixin):
                 f"Unable to retrieve application properties for the application {self.dial_application_id!r}: {ex}",
             )
 
-    @root_validator(pre=True)
+    @model_validator(mode="before")
+    @classmethod
     def create_secrets(cls, values: dict):
         if "api_key" in values:
             if "api_key_secret" not in values:
@@ -142,16 +155,16 @@ class FromRequestDeploymentMixin(FromRequestMixin):
         del headers["Authorization"]
 
         application_properties = None
-        props_header = headers.get(cls._DIAL_APPLICATION_PROPERTIES_HEADER)
+        props_header = headers.get(_DIAL_APPLICATION_PROPERTIES_HEADER)
         if props_header:
             try:
                 application_properties = json.loads(props_header)
             except json.JSONDecodeError:
                 raise InvalidRequestError(
-                    f"The value of {cls._DIAL_APPLICATION_PROPERTIES_HEADER} header isn't valid JSON"
+                    f"The value of {_DIAL_APPLICATION_PROPERTIES_HEADER} header isn't valid JSON"
                 )
 
-        application_id = headers.get(cls._DIAL_APPLICATION_ID_HEADER)
+        application_id = headers.get(_DIAL_APPLICATION_ID_HEADER)
 
         return cls(
             **(await cls.get_request_body(request)),
