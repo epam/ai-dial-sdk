@@ -1,7 +1,7 @@
 import fastapi
 
+from aidial_sdk._pydantic import SecretStr
 from aidial_sdk.chat_completion import Request
-from aidial_sdk.pydantic_v1 import SecretStr
 
 _DUMMY_FASTAPI_REQUEST = fastapi.Request({"type": "http"})
 

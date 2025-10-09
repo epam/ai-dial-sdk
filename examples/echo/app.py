@@ -25,7 +25,7 @@ class EchoApplication(ChatCompletion):
             if last_message.custom_content is not None:
                 for attachment in last_message.custom_content.attachments or []:
                     # Add the same attachment to the response
-                    choice.add_attachment(**attachment.dict())
+                    choice.add_attachment(**attachment.model_dump())
 
 
 # DIALApp extends FastAPI to provide a user-friendly interface for routing requests to your applications

@@ -1,6 +1,6 @@
 from typing import List, Literal, Optional, Union
 
-from aidial_sdk.pydantic_v1 import BaseModel
+from pydantic import BaseModel
 
 # 1 for X
 # 2 for O

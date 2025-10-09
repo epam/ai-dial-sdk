@@ -19,6 +19,7 @@ from aidial_sdk.deployment.truncate_prompt import (
     TruncatePromptResult,
     TruncatePromptSuccess,
 )
+from tests.utils.pydantic import model_copy
 
 
 def word_count_string(string: str) -> int:
@@ -66,7 +67,7 @@ def default_truncate_prompt(
             for idx, message in enumerate(request.messages)
             if idx in indices
         ]
-        sub_request = request.copy(update={"messages": messages})
+        sub_request = model_copy(request, update={"messages": messages})
         return count_request_tokens(sub_request)
 
     all_indices = set(range(0, len(request.messages)))

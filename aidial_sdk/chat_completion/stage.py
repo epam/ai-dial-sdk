@@ -1,6 +1,7 @@
 from types import TracebackType
 from typing import Optional, Type, overload
 
+from aidial_sdk._pydantic import ValidationError
 from aidial_sdk.chat_completion._types import ChunkQueue
 from aidial_sdk.chat_completion.chunks import (
     AttachmentStageChunk,
@@ -11,7 +12,6 @@ from aidial_sdk.chat_completion.chunks import (
 )
 from aidial_sdk.chat_completion.enums import Status
 from aidial_sdk.chat_completion.request import Attachment
-from aidial_sdk.pydantic_v1 import ValidationError
 from aidial_sdk.utils._attachment import create_attachment
 from aidial_sdk.utils._content_stream import ContentStream
 from aidial_sdk.utils.errors import runtime_error
@@ -109,7 +109,7 @@ class Stage:
                 choice_index=self._choice_index,
                 stage_index=self._stage_index,
                 attachment_index=self._last_attachment_index,
-                **create_attachment(*args, **kwargs).dict(),
+                **create_attachment(*args, **kwargs).model_dump(),
             )
         except ValidationError as e:
             raise runtime_error(e.errors()[0]["msg"])

@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from starlette.testclient import TestClient
 
 from tests.utils.errors import Error
+from tests.utils.json import match_objects
 
 
 class TestCase:
@@ -58,5 +59,5 @@ def run_endpoint_test(testcase: TestCase):
         expected_response_code = 200
         expected_response_body = expected_response
 
-    assert actual_response_body == expected_response_body
+    assert match_objects(expected_response_body, actual_response_body)
     assert actual_response.status_code == expected_response_code

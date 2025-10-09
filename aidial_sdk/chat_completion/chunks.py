@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Literal, Optional, TypedDict
 
+from aidial_sdk._pydantic._compat import BaseModel
 from aidial_sdk.chat_completion.enums import FinishReason, Status
 from aidial_sdk.exceptions import HTTPException as DIALException
-from aidial_sdk.pydantic_v1 import BaseModel, root_validator
 from aidial_sdk.utils.json import remove_nones
 
 
@@ -355,19 +355,8 @@ class Attachment(BaseModel):
     reference_url: Optional[str]
     reference_type: Optional[str]
 
-    @root_validator
-    def check_data_or_url(cls, values):
-        data, url = values.get("data"), values.get("url")
-
-        if data is None and url is None:
-            raise ValueError("Trying to add attachment without data and url")
-        if data is not None and url is not None:
-            raise ValueError("Trying to add attachment with data and url")
-
-        return values
-
-    def attachment_dict(self, index: int):
-        attachment: Dict[str, Any] = {"index": index}
+    def attachment_dict(self) -> dict:
+        attachment: Dict[str, Any] = {"index": self.attachment_index}
 
         if self.type:
             attachment["type"] = self.type
@@ -398,9 +387,7 @@ class AttachmentChunk(Attachment, BaseChunk):
                     "finish_reason": None,
                     "delta": {
                         "custom_content": {
-                            "attachments": [
-                                self.attachment_dict(self.attachment_index)
-                            ]
+                            "attachments": [self.attachment_dict()]
                         }
                     },
                 }
@@ -423,11 +410,7 @@ class AttachmentStageChunk(Attachment, BaseChunk):
                             "stages": [
                                 {
                                     "index": self.stage_index,
-                                    "attachments": [
-                                        self.attachment_dict(
-                                            self.attachment_index
-                                        )
-                                    ],
+                                    "attachments": [self.attachment_dict()],
                                     "status": None,
                                 }
                             ]
