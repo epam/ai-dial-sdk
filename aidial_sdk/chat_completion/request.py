@@ -235,6 +235,10 @@ class ResponseFormatJsonSchema(ExtraAllowModel):
     json_schema: ResponseFormatJsonSchemaObject
 
 
+class StreamOptions(ExtraAllowModel):
+    include_usage: Optional[bool]
+
+
 ResponseFormat = Union[
     ResponseFormatText,
     ResponseFormatJsonObject,
@@ -254,6 +258,7 @@ class AzureChatCompletionRequest(ExtraAllowModel):
         Union[Literal["auto", "none", "required"], ToolChoice]
     ] = None
     stream: bool = False
+    stream_options: Optional[StreamOptions] = None
     temperature: Optional[Temperature] = None
     top_p: Optional[TopP] = None
     n: Optional[N] = None
