@@ -11,7 +11,7 @@
     <a href="https://pypi.org/project/aidial-sdk/">
         <img src="https://img.shields.io/pypi/v/aidial-sdk.svg" alt="PyPI version">
     </a>
-    <a href="https://discord.gg/TMMwWkEYzS">
+    <a href="https://discord.gg/ukzj9U9tEe">
         <img src="https://img.shields.io/static/v1?label=AI%20DIALX%20Community%20in&message=Discord&color=blue&logo=Discord&style=flat-square" alt="Discord">
     </a>
 </h4>
@@ -150,13 +150,11 @@ This will install all requirements for running the package, linting, formatting 
 
 ### IDE configuration
 
-> [!TIP]
 > The recommended IDE is [VSCode](https://code.visualstudio.com/).
 > Open the project in VSCode and install the recommended extensions.
 > 
 > The VSCode is configured to use PEP-8 compatible formatter [Black](https://black.readthedocs.io/en/stable/index.html).
 
-> [!TIP]
 > Alternatively you can use [PyCharm](https://www.jetbrains.com/pycharm/).
 > 
 > Set-up the Black formatter for PyCharm [manually](https://black.readthedocs.io/en/stable/integrations/editors.html#pycharm-intellij-idea) or
