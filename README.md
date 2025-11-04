@@ -17,6 +17,7 @@
 </h4>
 
 - [Overview](#overview)
+- [Environment Variables](#environment-variables)
 - [Usage](#usage)
     - [Echo application example](#echo-application-example)
       - [Run](#Run)
@@ -37,6 +38,15 @@
 Framework to create applications and model adapters for [AI DIAL](https://epam-rail.com).
 
 Applications and model adapters implemented using this framework will be compatible with [AI DIAL API](https://epam-rail.com/dial_api) that was designed based on [Azure OpenAI API](https://learn.microsoft.com/en-us/azure/ai-services/openai/reference).
+
+---
+
+## Environment Variables
+
+| Variable     | Default | Description                                                                                                                                                                           |
+|--------------|---------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| DIAL_SDK_LOG | WARNING | DIAL SDK log level                                                                                                                                                                    |
+| PYDANTIC_V2  | False   | When `True` and Pydantic V2 is installed, DIAL SDK classes for requests/responses will be based on Pydantic V2 `BaseModel`. Otherwise, they will be based on Pydantic V1 `BaseModel`. |
 
 ---
 
@@ -142,22 +152,15 @@ This will install all requirements for running the package, linting, formatting 
 
 ### IDE configuration
 
-The recommended IDE is [VSCode](https://code.visualstudio.com/).
-Open the project in VSCode and install the recommended extensions.
+> The recommended IDE is [VSCode](https://code.visualstudio.com/).
+> Open the project in VSCode and install the recommended extensions.
+> 
+> The VSCode is configured to use PEP-8 compatible formatter [Black](https://black.readthedocs.io/en/stable/index.html).
 
-The VSCode is configured to use PEP-8 compatible formatter [Black](https://black.readthedocs.io/en/stable/index.html).
-
-Alternatively you can use [PyCharm](https://www.jetbrains.com/pycharm/).
-
-Set-up the Black formatter for PyCharm [manually](https://black.readthedocs.io/en/stable/integrations/editors.html#pycharm-intellij-idea) or
-install PyCharm>=2023.2 with [built-in Black support](https://blog.jetbrains.com/pycharm/2023/07/2023-2/#black).
-
-## Environment Variables
-
-|Variable|Default|Description|
-|---|---|---|
-|DIAL_SDK_LOG|WARNING|DIAL SDK log level|
-|PYDANTIC_V2|False|When `True` and Pydantic V2 is installed, DIAL SDK classes for requests/responses will be based on Pydantic V2 `BaseModel`. Otherwise, they will be based on Pydantic V1 `BaseModel`.|
+> Alternatively you can use [PyCharm](https://www.jetbrains.com/pycharm/).
+> 
+> Set-up the Black formatter for PyCharm [manually](https://black.readthedocs.io/en/stable/integrations/editors.html#pycharm-intellij-idea) or
+> install PyCharm>=2023.2 with [built-in Black support](https://blog.jetbrains.com/pycharm/2023/07/2023-2/#black).
 
 ---
 
