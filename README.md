@@ -1,12 +1,54 @@
-# AI DIAL Python SDK
+<h1 align="center">
+         AI DIAL Python SDK
+    </h1>
+    <p align="center">
+        <p align="center">
+        <a href="https://dialx.ai/">
+          <img src="https://dialx.ai/dialx_logo.svg" alt="About DIALX">
+        </a>
+    </p>
+<h4 align="center">
+    <a href="https://pypi.org/project/aidial-sdk/">
+        <img src="https://img.shields.io/pypi/v/aidial-sdk.svg" alt="PyPI version">
+    </a>
+    <a href="https://discord.gg/ukzj9U9tEe">
+        <img src="https://img.shields.io/static/v1?label=DIALX%20Community%20on&message=Discord&color=blue&logo=Discord&style=flat-square" alt="Discord">
+    </a>
+</h4>
 
-[![PyPI version](https://img.shields.io/pypi/v/aidial-sdk.svg)](https://pypi.org/project/aidial-sdk/)
+- [Overview](#overview)
+- [Environment Variables](#environment-variables)
+- [Usage](#usage)
+    - [Echo application example](#echo-application-example)
+      - [Run](#Run)
+      - [Check](#Check)
+- [Developer environment](#developer-environment)
+    - [IDE configuration](#IDE-configuration)
+- [Set up](#Set-up)
+  - [Lint](#Lint)
+  - [Test](#Test)
+  - [Clean](#Clean)
+  - [Build](#Build)
+  - [Publish](#Publish)
+
+---
 
 ## Overview
 
 Framework to create applications and model adapters for [AI DIAL](https://epam-rail.com).
 
 Applications and model adapters implemented using this framework will be compatible with [AI DIAL API](https://epam-rail.com/dial_api) that was designed based on [Azure OpenAI API](https://learn.microsoft.com/en-us/azure/ai-services/openai/reference).
+
+---
+
+## Environment Variables
+
+| Variable     | Default | Description                                                                                                                                                                           |
+|--------------|---------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| DIAL_SDK_LOG | WARNING | DIAL SDK log level                                                                                                                                                                    |
+| PYDANTIC_V2  | False   | When `True` and Pydantic V2 is installed, DIAL SDK classes for requests/responses will be based on Pydantic V2 `BaseModel`. Otherwise, they will be based on Pydantic V1 `BaseModel`. |
+
+---
 
 ## Usage
 
@@ -30,9 +72,7 @@ from aidial_sdk.chat_completion import ChatCompletion, Request, Response
 
 # ChatCompletion is an abstract class for applications and model adapters
 class EchoApplication(ChatCompletion):
-    async def chat_completion(
-        self, request: Request, response: Response
-    ) -> None:
+    async def chat_completion(self, request: Request, response: Response) -> None:
         # Get last message (the newest) from the history
         last_user_message = request.messages[-1]
 
@@ -91,11 +131,14 @@ You will see the JSON response as:
 }
 ```
 
+---
+
 ## Developer environment
 
-This project uses [Python>=3.9](https://www.python.org/downloads/) and [Poetry>=2.1.1](https://python-poetry.org/) as a dependency manager.
-
-Check out Poetry's [documentation on how to install it](https://python-poetry.org/docs/#installation) on your system before proceeding.
+> [!IMPORTANT]
+> This project uses [Python>=3.9](https://www.python.org/downloads/) and [Poetry>=2.1.1](https://python-poetry.org/) as a dependency manager.
+>
+> Check out Poetry's [documentation on how to install it](https://python-poetry.org/docs/#installation) on your system before proceeding.
 
 To install requirements:
 
@@ -109,22 +152,19 @@ This will install all requirements for running the package, linting, formatting 
 
 The recommended IDE is [VSCode](https://code.visualstudio.com/).
 Open the project in VSCode and install the recommended extensions.
-
+ 
 The VSCode is configured to use PEP-8 compatible formatter [Black](https://black.readthedocs.io/en/stable/index.html).
 
 Alternatively you can use [PyCharm](https://www.jetbrains.com/pycharm/).
-
+ 
 Set-up the Black formatter for PyCharm [manually](https://black.readthedocs.io/en/stable/integrations/editors.html#pycharm-intellij-idea) or
 install PyCharm>=2023.2 with [built-in Black support](https://blog.jetbrains.com/pycharm/2023/07/2023-2/#black).
 
-## Environment Variables
+---
 
-|Variable|Default|Description|
-|---|---|---|
-|DIAL_SDK_LOG|WARNING|DIAL SDK log level|
-|PYDANTIC_V2|False|When `True` and Pydantic V2 is installed, DIAL SDK classes for requests/responses will be based on Pydantic V2 `BaseModel`. Otherwise, they will be based on Pydantic V1 `BaseModel`.|
+## Set up
 
-## Lint
+### Lint
 
 Run the linting before committing:
 
@@ -138,7 +178,7 @@ To auto-fix formatting issues run:
 make format
 ```
 
-## Test
+### Test
 
 Run unit tests locally for available python versions:
 
@@ -152,7 +192,7 @@ Run unit tests for the specific python version:
 make test PYTHON=3.11
 ```
 
-## Clean
+### Clean
 
 To remove the virtual environment and build artifacts run:
 
@@ -160,7 +200,7 @@ To remove the virtual environment and build artifacts run:
 make clean
 ```
 
-## Build
+### Build
 
 To build the package run:
 
@@ -168,10 +208,12 @@ To build the package run:
 make build
 ```
 
-## Publish
+### Publish
 
 To publish the package to PyPI run:
 
 ```sh
 make publish
 ```
+
+---
