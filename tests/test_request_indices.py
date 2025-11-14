@@ -74,7 +74,7 @@ def test_index_field_ignore_int(test_case: TestCase):
 
 def test_index_field_fail_on_str(test_case: TestCase):
     if isinstance(test_case.obj, ToolCall):
-        err = r"index[\s\S]*value is not a valid integer"
+        err = r"index[\s\S]*(value is not a valid integer|Input should be a valid integer)"
     else:
         err = r"(Extra inputs are not permitted|extra fields not permitted)"
 
