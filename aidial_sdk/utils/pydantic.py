@@ -1,8 +1,8 @@
 from enum import Enum
-from typing import Any, Dict, Iterator, List, Optional, Tuple, Union
+from typing import Any, Dict, Iterator, List, Mapping, Optional, Tuple, Union
 
 from aidial_sdk._pydantic import PYDANTIC_V2, ConfigDict, FieldInfo
-from aidial_sdk._pydantic._compat import BaseModel
+from aidial_sdk._pydantic._compat import BaseModel, model_validator
 
 
 class ExtraAllowModel(BaseModel):
@@ -12,6 +12,21 @@ class ExtraAllowModel(BaseModel):
 
         class Config:
             extra = "allow"
+
+
+class IgnoreIndex(BaseModel):
+    @model_validator(mode="before")
+    @classmethod
+    def strip_index(cls, data: Any) -> Any:
+        if (
+            isinstance(data, Mapping)
+            and (idx := data.get("index")) is not None
+            and isinstance(idx, int)
+        ):
+            d = dict(data)
+            d.pop("index")
+            return d
+        return data
 
 
 _Loc = Tuple[Union[int, str], ...]
