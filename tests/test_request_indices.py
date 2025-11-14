@@ -64,12 +64,12 @@ def test_index_field_ser_deser(test_case: TestCase):
 
 
 def test_index_field_ignore_int(test_case: TestCase):
-    tool_call = model_parse(
+    obj = model_parse(
         type(test_case.obj),
         {**test_case.dct, **{"index": 101}},
         allow_extra_fields=False,
     )
-    _check_ser_deser(tool_call)
+    _check_ser_deser(obj)
 
 
 def test_index_field_fail_on_str(test_case: TestCase):
