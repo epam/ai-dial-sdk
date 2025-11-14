@@ -63,8 +63,7 @@ class FunctionCall(ExtraAllowModel):
     arguments: str
 
 
-class ToolCall(ExtraAllowModel):
-    index: Optional[int] = None
+class ToolCall(ExtraAllowModel, IgnoreIndex):
     id: StrictStr
     type: Literal["function"]
     function: FunctionCall

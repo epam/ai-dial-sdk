@@ -73,12 +73,10 @@ def test_index_field_ignore_int(test_case: TestCase):
 
 
 def test_index_field_fail_on_str(test_case: TestCase):
-    if isinstance(test_case.obj, ToolCall):
-        err = r"index[\s\S]*(value is not a valid integer|Input should be a valid integer)"
-    else:
-        err = r"(Extra inputs are not permitted|extra fields not permitted)"
-
-    with pytest.raises(ValidationError, match=err):
+    with pytest.raises(
+        ValidationError,
+        match=r"(Extra inputs are not permitted|extra fields not permitted)",
+    ):
         model_parse(
             type(test_case.obj),
             {**test_case.dct, **{"index": "value"}},
