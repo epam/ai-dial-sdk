@@ -2,6 +2,7 @@ from typing import Any, Dict, Optional, Type, TypeVar, Union
 
 from aidial_sdk._pydantic import PYDANTIC_V2, BaseModel
 from aidial_sdk._pydantic import Field as PydField
+from aidial_sdk.utils.pydantic import model_validate_extra_fields
 
 _ModelT = TypeVar("_ModelT", bound=BaseModel)
 
@@ -15,16 +16,28 @@ def Field(*args, **kwargs) -> Any:
         return PydField(*args, **kwargs)
 
 
-def model_parse(model: Type[_ModelT], data: Any) -> _ModelT:
+def model_parse(
+    model: Type[_ModelT], data: Any, *, allow_extra_fields=True
+) -> _ModelT:
     if PYDANTIC_V2:
-        return model.model_validate(data)
-    return model.parse_obj(data)  # pyright: ignore[reportDeprecated]
+        obj = model.model_validate(data)
+    else:
+        obj = model.parse_obj(data)  # pyright: ignore[reportDeprecated]
+    if not allow_extra_fields:
+        model_validate_extra_fields(obj)  # type: ignore
+    return obj
 
 
-def model_parse_json(model: Type[_ModelT], data: Union[str, bytes]) -> _ModelT:
+def model_parse_json(
+    model: Type[_ModelT], data: Union[str, bytes], *, allow_extra_fields=True
+) -> _ModelT:
     if PYDANTIC_V2:
-        return model.model_validate_json(data)
-    return model.parse_raw(data)  # pyright: ignore[reportDeprecated]
+        obj = model.model_validate_json(data)
+    else:
+        obj = model.parse_raw(data)  # pyright: ignore[reportDeprecated]
+    if not allow_extra_fields:
+        model_validate_extra_fields(obj)  # type: ignore
+    return obj
 
 
 def model_json_schema(model: Type[_ModelT]) -> Dict[str, Any]:

@@ -15,10 +15,10 @@ from aidial_sdk._pydantic._compat import model_validator
 from aidial_sdk.chat_completion.enums import Status
 from aidial_sdk.deployment.from_request_mixin import FromRequestDeploymentMixin
 from aidial_sdk.exceptions import InvalidRequestError
-from aidial_sdk.utils.pydantic import ExtraAllowModel
+from aidial_sdk.utils.pydantic import ExtraAllowModel, IgnoreIndex
 
 
-class Attachment(ExtraAllowModel):
+class Attachment(ExtraAllowModel, IgnoreIndex):
     type: Optional[StrictStr] = "text/markdown"
     title: Optional[StrictStr] = None
     data: Optional[StrictStr] = None
@@ -43,7 +43,7 @@ class Attachment(ExtraAllowModel):
         return values
 
 
-class Stage(ExtraAllowModel):
+class Stage(ExtraAllowModel, IgnoreIndex):
     name: StrictStr
     status: Status
     content: Optional[StrictStr] = None
@@ -63,9 +63,7 @@ class FunctionCall(ExtraAllowModel):
     arguments: str
 
 
-class ToolCall(ExtraAllowModel):
-    # OpenAI API doesn't strictly specify existence of the index field
-    index: Optional[int]
+class ToolCall(ExtraAllowModel, IgnoreIndex):
     id: StrictStr
     type: Literal["function"]
     function: FunctionCall
