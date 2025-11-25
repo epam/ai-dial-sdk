@@ -244,6 +244,14 @@ ResponseFormat = Union[
 ]
 
 
+class ReasoningEffort(str, Enum):
+    NONE = "none"
+    MINIMAL = "minimal"
+    LOW = "low"
+    MEDIUM = "medium"
+    HIGH = "high"
+
+
 class AzureChatCompletionRequest(ExtraAllowModel):
     model: Optional[StrictStr] = None
     messages: List[Message]
@@ -270,6 +278,7 @@ class AzureChatCompletionRequest(ExtraAllowModel):
     seed: Optional[StrictInt] = None
     logprobs: Optional[StrictBool] = None
     top_logprobs: Optional[StrictInt] = None
+    reasoning_effort: Optional[ReasoningEffort] = None
     response_format: Optional[ResponseFormat] = None
     parallel_tool_calls: Optional[StrictBool] = None
 
