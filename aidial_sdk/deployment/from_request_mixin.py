@@ -130,9 +130,13 @@ class FromRequestDeploymentMixin(FromRequestMixin):
 
         if "bearer_token" in values:
             if "bearer_token_secret" not in values:
-                values["bearer_token_secret"] = SecretStr(values.pop("bearer_token"))
+                values["bearer_token_secret"] = SecretStr(
+                    values.pop("bearer_token")
+                )
             else:
-                raise ValueError("bearer_token and bearer_token_secret cannot be both provided")
+                raise ValueError(
+                    "bearer_token and bearer_token_secret cannot be both provided"
+                )
 
         return values
 
@@ -146,7 +150,11 @@ class FromRequestDeploymentMixin(FromRequestMixin):
 
     @property
     def bearer_token(self) -> Optional[str]:
-        return self.bearer_token_secret.get_secret_value() if self.bearer_token_secret else None
+        return (
+            self.bearer_token_secret.get_secret_value()
+            if self.bearer_token_secret
+            else None
+        )
 
     @classmethod
     async def from_request(
@@ -160,11 +168,20 @@ class FromRequestDeploymentMixin(FromRequestMixin):
         api_key = headers.get("Api-Key")
         if api_key is None:
             raise InvalidRequestError("Api-Key header is required")
-        del headers["Api-Key"]
+        if "Api-Key" in headers:
+            del headers["Api-Key"]
 
+        # Preserve the full Authorization header as jwt for backward-compat (the original sdk behavior)
         jwt = headers.get("Authorization")
-        bearer_token = jwt[len("Bearer ") :].strip() if jwt is not None and jwt.startswith("Bearer ") else None
-        del headers["Authorization"]
+        bearer_token = None
+        if jwt is not None:
+            import re
+
+            match = re.match(r"^\s*Bearer\s+(.+)$", jwt, flags=re.IGNORECASE)
+            if match:
+                bearer_token = match.group(1).strip()
+        if "Authorization" in headers:
+            del headers["Authorization"]
 
         application_properties = None
         props_header = headers.get(_DIAL_APPLICATION_PROPERTIES_HEADER)
@@ -182,7 +199,9 @@ class FromRequestDeploymentMixin(FromRequestMixin):
             **(await cls.get_request_body(request)),
             api_key_secret=SecretStr(api_key),
             jwt_secret=SecretStr(jwt) if jwt else None,
-            bearer_token_secret=SecretStr(bearer_token) if bearer_token else None,
+            bearer_token_secret=(
+                SecretStr(bearer_token) if bearer_token else None
+            ),
             deployment_id=deployment_id,
             api_version=request.query_params.get("api-version"),
             headers=headers,
