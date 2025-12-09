@@ -1,3 +1,5 @@
+import warnings
+
 import pytest
 from starlette.testclient import TestClient
 
@@ -26,8 +28,11 @@ class AssertingApp(TokenEchoApp):
         self.expected_jwt = expected_jwt
         self.expected_bearer_token = expected_bearer_token
 
+    # noinspection PyDeprecation
     async def chat_completion(self, request: Request, response: Response):
-        assert request.jwt == self.expected_jwt
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", DeprecationWarning)
+            assert request.jwt == self.expected_jwt
         assert request.bearer_token == self.expected_bearer_token
         await super().chat_completion(request, response)
 
@@ -37,8 +42,8 @@ class AssertingApp(TokenEchoApp):
     [
         (None, None, None),
         ("Bearer abc123", "Bearer abc123", "abc123"),
-        ("Bearer   spaced", "Bearer   spaced", "spaced"),
-        ("bearer lower", "bearer lower", "lower"),
+        ("Bearer   spaced", "Bearer   spaced", "  spaced"),
+        ("bearer lower", "bearer lower", None),
         ("Token abc", "Token abc", None),
         ("Bearer", "Bearer", None),
     ],
