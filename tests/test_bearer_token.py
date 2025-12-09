@@ -61,10 +61,10 @@ def test_bearer_token_parsing(authz_header, expected_jwt, expected_bearer):
 
 def test_bearer_token_is_removed_from_headers_forwarding():
     class InspectHeadersApp(TokenEchoApp):
-        async def chat_completion(self, request: Request, resp: Response):
+        async def chat_completion(self, request: Request, response: Response):
             assert "Authorization" not in request.headers
             assert "Api-Key" not in request.headers
-            await super().chat_completion(request, resp)
+            await super().chat_completion(request, response)
 
     client = create_client(InspectHeadersApp())
 
