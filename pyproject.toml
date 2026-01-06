@@ -1,6 +1,6 @@
 [project]
 name = "aidial-sdk"
-version = "0.30.0rc"
+version = "0.31.0rc"
 description = "Framework to create applications and model adapters for AI DIAL"
 authors = [{ name = "EPAM RAIL", email = "SpecialEPM-DIALDevTeam@epam.com" }]
 license = "Apache-2.0"
@@ -45,7 +45,7 @@ pillow = [
 ]
 httpx = "^0.25.0"
 respx = "^0.21.1"
-aiohttp = "^3.12.14"
+aiohttp = "^3.13.3"
 aioresponses = "^0.7.6"
 requests = "^2.32"
 responses = "^0.25.3"

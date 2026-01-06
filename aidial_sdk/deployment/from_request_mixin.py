@@ -1,4 +1,5 @@
 import json
+import warnings
 from abc import ABC, abstractmethod
 from typing import Any, Dict, Mapping, Optional, Type, TypeVar
 from urllib.parse import urljoin
@@ -47,6 +48,7 @@ class FromRequestDeploymentMixin(FromRequestMixin):
     base_url: Optional[str] = None
     api_key_secret: SecretStr
     jwt_secret: Optional[SecretStr] = None
+    bearer_token_secret: Optional[SecretStr] = None
     deployment_id: StrictStr
     api_version: Optional[StrictStr] = None
     unreliable_dial_application_properties: Optional[Dict[str, Any]] = None
@@ -126,7 +128,6 @@ class FromRequestDeploymentMixin(FromRequestMixin):
                 values["jwt_secret"] = SecretStr(values.pop("jwt"))
             else:
                 raise ValueError("jwt and jwt_secret cannot be both provided")
-
         return values
 
     @property
@@ -135,7 +136,23 @@ class FromRequestDeploymentMixin(FromRequestMixin):
 
     @property
     def jwt(self) -> Optional[str]:
+        warnings.warn(
+            "The jwt property is deprecated. "
+            "It returns the complete Authorization header (including Bearer), "
+            "which is inconsistent with the expected raw JWT value. "
+            "Use bearer_token to obtain the token without the prefix.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.jwt_secret.get_secret_value() if self.jwt_secret else None
+
+    @property
+    def bearer_token(self) -> Optional[str]:
+        return (
+            self.bearer_token_secret.get_secret_value()
+            if self.bearer_token_secret
+            else None
+        )
 
     @classmethod
     async def from_request(
@@ -151,7 +168,11 @@ class FromRequestDeploymentMixin(FromRequestMixin):
             raise InvalidRequestError("Api-Key header is required")
         del headers["Api-Key"]
 
-        jwt = headers.get("Authorization")
+        authorization = headers.get("Authorization")
+        if authorization and authorization.startswith("Bearer "):
+            bearer_token = authorization.removeprefix("Bearer ")
+        else:
+            bearer_token = None
         del headers["Authorization"]
 
         application_properties = None
@@ -169,7 +190,12 @@ class FromRequestDeploymentMixin(FromRequestMixin):
         return cls(
             **(await cls.get_request_body(request)),
             api_key_secret=SecretStr(api_key),
-            jwt_secret=SecretStr(jwt) if jwt else None,
+            jwt_secret=(
+                SecretStr(authorization) if authorization else None
+            ),  # Preserve the full Authorization header as jwt for backward-compat (the original sdk behavior)
+            bearer_token_secret=(
+                SecretStr(bearer_token) if bearer_token else None
+            ),
             deployment_id=deployment_id,
             api_version=request.query_params.get("api-version"),
             headers=headers,
