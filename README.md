@@ -19,17 +19,17 @@
 - [Overview](#overview)
 - [Environment Variables](#environment-variables)
 - [Usage](#usage)
-    - [Echo application example](#echo-application-example)
-      - [Run](#Run)
-      - [Check](#Check)
+  - [Echo application example](#echo-application-example)
+    - [Run](#run)
+    - [Check](#check)
 - [Developer environment](#developer-environment)
-    - [IDE configuration](#IDE-configuration)
-- [Set up](#Set-up)
-  - [Lint](#Lint)
-  - [Test](#Test)
-  - [Clean](#Clean)
-  - [Build](#Build)
-  - [Publish](#Publish)
+  - [IDE configuration](#ide-configuration)
+- [Set up](#set-up)
+  - [Lint](#lint)
+  - [Test](#test)
+  - [Clean](#clean)
+  - [Build](#build)
+  - [Publish](#publish)
 
 ---
 
@@ -136,7 +136,7 @@ You will see the JSON response as:
 ## Developer environment
 
 > [!IMPORTANT]
-> This project uses [Python>=3.9](https://www.python.org/downloads/) and [Poetry>=2.1.1](https://python-poetry.org/) as a dependency manager.
+> This project uses [Python>=3.10](https://www.python.org/downloads/) and [Poetry>=2.1.1](https://python-poetry.org/) as a dependency manager.
 >
 > Check out Poetry's [documentation on how to install it](https://python-poetry.org/docs/#installation) on your system before proceeding.
 
@@ -152,11 +152,11 @@ This will install all requirements for running the package, linting, formatting 
 
 The recommended IDE is [VSCode](https://code.visualstudio.com/).
 Open the project in VSCode and install the recommended extensions.
- 
+
 The VSCode is configured to use PEP-8 compatible formatter [Black](https://black.readthedocs.io/en/stable/index.html).
 
 Alternatively you can use [PyCharm](https://www.jetbrains.com/pycharm/).
- 
+
 Set-up the Black formatter for PyCharm [manually](https://black.readthedocs.io/en/stable/integrations/editors.html#pycharm-intellij-idea) or
 install PyCharm>=2023.2 with [built-in Black support](https://blog.jetbrains.com/pycharm/2023/07/2023-2/#black).
 

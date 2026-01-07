@@ -2487,5 +2487,5 @@ telemetry = ["opentelemetry-api", "opentelemetry-exporter-otlp-proto-grpc", "ope
 
 [metadata]
 lock-version = "2.1"
-python-versions = ">=3.9,<4.0"
-content-hash = "2f29fd4e69bf6dc570bacd58d89b5f3957b8cc22439135d62e62be068dc98bf1"
+python-versions = ">=3.10,<4.0"
+content-hash = "b94ac7c33243dd05b84bfbcd79b2de2da2c2686241e09eafecd6e80bf6465286"

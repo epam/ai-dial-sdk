@@ -5,7 +5,7 @@ description = "Framework to create applications and model adapters for AI DIAL"
 authors = [{ name = "EPAM RAIL", email = "SpecialEPM-DIALDevTeam@epam.com" }]
 license = "Apache-2.0"
 readme = "README.md"
-requires-python = ">=3.9,<4.0"
+requires-python = ">=3.10,<4.0"
 dependencies = [
     "fastapi (>=0.51,<1.0)",
     "uvicorn (>=0.19,<1.0)",

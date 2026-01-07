@@ -16,14 +16,13 @@ from requests.structures import CaseInsensitiveDict
 from aidial_sdk.header_propagator import HeaderPropagator
 from aidial_sdk.utils.json import remove_nones
 from tests.header_propagation.client import app as sender
-from tests.utils.text import removeprefix
 
 DIAL_URL = "http://dial.example.com"
 NON_DIAL_URL = "http://non-dial.example.com"
 API_KEY = "test-api-key"
 
 URL_PATTERN = re.compile(rf"{re.escape(DIAL_URL)}|{re.escape(NON_DIAL_URL)}")
-HOSTS = [removeprefix(url, "http://") for url in [DIAL_URL, NON_DIAL_URL]]
+HOSTS = [url.removeprefix("http://") for url in [DIAL_URL, NON_DIAL_URL]]
 
 
 @pytest.fixture
