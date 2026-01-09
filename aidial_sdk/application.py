@@ -262,7 +262,9 @@ class DIALApp(FastAPI):
 
             response = ChatCompletionResponse(request)
 
-            stream = response._generate_stream(impl.chat_completion)
+            stream = response._generate_stream(
+                original_request, impl.chat_completion
+            )
 
             if request.stream:
                 if heartbeat_interval:

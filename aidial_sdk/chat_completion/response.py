@@ -3,6 +3,7 @@ from time import time
 from typing import Any, Callable, Coroutine, List, Optional, Tuple
 from uuid import uuid4
 
+from fastapi import Request as FASTAPIRequest
 from typing_extensions import assert_never
 
 from aidial_sdk.chat_completion._types import ChunkQueue
@@ -36,6 +37,7 @@ class Response:
     request: Request
 
     _queue: ChunkQueue
+    _stop_event: asyncio.Event
     _last_choice_index: int
     _last_usage_per_model_index: int
     _generation_started: bool
@@ -47,6 +49,7 @@ class Response:
 
     def __init__(self, request: Request):
         self._queue = asyncio.Queue()
+        self._stop_event = asyncio.Event()
         self._last_choice_index = 0
         self._last_usage_per_model_index = 0
         self._generation_started = False
@@ -79,6 +82,12 @@ class Response:
     def headers(self) -> List[Tuple[str, str]]:
         return self._headers
 
+    async def _poll_disconnect(self, request: FASTAPIRequest):
+        while not self._stop_event.is_set():
+            disconnected = await request.is_disconnected()
+            if disconnected:
+                raise runtime_error("Client disconnected")
+
     async def _run_producer(self, producer: _Producer):
         try:
             await producer(self.request, self)
@@ -92,10 +101,14 @@ class Response:
             self._queue.put_nowait(ExceptionChunk(dial_exception))
         else:
             self._queue.put_nowait(EndChunk())
+        self._stop_event.set()
 
-    async def _generate_stream(self, producer: _Producer) -> ResponseStream:
+    async def _generate_stream(
+        self, request: FASTAPIRequest, producer: _Producer
+    ) -> ResponseStream:
         async with CancelScope() as cs:
             cs.create_task(self._run_producer(producer))
+            cs.create_task(self._poll_disconnect(request))
 
             async for chunk in self._generate_chunk_stream():
                 yield chunk
