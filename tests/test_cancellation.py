@@ -102,9 +102,7 @@ async def test_cancellation(
             pass
 
     try:
-        stream = response._generate_stream(
-            response.request.original_request, chat_completion
-        )
+        stream = response._generate_stream(chat_completion)
         if with_heartbeat:
             stream = add_heartbeat(
                 stream,
