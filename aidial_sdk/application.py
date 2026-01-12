@@ -29,6 +29,7 @@ from aidial_sdk.embeddings.request import Request as EmbeddingsRequest
 from aidial_sdk.exceptions import HTTPException as DIALException
 from aidial_sdk.header_propagator import HeaderPropagator
 from aidial_sdk.telemetry.types import TelemetryConfig
+from aidial_sdk.utils._disconnect_middleware import DisconnectMiddleware
 from aidial_sdk.utils._reflection import get_method_implementation
 from aidial_sdk.utils.log_config import LogConfig
 from aidial_sdk.utils.logging import log_debug, set_log_deployment
@@ -98,6 +99,8 @@ class DIALApp(FastAPI):
             path = "/health"
             self.add_api_route(path, DIALApp._healthcheck, methods=["GET"])
             logging.getLogger("uvicorn.access").addFilter(PathFilter(path))
+
+        self.add_middleware(DisconnectMiddleware)
 
         self.add_exception_handler(
             ValidationError, pydantic_validation_exception_handler
