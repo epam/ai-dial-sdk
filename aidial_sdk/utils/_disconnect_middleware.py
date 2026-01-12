@@ -32,14 +32,12 @@ class DisconnectMiddleware:
         async def message_poller(handler_task: asyncio.Task) -> None:
             while True:
                 message = await receive()
+                await queue.put(message)
                 if message["type"] == "http.disconnect":
                     # Only cancel if response hasn't completed (premature disconnect)
                     if not response_completed:
                         handler_task.cancel()
-                        return
-                    # If response completed, this is normal - don't cancel
                     return
-                await queue.put(message)
 
         async def send_wrapper(response: MutableMapping[str, Any]) -> None:
             nonlocal response_completed
