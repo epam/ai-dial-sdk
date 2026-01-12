@@ -3,7 +3,6 @@ from time import time
 from typing import Any, Callable, Coroutine, List, Optional, Tuple
 from uuid import uuid4
 
-from runner_with_api.fastapi.cancellation import cancel_on_disconnect
 from typing_extensions import assert_never
 
 from aidial_sdk.chat_completion._types import ChunkQueue
@@ -81,19 +80,18 @@ class Response:
         return self._headers
 
     async def _run_producer(self, producer: _Producer):
-        async with cancel_on_disconnect(self.request.original_request):
-            try:
-                await producer(self.request, self)
-            except Exception as e:
-                if isinstance(e, DIALException):
-                    dial_exception = e
-                else:
-                    log_exception(RUNTIME_ERROR_MESSAGE)
-                    dial_exception = RuntimeServerError(RUNTIME_ERROR_MESSAGE)
-
-                self._queue.put_nowait(ExceptionChunk(dial_exception))
+        try:
+            await producer(self.request, self)
+        except Exception as e:
+            if isinstance(e, DIALException):
+                dial_exception = e
             else:
-                self._queue.put_nowait(EndChunk())
+                log_exception(RUNTIME_ERROR_MESSAGE)
+                dial_exception = RuntimeServerError(RUNTIME_ERROR_MESSAGE)
+
+            self._queue.put_nowait(ExceptionChunk(dial_exception))
+        else:
+            self._queue.put_nowait(EndChunk())
 
     async def _generate_stream(self, producer: _Producer) -> ResponseStream:
         async with CancelScope() as cs:
