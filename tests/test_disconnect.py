@@ -74,11 +74,7 @@ async def test_disconnect(
     chat_completion: WaitingApp,
     test_http_client: httpx.AsyncClient,
 ):
-    if stream and non_empty_stream:
-        await run_disconnect_test(stream, chat_completion, test_http_client)
-    else:
-        with pytest.raises(httpx.ReadTimeout):
-            await run_disconnect_test(stream, chat_completion, test_http_client)
+    await run_disconnect_test(stream, chat_completion, test_http_client)
 
 
 async def run_disconnect_test(
@@ -86,19 +82,24 @@ async def run_disconnect_test(
     chat_completion: WaitingApp,
     test_http_client: httpx.AsyncClient,
 ):
-    async with test_http_client.stream(
-        "POST",
-        "/chat/completions",
-        json={
-            "messages": [{"role": "user", "content": "hello"}],
-            "stream": stream,
-        },
-        timeout=1,
-    ) as response:
-        await asyncio.wait_for(chat_completion.started.wait(), timeout=5)
+    task = asyncio.create_task(
+        test_http_client.post(
+            "/chat/completions",
+            json={
+                "messages": [{"role": "user", "content": "hello"}],
+                "stream": stream,
+            },
+            timeout=2,
+        )
+    )
 
-        # Emulate client disconnect by closing the socket
-        await response.aclose()
+    await asyncio.wait_for(chat_completion.started.wait(), timeout=1)
+    await test_http_client.aclose()
 
-    await asyncio.wait_for(chat_completion.cancelled.wait(), timeout=5)
+    await asyncio.wait_for(chat_completion.cancelled.wait(), timeout=1)
     assert chat_completion.is_cancelled
+
+    try:
+        await task
+    except httpx.ReadError:
+        pass
