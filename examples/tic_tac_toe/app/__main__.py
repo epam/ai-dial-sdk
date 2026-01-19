@@ -6,7 +6,6 @@ import uvicorn
 # we need to enable the compatibility mode with Pydantic V2 via the env variable:
 os.environ["PYDANTIC_V2"] = "True"
 
-# Run built app
 if __name__ == "__main__":
     from app.main import app
     uvicorn.run(app, port=5000)
