@@ -5,7 +5,6 @@ A DIAL application that is configurable by the user.
 import random
 from typing import Optional
 
-import uvicorn
 from pydantic import BaseModel
 
 from aidial_sdk import DIALApp
@@ -206,7 +205,3 @@ class TicTacToeApplication(ChatCompletion):
 # DIALApp extends FastAPI to provide a user-friendly interface for routing requests to your applications
 app = DIALApp()
 app.add_chat_completion("app", TicTacToeApplication())
-
-# Run built app
-if __name__ == "__main__":
-    uvicorn.run(app, port=5000)

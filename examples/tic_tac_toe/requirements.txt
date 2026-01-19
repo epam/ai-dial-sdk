@@ -1,3 +1,3 @@
-aidial-sdk>=0.19
+aidial-sdk>=0.26
 uvicorn==0.30.1
 pydantic>1,<3
