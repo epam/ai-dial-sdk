@@ -9,24 +9,18 @@ from tests.utils.endpoint_test import TestCase, run_endpoint_test
 deployment = "test-app"
 app = DIALApp().add_embeddings(deployment, SimpleEmbeddings())
 
-expected_response_1 = {
-    "data": [
-        {"embedding": [0.0], "index": 0, "object": "embedding"},
-    ],
-    "model": "dummy",
-    "object": "list",
-    "usage": {"prompt_tokens": 1, "total_tokens": 1},
-}
 
-expected_response_2 = {
-    "data": [
-        {"embedding": [0.0], "index": 0, "object": "embedding"},
-        {"embedding": [1.0], "index": 1, "object": "embedding"},
-    ],
-    "model": "dummy",
-    "object": "list",
-    "usage": {"prompt_tokens": 2, "total_tokens": 2},
-}
+def _expected_response(n: int) -> dict:
+    return {
+        "data": [
+            {"embedding": [float(i)], "index": i, "object": "embedding"}
+            for i in range(n)
+        ],
+        "model": "dummy",
+        "object": "list",
+        "usage": {"prompt_tokens": n, "total_tokens": n},
+    }
+
 
 testcases: List[TestCase] = [
     TestCase(
@@ -40,21 +34,47 @@ testcases: List[TestCase] = [
                 "instruction": "instruction",
             },
         },
-        expected_response_1,
+        _expected_response(1),
     ),
     TestCase(
         app,
         deployment,
         "embeddings",
         {"input": [15339]},
-        expected_response_1,
+        _expected_response(1),
     ),
     TestCase(
         app,
         deployment,
         "embeddings",
         {"input": ["a", "b"]},
-        expected_response_2,
+        _expected_response(2),
+    ),
+    TestCase(
+        app,
+        deployment,
+        "embeddings",
+        {
+            "input": ["a"],
+            "custom_input": [
+                "input0",
+                ["input1"],
+                ["input2-part1", "input2-part2"],
+                {
+                    "type": "text/plain",
+                    "data": "attachment data1",
+                },
+                [
+                    "attachment title",
+                    {
+                        "type": "text/plain",
+                        "data": "attachment data2",
+                    },
+                ],
+            ],
+            "custom_fields": {"instruction": "instruction"},
+        },
+        _expected_response(1),
     ),
 ]
 
