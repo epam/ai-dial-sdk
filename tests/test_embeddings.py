@@ -3,8 +3,10 @@ from typing import List
 import pytest
 
 from aidial_sdk import DIALApp
+from aidial_sdk.embeddings.request import EmbeddingsRequest
 from tests.applications.simple_embeddings import SimpleEmbeddings
 from tests.utils.endpoint_test import TestCase, run_endpoint_test
+from tests.utils.pydantic import model_parse
 
 deployment = "test-app"
 app = DIALApp().add_embeddings(deployment, SimpleEmbeddings())
@@ -80,5 +82,14 @@ testcases: List[TestCase] = [
 
 
 @pytest.mark.parametrize("testcase", testcases)
-def test_embeddings(testcase: TestCase):
+def test_embeddings_call(testcase: TestCase):
     run_endpoint_test(testcase)
+
+
+@pytest.mark.parametrize("testcase", testcases)
+def test_embeddings_request_parsing(testcase: TestCase):
+    request = testcase.request_body
+    request.setdefault("encoding_format", "float")
+
+    parsed = model_parse(EmbeddingsRequest, request)
+    assert parsed.model_dump(exclude_none=True) == request
