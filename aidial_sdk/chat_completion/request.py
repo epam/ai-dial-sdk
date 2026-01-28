@@ -26,10 +26,15 @@ class Attachment(ExtraAllowModel, IgnoreIndex):
     reference_type: Optional[StrictStr] = None
     reference_url: Optional[StrictStr] = None
 
-    @model_validator(mode="before")
+    @model_validator(mode="after")
     @classmethod
     def check_data_or_url(cls, values: Any):
-        data, url = values.get("data"), values.get("url")
+        if isinstance(values, cls):
+            data = values.data
+            url = values.url
+        else:
+            data = values.get("data")
+            url = values.get("url")
 
         if data is None and url is None:
             raise ValueError(
