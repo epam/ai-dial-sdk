@@ -17,8 +17,8 @@ app = DIALApp().add_chat_completion(deployment, NoopApplication())
 
 
 testcases: List[TestCase] = [
-    TestCase(app, deployment, "rate", RATE_REQUEST_OK2, None),
-    TestCase(app, deployment, "rate", RATE_REQUEST_OK1, None),
+    TestCase(app, deployment, "rate", RATE_REQUEST_OK2, ""),
+    TestCase(app, deployment, "rate", RATE_REQUEST_OK1, ""),
     TestCase(
         app, deployment, "rate", RATE_REQUEST_FAIL, extra_fields_error("foo")
     ),
