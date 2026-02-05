@@ -1,7 +1,7 @@
 import json
 import warnings
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Mapping, Optional, Type, TypeVar
+from typing import Any, Dict, Optional, Type, TypeVar
 from urllib.parse import urljoin
 
 import fastapi
@@ -10,6 +10,7 @@ from aidial_sdk._pydantic import (
     PYDANTIC_V2,
     ConfigDict,
     Field,
+    HeadersType,
     SecretStr,
     StrictStr,
 )
@@ -44,7 +45,7 @@ _DIAL_APPLICATION_ID_HEADER = "X-DIAL-APPLICATION-ID"
 
 class FromRequestDeploymentMixin(FromRequestMixin):
 
-    headers: Mapping[str, str]
+    headers: HeadersType
     base_url: Optional[str] = None
     api_key_secret: SecretStr
     jwt_secret: Optional[SecretStr] = None
