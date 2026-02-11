@@ -23,7 +23,6 @@ from aidial_sdk.chat_completion.chunks import (
 from aidial_sdk.chat_completion.request import Request
 from aidial_sdk.exceptions import HTTPException as DIALException
 from aidial_sdk.exceptions import RequestValidationError, RuntimeServerError
-from aidial_sdk.utils._cancel_scope import CancelScope
 from aidial_sdk.utils.errors import RUNTIME_ERROR_MESSAGE, runtime_error
 from aidial_sdk.utils.logging import log_error, log_exception
 from aidial_sdk.utils.merge_chunks import merge
@@ -94,11 +93,18 @@ class Response:
             self._queue.put_nowait(EndChunk())
 
     async def _generate_stream(self, producer: _Producer) -> ResponseStream:
-        async with CancelScope() as cs:
-            cs.create_task(self._run_producer(producer))
+        producer_task = asyncio.create_task(self._run_producer(producer))
 
+        try:
             async for chunk in self._generate_chunk_stream():
                 yield chunk
+        finally:
+            if not producer_task.done():
+                producer_task.cancel()
+                try:
+                    await producer_task
+                except asyncio.CancelledError:
+                    pass
 
     async def _generate_chunk_stream(self) -> ResponseStream:
         def _create_chunk(chunk: BaseChunk):
