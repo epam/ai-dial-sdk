@@ -55,7 +55,8 @@ class Stage:
             if not self._closed:
                 self.close(Status.COMPLETED)
         else:
-            self.close(Status.FAILED)
+            if not self._closed:
+                self.close(Status.FAILED)
 
         return False
 
