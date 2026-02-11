@@ -167,7 +167,7 @@ class TestCase(BaseModel):
                 BEAT,
                 CHOICE_OPEN,
                 content("1"),
-                CHOICE_CLOSE,
+                # NO CHOICE_CLOSE when exception occurs
                 ERROR,
             ],
         ),
