@@ -51,11 +51,9 @@ class Stage:
         exc: Optional[BaseException],
         traceback: Optional[TracebackType],
     ) -> Optional[bool]:
-        if not exc:
-            if not self._closed:
-                self.close(Status.COMPLETED)
-        else:
-            self.close(Status.FAILED)
+        if not self._closed:
+            status = Status.FAILED if exc else Status.COMPLETED
+            self.close(status)
 
         return False
 

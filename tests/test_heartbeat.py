@@ -167,7 +167,6 @@ class TestCase(BaseModel):
                 BEAT,
                 CHOICE_OPEN,
                 content("1"),
-                CHOICE_CLOSE,
                 ERROR,
             ],
         ),
