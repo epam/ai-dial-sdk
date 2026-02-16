@@ -269,9 +269,7 @@ class DIALApp(FastAPI):
     ):
         async def _handler(original_request: Request):
             request = await self._parse_request(
-                ChatCompletionRequest,
-                original_request,
-                deployment_id,
+                ChatCompletionRequest, original_request, deployment_id
             )
 
             response = ChatCompletionResponse(request)
