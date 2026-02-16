@@ -1,4 +1,3 @@
-import types
 from contextvars import ContextVar
 from typing import MutableMapping, Optional
 
