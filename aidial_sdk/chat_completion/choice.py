@@ -61,7 +61,8 @@ class Choice(ChoiceBase):
         exc: Optional[BaseException],
         traceback: Optional[TracebackType],
     ) -> Optional[bool]:
-        self.close()
+        if not exc and not self._closed:
+            self.close()
         return False
 
     def send_chunk(self, chunk: BaseChunk) -> None:
