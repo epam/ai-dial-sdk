@@ -48,7 +48,10 @@ RequestType = TypeVar("RequestType", bound=FromRequestMixin)
 def _interpolate_deployment_id(deployment_id: str, path_params: dict) -> str:
     result = deployment_id
     for key, value in path_params.items():
-        result = result.replace(f"{{{key}}}", str(value))
+        # Replace {key} or {key:type} patterns with actual value
+        # Pattern matches {key} or {key:int}, {key:path}, etc.
+        pattern = r"\{" + re.escape(key) + r"(?::[^}]*)?\}"
+        result = re.sub(pattern, str(value), result)
     return result
 
 
@@ -206,13 +209,8 @@ class DIALApp(FastAPI):
         request_type: Type["RequestType"],
     ):
         async def _handler(original_request: Request) -> Response:
-            interpolated_deployment_id = _interpolate_deployment_id(
-                deployment_id, original_request.path_params
-            )
-            set_log_deployment(interpolated_deployment_id)
-
             request = await self._parse_request(
-                request_type, original_request, interpolated_deployment_id
+                request_type, original_request, deployment_id
             )
             log_debug(f"request[{endpoint}]: {request}")
 
@@ -235,13 +233,8 @@ class DIALApp(FastAPI):
 
     def _rate_response(self, deployment_id: str, impl: ChatCompletion):
         async def _handler(original_request: Request):
-            interpolated_deployment_id = _interpolate_deployment_id(
-                deployment_id, original_request.path_params
-            )
-            set_log_deployment(interpolated_deployment_id)
-
             request = await self._parse_request(
-                RateRequest, original_request, interpolated_deployment_id
+                RateRequest, original_request, deployment_id
             )
 
             await impl.rate_response(request)
@@ -255,8 +248,13 @@ class DIALApp(FastAPI):
         original_request: Request,
         deployment_id: str,
     ) -> RequestType:
+        interpolated_deployment_id = _interpolate_deployment_id(
+            deployment_id, original_request.path_params
+        )
+        set_log_deployment(interpolated_deployment_id)
+
         ret = await request.from_request(
-            original_request, deployment_id, self._dial_url
+            original_request, interpolated_deployment_id, self._dial_url
         )
         if not self._allow_extra_request_fields:
             model_validate_extra_fields(ret)
@@ -270,15 +268,10 @@ class DIALApp(FastAPI):
         heartbeat_interval: Optional[float],
     ):
         async def _handler(original_request: Request):
-            interpolated_deployment_id = _interpolate_deployment_id(
-                deployment_id, original_request.path_params
-            )
-            set_log_deployment(interpolated_deployment_id)
-
             request = await self._parse_request(
                 ChatCompletionRequest,
                 original_request,
-                interpolated_deployment_id,
+                deployment_id,
             )
 
             response = ChatCompletionResponse(request)
@@ -312,12 +305,8 @@ class DIALApp(FastAPI):
 
     def _embeddings(self, deployment_id: str, impl: Embeddings):
         async def _handler(original_request: Request):
-            interpolated_deployment_id = _interpolate_deployment_id(
-                deployment_id, original_request.path_params
-            )
-            set_log_deployment(interpolated_deployment_id)
             request = await self._parse_request(
-                EmbeddingsRequest, original_request, interpolated_deployment_id
+                EmbeddingsRequest, original_request, deployment_id
             )
             response = await impl.embeddings(request)
             response_json = response.model_dump()

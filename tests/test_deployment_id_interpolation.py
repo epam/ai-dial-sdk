@@ -13,9 +13,13 @@ from tests.utils.endpoint_test import TestCase, run_endpoint_test
 
 class _DeploymentIdChecker(ChatCompletion, Embeddings):
     expected_deployment_id: str
+    expected_idx_value: str | int
 
-    def __init__(self, expected_deployment_id: str):
+    def __init__(
+        self, expected_deployment_id: str, expected_idx_value: str | int
+    ):
         self.expected_deployment_id = expected_deployment_id
+        self.expected_idx_value = expected_idx_value
 
     async def chat_completion(
         self, request: ChatRequest, response: ChatResponse
@@ -25,7 +29,10 @@ class _DeploymentIdChecker(ChatCompletion, Embeddings):
         ), f"Expected deployment_id='{self.expected_deployment_id}', got '{request.deployment_id}'"
 
         assert "idx" in request.original_request.path_params
-        assert request.original_request.path_params["idx"] == "123"
+        assert (
+            request.original_request.path_params["idx"]
+            == self.expected_idx_value
+        )
 
         with response.create_single_choice() as choice:
             choice.append_content("test")
@@ -36,7 +43,10 @@ class _DeploymentIdChecker(ChatCompletion, Embeddings):
         ), f"Expected deployment_id='{self.expected_deployment_id}', got '{request.deployment_id}'"
 
         assert "idx" in request.original_request.path_params
-        assert request.original_request.path_params["idx"] == "456"
+        assert (
+            request.original_request.path_params["idx"]
+            == self.expected_idx_value
+        )
 
         return EmbeddingResponse(
             data=[],
@@ -46,17 +56,39 @@ class _DeploymentIdChecker(ChatCompletion, Embeddings):
 
 
 _CHAT_APP = DIALApp().add_chat_completion(
-    "app-{idx}", _DeploymentIdChecker("app-123")
+    "app-{idx}", _DeploymentIdChecker("app-123", "123")
+)
+
+_CHAT_APP_WITH_PARSER = DIALApp().add_chat_completion(
+    "app-{idx:int}", _DeploymentIdChecker("app-123", 123)
 )
 
 _EMBEDDINGS_APP = DIALApp().add_embeddings(
-    "app-{idx}", _DeploymentIdChecker("app-456")
+    "app-{idx}", _DeploymentIdChecker("app-456", "456")
+)
+
+_EMBEDDINGS_APP_WITH_PARSER = DIALApp().add_embeddings(
+    "app-{idx:int}", _DeploymentIdChecker("app-456", 456)
 )
 
 
 _TESTCASES: list[TestCase] = [
     TestCase(_CHAT_APP, "app-123", "chat/completions", {"messages": []}, None),
+    TestCase(
+        _CHAT_APP_WITH_PARSER,
+        "app-123",
+        "chat/completions",
+        {"messages": []},
+        None,
+    ),
     TestCase(_EMBEDDINGS_APP, "app-456", "embeddings", {"input": []}, None),
+    TestCase(
+        _EMBEDDINGS_APP_WITH_PARSER,
+        "app-456",
+        "embeddings",
+        {"input": []},
+        None,
+    ),
 ]
 
 
