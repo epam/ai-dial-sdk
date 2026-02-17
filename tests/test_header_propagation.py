@@ -94,10 +94,10 @@ def mock_aiohttp():
     ),
 )
 def test_send_request(
-    client: TestClient,
     mock_requests,
     mock_httpx,
     mock_aiohttp,
+    client: TestClient,
     lib: str,
     url: str,
     key_to_propagate: Optional[str],
@@ -132,12 +132,5 @@ def test_send_request(
         expected_headers["api-key"] = expected_key
         if add_authz and key_for_upstream:
             expected_headers["authorization"] = f"Bearer {expected_key}"
-
-    # NOTE: aioresponses doesn't call trace_configs in the mocked version,
-    # and since we are patching the request via a dedicated trace config,
-    # we can't test the header propagation for aiohttp.
-    # https://github.com/pnuckowski/aioresponses/issues/246
-    if lib == "aiohttp":
-        expected_headers = headers_for_upstream
 
     assert response.json() == expected_headers

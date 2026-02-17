@@ -1,4 +1,3 @@
-import types
 from contextvars import ContextVar
 from typing import MutableMapping, Optional
 
@@ -58,28 +57,22 @@ class HeaderPropagator:
     def _instrument_aiohttp(self):
         try:
             import aiohttp
+            from multidict import CIMultiDict
         except ImportError:
             return
 
-        async def _on_request_start(
-            session: aiohttp.ClientSession,
-            trace_config_ctx: types.SimpleNamespace,
-            params: aiohttp.TraceRequestStartParams,
-        ):
-            self._modify_headers(str(params.url), params.headers)
+        def instrumented_request(wrapped, instance, args, kwargs):
+            # aiohttp.ClientSession._request(self, method, str_or_url, **kwargs)
+            url = str(args[1])
+            headers = CIMultiDict(kwargs.get("headers") or {})
+            self._modify_headers(url, headers)
+            if headers:
+                kwargs["headers"] = headers
 
-        def instrumented_init(wrapped, instance, args, kwargs):
-            trace_config = aiohttp.TraceConfig()
-            trace_config.on_request_start.append(_on_request_start)
-
-            trace_configs = list(kwargs.get("trace_configs") or [])
-            trace_configs.append(trace_config)
-
-            kwargs["trace_configs"] = trace_configs
             return wrapped(*args, **kwargs)
 
         wrapt.wrap_function_wrapper(
-            aiohttp.ClientSession, "__init__", instrumented_init
+            aiohttp.ClientSession, "_request", instrumented_request
         )
 
     def _instrument_requests(self):
