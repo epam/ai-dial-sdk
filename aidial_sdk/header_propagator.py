@@ -51,6 +51,9 @@ class HeaderPropagator:
         self._instrument_requests()
         self._enabled = True
 
+    def disable(self):
+        pass
+
     def _instrument_fast_api(self, app: FastAPI):
         app.add_middleware(FastAPIMiddleware, api_key=self._api_key)
 
