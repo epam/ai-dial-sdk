@@ -58,7 +58,7 @@ class Stage(ExtraAllowModel, IgnoreIndex):
 class CustomContent(ExtraAllowModel):
     stages: Optional[List[Stage]] = None
     attachments: Optional[List[Attachment]] = None
-    state: Optional[Any] = None
+    state: Optional[dict] = None
     form_value: Optional[Any] = None
     form_schema: Optional[Any] = None
 

@@ -1,6 +1,6 @@
 import json
 from types import TracebackType
-from typing import Any, Optional, Type, overload
+from typing import Optional, Type, overload
 
 from aidial_sdk._pydantic import ValidationError
 from aidial_sdk.chat_completion._types import ChunkQueue
@@ -153,7 +153,7 @@ class Choice(ChoiceBase):
         self.send_chunk(attachment_chunk)
         self._last_attachment_index += 1
 
-    def set_state(self, state: Any) -> None:
+    def set_state(self, state: dict) -> None:
         if self._state_submitted:
             raise runtime_error('Trying to set "state" twice')
 
@@ -165,7 +165,7 @@ class Choice(ChoiceBase):
         self._state_submitted = True
         self.send_chunk(StateChunk(self._index, state))
 
-    def set_form_schema(self, form_schema: Any) -> None:
+    def set_form_schema(self, form_schema: dict) -> None:
         if self._schema_submitted:
             raise runtime_error("Trying to set form schema twice")
 
