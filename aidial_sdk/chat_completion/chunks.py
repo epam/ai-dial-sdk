@@ -288,9 +288,9 @@ class ContentStageChunk(BaseChunk):
 
 class FormSchemaChunk(BaseChunk):
     choice_index: int
-    form_schema: str
+    form_schema: dict
 
-    def __init__(self, choice_index: int, form_schema: Any):
+    def __init__(self, choice_index: int, form_schema: dict):
         self.choice_index = choice_index
         self.form_schema = form_schema
 
@@ -424,9 +424,9 @@ class AttachmentStageChunk(Attachment, BaseChunk):
 
 class StateChunk(BaseChunk):
     choice_index: int
-    state: Any
+    state: dict
 
-    def __init__(self, choice_index: int, state: Any):
+    def __init__(self, choice_index: int, state: dict):
         self.state = state
         self.choice_index = choice_index
 
