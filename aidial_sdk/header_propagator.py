@@ -47,8 +47,7 @@ class HeaderPropagator:
 
     _active_instances: ClassVar[list["HeaderPropagator"]] = []
     _original_requests_send: ClassVar[Any | None] = None
-    _original_httpx_build_request: ClassVar[Any | None] = None
-    _original_httpx_async_build_request: ClassVar[Any | None] = None
+    _original_httpx_build_requests: ClassVar[tuple[Any, Any] | None] = None
 
     def __init__(self, app: FastAPI, dial_url: str):
         self._app = app
@@ -131,7 +130,7 @@ class HeaderPropagator:
         HeaderPropagator._original_requests_send = None
 
     def _instrument_httpx(self):
-        if HeaderPropagator._original_httpx_build_request is not None:
+        if HeaderPropagator._original_httpx_build_requests is not None:
             return
 
         try:
@@ -145,9 +144,9 @@ class HeaderPropagator:
                 prop._modify_headers(str(request.url), request.headers)
             return request
 
-        HeaderPropagator._original_httpx_build_request = httpx.Client.build_request
-        HeaderPropagator._original_httpx_async_build_request = (
-            httpx.AsyncClient.build_request
+        HeaderPropagator._original_httpx_build_requests = (
+            httpx.Client.build_request,
+            httpx.AsyncClient.build_request,
         )
         wrapt.wrap_function_wrapper(
             httpx.Client, "build_request", instrumented_build_request
@@ -158,16 +157,16 @@ class HeaderPropagator:
         )
 
     def _deinstrument_httpx(self):
-        if HeaderPropagator._original_httpx_build_request is None:
+        if HeaderPropagator._original_httpx_build_requests is None:
             return
         import httpx
 
-        httpx.Client.build_request = HeaderPropagator._original_httpx_build_request
-        httpx.AsyncClient.build_request = (
-            HeaderPropagator._original_httpx_async_build_request
+        client_orig, async_client_orig = (
+            HeaderPropagator._original_httpx_build_requests
         )
-        HeaderPropagator._original_httpx_build_request = None
-        HeaderPropagator._original_httpx_async_build_request = None
+        httpx.Client.build_request = client_orig
+        httpx.AsyncClient.build_request = async_client_orig
+        HeaderPropagator._original_httpx_build_requests = None
 
     def _modify_headers(
         self, url: str, headers: MutableMapping[str, str]
