@@ -40,6 +40,9 @@ test_fast: install
 benchmark: install
 	python -m benchmark.benchmark_merge_chunks
 
+pre_commit_hooks: install
+	pre-commit install
+
 help:
 	@echo '===================='
 	@echo 'build                        - build the library'
