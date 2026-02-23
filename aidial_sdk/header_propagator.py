@@ -1,5 +1,6 @@
 from contextvars import ContextVar
-from typing import MutableMapping, Optional
+from typing import ClassVar, MutableMapping, Optional
+from urllib.parse import urlparse, urlunparse
 
 import wrapt
 from fastapi import FastAPI
@@ -25,15 +26,35 @@ class FastAPIMiddleware:
         await self.app(scope, receive, send)
 
 
+def _normalize_url(url: str) -> str:
+    parsed = urlparse(url)
+    port = parsed.port
+    scheme = parsed.scheme
+    hostname = parsed.hostname or ""
+
+    if (scheme == "http" and port == 80) or (scheme == "https" and port == 443):
+        netloc = hostname
+    else:
+        netloc = parsed.netloc
+
+    return urlunparse(parsed._replace(netloc=netloc))
+
+
 class HeaderPropagator:
     _app: FastAPI
     _dial_url: str
+    _normalized_dial_url: str
     _api_key: ContextVar[Optional[str]]
     _enabled: bool
+
+    _active_instances: ClassVar[list["HeaderPropagator"]] = []
+    _requests_wrapper_installed: ClassVar[bool] = False
+    _httpx_wrapper_installed: ClassVar[bool] = False
 
     def __init__(self, app: FastAPI, dial_url: str):
         self._app = app
         self._dial_url = dial_url
+        self._normalized_dial_url = _normalize_url(dial_url)
 
         self._api_key: ContextVar[Optional[str]] = ContextVar(
             "api_key", default=None
@@ -47,12 +68,24 @@ class HeaderPropagator:
 
         self._instrument_fast_api(self._app)
         self._instrument_aiohttp()
-        self._instrument_httpx()
-        self._instrument_requests()
+
+        if not HeaderPropagator._requests_wrapper_installed:
+            self._instrument_requests()
+            HeaderPropagator._requests_wrapper_installed = True
+
+        if not HeaderPropagator._httpx_wrapper_installed:
+            self._instrument_httpx()
+            HeaderPropagator._httpx_wrapper_installed = True
+
+        HeaderPropagator._active_instances.append(self)
         self._enabled = True
 
     def disable(self):
-        pass
+        if not self._enabled:
+            return
+
+        self._enabled = False
+        HeaderPropagator._active_instances.remove(self)
 
     def _instrument_fast_api(self, app: FastAPI):
         app.add_middleware(FastAPIMiddleware, api_key=self._api_key)
@@ -68,7 +101,8 @@ class HeaderPropagator:
             # aiohttp.ClientSession._request(self, method, str_or_url, **kwargs)
             url = str(args[1])
             headers = CIMultiDict(kwargs.get("headers") or {})
-            self._modify_headers(url, headers)
+            for prop in HeaderPropagator._active_instances:
+                prop._modify_headers(url, headers)
             if headers:
                 kwargs["headers"] = headers
 
@@ -86,7 +120,8 @@ class HeaderPropagator:
 
         def instrumented_send(wrapped, instance, args, kwargs):
             request: requests.PreparedRequest = args[0]
-            self._modify_headers(request.url or "", request.headers)
+            for prop in HeaderPropagator._active_instances:
+                prop._modify_headers(request.url or "", request.headers)
             return wrapped(*args, **kwargs)
 
         wrapt.wrap_function_wrapper(requests.Session, "send", instrumented_send)
@@ -99,7 +134,8 @@ class HeaderPropagator:
 
         def instrumented_build_request(wrapped, instance, args, kwargs):
             request: httpx.Request = wrapped(*args, **kwargs)
-            self._modify_headers(str(request.url), request.headers)
+            for prop in HeaderPropagator._active_instances:
+                prop._modify_headers(str(request.url), request.headers)
             return request
 
         wrapt.wrap_function_wrapper(
@@ -113,7 +149,7 @@ class HeaderPropagator:
     def _modify_headers(
         self, url: str, headers: MutableMapping[str, str]
     ) -> None:
-        if url.startswith(self._dial_url):
+        if _normalize_url(url).startswith(self._normalized_dial_url):
             api_key = self._api_key.get()
             if api_key:
                 old_api_key = headers.get("api-key")
