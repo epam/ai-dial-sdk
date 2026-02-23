@@ -1,5 +1,5 @@
 from contextvars import ContextVar
-from typing import ClassVar, MutableMapping, Optional
+from typing import Any, ClassVar, MutableMapping, Optional
 from urllib.parse import urlparse, urlunparse
 
 import wrapt
@@ -30,10 +30,9 @@ def _normalize_url(url: str) -> str:
     parsed = urlparse(url)
     port = parsed.port
     scheme = parsed.scheme
-    hostname = parsed.hostname or ""
 
-    if (scheme == "http" and port == 80) or (scheme == "https" and port == 443):
-        netloc = hostname
+    if (scheme, port) in (("http", 80), ("https", 443)):
+        netloc = parsed.hostname or ""
     else:
         netloc = parsed.netloc
 
@@ -43,18 +42,17 @@ def _normalize_url(url: str) -> str:
 class HeaderPropagator:
     _app: FastAPI
     _dial_url: str
-    _normalized_dial_url: str
     _api_key: ContextVar[Optional[str]]
     _enabled: bool
 
     _active_instances: ClassVar[list["HeaderPropagator"]] = []
-    _requests_wrapper_installed: ClassVar[bool] = False
-    _httpx_wrapper_installed: ClassVar[bool] = False
+    _original_requests_send: ClassVar[Any | None] = None
+    _original_httpx_build_request: ClassVar[Any | None] = None
+    _original_httpx_async_build_request: ClassVar[Any | None] = None
 
     def __init__(self, app: FastAPI, dial_url: str):
         self._app = app
-        self._dial_url = dial_url
-        self._normalized_dial_url = _normalize_url(dial_url)
+        self._dial_url = _normalize_url(dial_url)
 
         self._api_key: ContextVar[Optional[str]] = ContextVar(
             "api_key", default=None
@@ -68,14 +66,8 @@ class HeaderPropagator:
 
         self._instrument_fast_api(self._app)
         self._instrument_aiohttp()
-
-        if not HeaderPropagator._requests_wrapper_installed:
-            self._instrument_requests()
-            HeaderPropagator._requests_wrapper_installed = True
-
-        if not HeaderPropagator._httpx_wrapper_installed:
-            self._instrument_httpx()
-            HeaderPropagator._httpx_wrapper_installed = True
+        self._instrument_requests()
+        self._instrument_httpx()
 
         HeaderPropagator._active_instances.append(self)
         self._enabled = True
@@ -113,6 +105,9 @@ class HeaderPropagator:
         )
 
     def _instrument_requests(self):
+        if HeaderPropagator._original_requests_send is not None:
+            return
+
         try:
             import requests
         except ImportError:
@@ -124,9 +119,21 @@ class HeaderPropagator:
                 prop._modify_headers(request.url or "", request.headers)
             return wrapped(*args, **kwargs)
 
+        HeaderPropagator._original_requests_send = requests.Session.send
         wrapt.wrap_function_wrapper(requests.Session, "send", instrumented_send)
 
+    def _deinstrument_requests(self):
+        if HeaderPropagator._original_requests_send is None:
+            return
+        import requests
+
+        requests.Session.send = HeaderPropagator._original_requests_send
+        HeaderPropagator._original_requests_send = None
+
     def _instrument_httpx(self):
+        if HeaderPropagator._original_httpx_build_request is not None:
+            return
+
         try:
             import httpx
         except ImportError:
@@ -138,6 +145,10 @@ class HeaderPropagator:
                 prop._modify_headers(str(request.url), request.headers)
             return request
 
+        HeaderPropagator._original_httpx_build_request = httpx.Client.build_request
+        HeaderPropagator._original_httpx_async_build_request = (
+            httpx.AsyncClient.build_request
+        )
         wrapt.wrap_function_wrapper(
             httpx.Client, "build_request", instrumented_build_request
         )
@@ -146,10 +157,22 @@ class HeaderPropagator:
             httpx.AsyncClient, "build_request", instrumented_build_request
         )
 
+    def _deinstrument_httpx(self):
+        if HeaderPropagator._original_httpx_build_request is None:
+            return
+        import httpx
+
+        httpx.Client.build_request = HeaderPropagator._original_httpx_build_request
+        httpx.AsyncClient.build_request = (
+            HeaderPropagator._original_httpx_async_build_request
+        )
+        HeaderPropagator._original_httpx_build_request = None
+        HeaderPropagator._original_httpx_async_build_request = None
+
     def _modify_headers(
         self, url: str, headers: MutableMapping[str, str]
     ) -> None:
-        if _normalize_url(url).startswith(self._normalized_dial_url):
+        if _normalize_url(url).startswith(self._dial_url):
             api_key = self._api_key.get()
             if api_key:
                 old_api_key = headers.get("api-key")
