@@ -198,7 +198,7 @@ make test PYTHON=3.11
 You may optionally install Git hooks that will automatically run the linting step on Git push. You only need to do it once for the given repository.
 
 ```sh
-make pre_commit_hooks
+make install_git_hooks
 ```
 
 > [!IMPORTANT]
