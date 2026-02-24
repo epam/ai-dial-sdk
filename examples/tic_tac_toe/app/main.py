@@ -3,7 +3,6 @@ A DIAL application that is configurable by the user.
 """
 
 import random
-from typing import Optional
 
 from pydantic import BaseModel
 
@@ -83,7 +82,6 @@ class MoveOutcome(BaseModel):
 
 # ChatCompletion is an abstract class for applications and model adapters
 class TicTacToeApplication(ChatCompletion):
-
     async def configuration(self, request):
         # Return the schema of the initial configuration
         return InitConfiguration.model_json_schema()
@@ -152,7 +150,7 @@ class TicTacToeApplication(ChatCompletion):
 
     @staticmethod
     def make_bot_move(
-        board: Board, user_player: Player, user_move: Optional[Move]
+        board: Board, user_player: Player, user_move: Move | None
     ) -> MoveOutcome:
         """Helper function that advances the game board according to the bot and user moves."""
 
@@ -188,7 +186,7 @@ class TicTacToeApplication(ChatCompletion):
         else:
             # Otherwise, make a random move by the bot
             moves = board.possible_moves
-            bot_move = random.choice(moves)
+            bot_move = random.choice(moves)  # noqa: S311
             board = board.make_move(bot_move)
             bot_response = "I moved to " + bot_move.print() + ". "
 

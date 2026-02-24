@@ -74,6 +74,7 @@ typeCheckingMode = "basic"
 reportDeprecated = "error"
 reportUnusedVariable = "error"
 reportIncompatibleMethodOverride = "error"
+exclude = ["examples/langchain_rag"]
 
 [tool.ruff]
 line-length = 80

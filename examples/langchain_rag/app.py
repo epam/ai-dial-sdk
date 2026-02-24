@@ -92,7 +92,6 @@ class SimpleRAGApplication(ChatCompletion):
 
             # Show the user start of calculating embeddings stage
             with choice.create_stage("Calculating embeddings"):
-
                 openai_embedding = AzureOpenAIEmbeddings(
                     model=EMBEDDINGS_MODEL,
                     azure_deployment=EMBEDDINGS_MODEL,

@@ -1,16 +1,14 @@
-from typing import Optional
-
 from aidial_sdk.chat_completion import Message, Request
 
 
-def get_message_form_value(message: Message) -> Optional[dict]:
+def get_message_form_value(message: Message) -> dict | None:
     cc = message.custom_content
     if cc is None:
         return None
     return cc.form_value
 
 
-def get_message_state(message: Message) -> Optional[dict]:
+def get_message_state(message: Message) -> dict | None:
     cc = message.custom_content
     if cc is None:
         return None

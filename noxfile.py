@@ -4,7 +4,7 @@ import nox
 
 nox.options.reuse_existing_virtualenvs = True
 
-SRC = ["aidial_sdk", "tests", "noxfile.py"]
+SRC = ["aidial_sdk", "tests", "noxfile.py", "examples"]
 
 
 @nox.session
