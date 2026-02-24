@@ -27,6 +27,7 @@
 - [Set up](#set-up)
   - [Lint](#lint)
   - [Test](#test)
+  - [Git hooks](#git-hooks)
   - [Clean](#clean)
   - [Build](#build)
   - [Publish](#publish)
@@ -191,6 +192,17 @@ Run unit tests for the specific python version:
 ```sh
 make test PYTHON=3.11
 ```
+
+### Git hooks
+
+You may optionally install Git hooks that will automatically run the linting step on Git push. You only need to do it once for the given repository.
+
+```sh
+make pre_commit_hooks
+```
+
+> [!IMPORTANT]
+> This command doesn't work if you have already installed Git hooks locally or globally.
 
 ### Clean
 

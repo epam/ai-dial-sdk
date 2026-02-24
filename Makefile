@@ -40,14 +40,15 @@ test_fast: install
 benchmark: install
 	python -m benchmark.benchmark_merge_chunks
 
-pre_commit_hooks: install
-	pre-commit install
+install_git_hooks: install
+	$(VENV_DIR)/bin/pre-commit install
 
 help:
 	@echo '===================='
 	@echo 'build                        - build the library'
 	@echo 'clean                        - clean virtual env and build artifacts'
 	@echo 'publish                      - publish the library to Pypi'
+	@echo 'install_git_hooks            - install the git hooks'
 	@echo '-- LINTING --'
 	@echo 'format                       - run code formatters'
 	@echo 'lint                         - run linters'
