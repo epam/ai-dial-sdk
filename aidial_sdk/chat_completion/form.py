@@ -115,7 +115,7 @@ def _add_button_fields(
 
         if (anyOf := prop.pop("anyOf", None)) is not None:
             # Optional types are translated in Pydantic V2 to
-            # > {'anyOf': [{'type': 'integer'}, {'type': 'null'}], 'default': null}
+            # the JSON schema {'anyOf': [{'type': 'integer'}, {'type': 'null'}], 'default': null}
             # which conflicts with the 'oneOf' definition.
             types = {schema["type"] for schema in anyOf}
             types.discard("null")
