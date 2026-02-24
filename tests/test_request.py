@@ -1,5 +1,3 @@
-from typing import List
-
 import pytest
 
 from aidial_sdk import DIALApp
@@ -14,7 +12,7 @@ from tests.utils.endpoint_test import TestCase, run_endpoint_test
 
 
 class _TestApp(ChatCompletion, Embeddings):
-    headers: List[str]
+    headers: list[str]
 
     @staticmethod
     def _header_variations(header: str):
@@ -25,7 +23,7 @@ class _TestApp(ChatCompletion, Embeddings):
             c.upper() if i % 2 else c.lower() for (i, c) in enumerate(header)
         )
 
-    def __init__(self, headers: List[str]):
+    def __init__(self, headers: list[str]):
         self.headers = headers
 
     def _check_headers(self, request: FromRequestDeploymentMixin):
@@ -57,7 +55,7 @@ _APP = (
 
 _HEADERS = {"x-test-header": "test-header-value"}
 
-_TESTCASES: List[TestCase] = [
+_TESTCASES: list[TestCase] = [
     TestCase(
         _APP, "test-app", "chat/completions", {"messages": []}, None, _HEADERS
     ),

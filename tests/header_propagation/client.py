@@ -1,4 +1,5 @@
 from enum import Enum
+from urllib.parse import urlparse
 
 import aiohttp
 import httpx
@@ -30,8 +31,12 @@ async def handle(request: Request):
     lib = request.lib
     headers = request.headers
 
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https") or not parsed.hostname:
+        raise ValueError("Invalid URL")
+
     if lib == Library.requests:
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=headers, timeout=5)
         status_code = response.status_code
         content = response.json()
 
@@ -48,7 +53,7 @@ async def handle(request: Request):
             content = response.json()
 
     elif lib == Library.aiohttp:
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession() as session:  # noqa: SIM117
             async with session.get(url, headers=headers) as response:
                 status_code = response.status
                 content = await response.json()

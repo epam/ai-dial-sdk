@@ -1,5 +1,6 @@
+from collections.abc import MutableMapping
 from contextvars import ContextVar
-from typing import Any, MutableMapping, Optional
+from typing import Any
 from urllib.parse import urlparse, urlunparse
 
 import wrapt
@@ -11,7 +12,7 @@ class FastAPIMiddleware:
     def __init__(
         self,
         app: ASGIApp,
-        api_key: ContextVar[Optional[str]],
+        api_key: ContextVar[str | None],
     ) -> None:
         self.app = app
         self.api_key = api_key
@@ -42,7 +43,7 @@ def _normalize_url(url: str) -> str:
 class HeaderPropagator:
     _app: FastAPI
     _dial_url: str
-    _api_key: ContextVar[Optional[str]]
+    _api_key: ContextVar[str | None]
     _enabled: bool
 
     _original_requests_send: Any | None
@@ -53,7 +54,7 @@ class HeaderPropagator:
         self._app = app
         self._dial_url = _normalize_url(dial_url)
 
-        self._api_key: ContextVar[Optional[str]] = ContextVar(
+        self._api_key: ContextVar[str | None] = ContextVar(
             "api_key", default=None
         )
 
@@ -91,7 +92,7 @@ class HeaderPropagator:
             return
 
         def instrumented_request(wrapped, instance, args, kwargs):
-            # aiohttp.ClientSession._request(self, method, str_or_url, **kwargs)
+            # Method signature: aiohttp.ClientSession._request(self, method, str_or_url, **kwargs)
             url = str(args[1])
             headers = CIMultiDict(kwargs.get("headers") or {})
             self._modify_headers(url, headers)

@@ -1,6 +1,5 @@
 import logging
 import os
-from typing import Optional
 
 from aidial_sdk._pydantic._compat import BaseModel
 from aidial_sdk.utils.env import env_var_list
@@ -39,12 +38,12 @@ class MetricsConfig(BaseModel):
 
 
 class TelemetryConfig(BaseModel):
-    service_name: Optional[str] = None
+    service_name: str | None = None
 
-    logs: Optional[LogsConfig] = LogsConfig() if OTEL_LOGS_EXPORTER else None
-    tracing: Optional[TracingConfig] = (
+    logs: LogsConfig | None = LogsConfig() if OTEL_LOGS_EXPORTER else None
+    tracing: TracingConfig | None = (
         TracingConfig() if OTEL_TRACES_EXPORTER else None
     )
-    metrics: Optional[MetricsConfig] = (
+    metrics: MetricsConfig | None = (
         MetricsConfig() if OTEL_METRICS_EXPORTER else None
     )

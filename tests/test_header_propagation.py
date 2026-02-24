@@ -1,8 +1,9 @@
 import contextlib
 import json
+from collections.abc import Generator, Mapping
 from dataclasses import dataclass, field
 from itertools import product
-from typing import Any, Generator, Literal, Mapping, Optional
+from typing import Any, Literal
 
 import aioresponses
 import httpx
@@ -141,8 +142,8 @@ class TestCase:
     lib: Lib
     dial_url: str
     upstream_url: str
-    key_to_propagate: Optional[str]
-    key_for_upstream: Optional[str]
+    key_to_propagate: str | None
+    key_for_upstream: str | None
     add_authz: bool
 
     _urls_are_matching: bool

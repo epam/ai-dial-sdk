@@ -5,7 +5,8 @@ Helper classes that unify model configuration between Pydantic v1 and v2.
 from __future__ import annotations
 
 from abc import ABC, abstractmethod
-from typing import Any, Callable, Dict, Optional, Type, TypeVar
+from collections.abc import Callable
+from typing import Any, TypeVar
 
 from aidial_sdk._pydantic import PYDANTIC_V2, BaseModel
 
@@ -25,13 +26,13 @@ class ModelConfigWrapper:
         self._model_config.set_field(field, value)
 
     def post_process_schema(
-        self, on_schema: Callable[[Dict[str, Any]], None]
+        self, on_schema: Callable[[dict[str, Any]], None]
     ) -> None:
         attr_name = self._model_config.schema_extra_field
         old_schema_extra = self[attr_name]
 
         def _schema_extra(
-            schema: Dict[str, Any], model: Type[BaseModel]
+            schema: dict[str, Any], model: type[BaseModel]
         ) -> None:
             if old_schema_extra:
                 old_schema_extra(schema, model)
@@ -41,7 +42,7 @@ class ModelConfigWrapper:
 
     @classmethod
     def create(
-        cls, base_cls: Optional[Type[_Model]], namespace: Dict[str, Any]
+        cls, base_cls: type[_Model] | None, namespace: dict[str, Any]
     ) -> ModelConfigWrapper:
         if PYDANTIC_V2:
             return cls(_ConfigV2.create(base_cls, namespace))
@@ -66,15 +67,15 @@ class ModelConfigBase(ABC):
     @classmethod
     @abstractmethod
     def create(
-        cls, base_cls: Optional[Type[_Model]], namespace: Dict[str, Any]
+        cls, base_cls: type[_Model] | None, namespace: dict[str, Any]
     ) -> ModelConfigBase:
         pass
 
 
 class _ConfigV1(ModelConfigBase):
-    config_cls: Type
+    config_cls: type
 
-    def __init__(self, config_cls: Type):
+    def __init__(self, config_cls: type):
         self.config_cls = config_cls
 
     def set_field(self, field: str, value: Any) -> None:
@@ -89,7 +90,7 @@ class _ConfigV1(ModelConfigBase):
 
     @classmethod
     def create(
-        cls, base_cls: Optional[Type[_Model]], namespace: Dict[str, Any]
+        cls, base_cls: type[_Model] | None, namespace: dict[str, Any]
     ) -> ModelConfigBase:
         if (config_cls := namespace.get("Config")) is None:
             conf_base_cls = (
@@ -109,9 +110,9 @@ class _ConfigV1(ModelConfigBase):
 
 
 class _ConfigV2(ModelConfigBase):
-    model_config: Dict
+    model_config: dict
 
-    def __init__(self, model_config: Dict):
+    def __init__(self, model_config: dict):
         self.model_config = model_config
 
     def set_field(self, field: str, value: Any) -> None:
@@ -126,7 +127,7 @@ class _ConfigV2(ModelConfigBase):
 
     @classmethod
     def create(
-        cls, base_cls: Optional[Type[_Model]], namespace: Dict[str, Any]
+        cls, base_cls: type[_Model] | None, namespace: dict[str, Any]
     ) -> ModelConfigBase:
         base_model_config = (
             {} if base_cls is None else getattr(base_cls, "model_config", {})

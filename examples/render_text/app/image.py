@@ -13,7 +13,7 @@ def text_to_image_base64(text: str, img_size=(200, 100), font_size=20) -> str:
 
     try:
         font = ImageFont.truetype("Monaco.ttf", font_size)
-    except IOError:
+    except OSError:
         font = ImageFont.load_default(font_size)  # type: ignore
 
     wrapped_text = textwrap.fill(text, width=15)

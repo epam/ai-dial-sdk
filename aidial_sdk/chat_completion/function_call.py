@@ -1,5 +1,3 @@
-from typing import Optional
-
 from aidial_sdk.chat_completion.choice_base import ChoiceBase
 from aidial_sdk.chat_completion.chunks import FunctionCallChunk
 from aidial_sdk.utils.errors import runtime_error
@@ -13,7 +11,7 @@ class FunctionCall:
 
     @classmethod
     def create_and_send(
-        cls, choice: ChoiceBase, name: str, arguments: Optional[str]
+        cls, choice: ChoiceBase, name: str, arguments: str | None
     ) -> "FunctionCall":
         return cls(choice)._send_function_call(
             create=True, name=name, arguments=arguments
@@ -25,7 +23,7 @@ class FunctionCall:
         )
 
     def _send_function_call(
-        self, *, create: bool, name: Optional[str], arguments: Optional[str]
+        self, *, create: bool, name: str | None, arguments: str | None
     ) -> "FunctionCall":
         if not self._choice.opened:
             raise runtime_error(

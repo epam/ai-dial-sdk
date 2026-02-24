@@ -1,5 +1,4 @@
 import asyncio
-from typing import List
 
 from aidial_sdk.chat_completion import ChatCompletion, Request, Response
 
@@ -9,10 +8,10 @@ class IdleApplication(ChatCompletion):
     Application that waits the given intervals before producing chunks.
     """
 
-    intervals: List[float]
+    intervals: list[float]
     throw_exception: bool
 
-    def __init__(self, intervals: List[float], throw_exception: bool):
+    def __init__(self, intervals: list[float], throw_exception: bool):
         self.intervals = intervals
         self.throw_exception = throw_exception
 

@@ -1,5 +1,4 @@
 import re
-from typing import List
 
 import pytest
 
@@ -43,7 +42,7 @@ deployment = "test-app"
 noop = DIALApp().add_chat_completion(deployment, App())
 
 
-testcases: List[TestCase] = [
+testcases: list[TestCase] = [
     TestCase(
         noop,
         deployment,

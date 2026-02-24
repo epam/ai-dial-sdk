@@ -1,5 +1,4 @@
 from abc import ABC, abstractmethod
-from typing import Union
 
 from aidial_sdk.chat_completion.request import Request
 from aidial_sdk.chat_completion.response import Response
@@ -24,6 +23,7 @@ class ChatCompletion(ABC):
 
     async def rate_response(self, request: RateRequest) -> None:
         """Implement rate response logic"""
+        return None
 
     async def tokenize(self, request: TokenizeRequest) -> TokenizeResponse:
         """Implement tokenize logic"""
@@ -37,6 +37,6 @@ class ChatCompletion(ABC):
 
     async def configuration(
         self, request: ConfigurationRequest
-    ) -> Union[ConfigurationResponse, dict]:
+    ) -> ConfigurationResponse | dict:
         """Implement configuration logic"""
         raise NotImplementedError()

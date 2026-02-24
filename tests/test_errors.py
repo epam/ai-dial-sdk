@@ -1,5 +1,5 @@
 import dataclasses
-from typing import Any, Dict, List
+from typing import Any
 
 import pytest
 
@@ -34,10 +34,10 @@ class ErrorTestCase:
     content: Any
     response_code: int
     response_error: dict
-    response_headers: Dict[str, str] = dataclasses.field(default_factory=dict)
+    response_headers: dict[str, str] = dataclasses.field(default_factory=dict)
 
 
-error_testcases: List[ErrorTestCase] = [
+error_testcases: list[ErrorTestCase] = [
     ErrorTestCase("fastapi_exception", 500, DEFAULT_RUNTIME_ERROR),
     ErrorTestCase("value_error_exception", 500, DEFAULT_RUNTIME_ERROR),
     ErrorTestCase("zero_division_exception", 500, DEFAULT_RUNTIME_ERROR),

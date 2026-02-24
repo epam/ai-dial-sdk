@@ -1,14 +1,9 @@
 import asyncio
 import json
+from collections.abc import AsyncIterator, Awaitable, Callable
 from typing import (
     Any,
-    AsyncIterator,
-    Awaitable,
-    Callable,
-    Dict,
-    Optional,
     TypeVar,
-    Union,
     cast,
 )
 
@@ -23,8 +18,8 @@ from aidial_sdk.utils.merge_chunks import cleanup_indices, merge
 _DONE_MARKER = "[DONE]"
 
 
-async def merge_chunks(chunk_stream: AsyncIterator[dict]) -> Dict[str, Any]:
-    response: Dict[str, Any] = {}
+async def merge_chunks(chunk_stream: AsyncIterator[dict]) -> dict[str, Any]:
+    response: dict[str, Any] = {}
     async for chunk in chunk_stream:
         response = merge(response, chunk)
 
@@ -35,7 +30,7 @@ async def merge_chunks(chunk_stream: AsyncIterator[dict]) -> Dict[str, Any]:
     return response
 
 
-def _format_chunk(data: Union[dict, str]) -> str:
+def _format_chunk(data: dict | str) -> str:
     data = "data: " + (
         json.dumps(data, separators=(",", ":"))
         if isinstance(data, dict)
@@ -45,10 +40,10 @@ def _format_chunk(data: Union[dict, str]) -> str:
     return f"{data}\n\n"
 
 
-ResponseStream = AsyncIterator[Union[BaseChunkWithDefaults, DIALException]]
+ResponseStream = AsyncIterator[BaseChunkWithDefaults | DIALException]
 
 ResponseStreamWithStr = AsyncIterator[
-    Union[BaseChunkWithDefaults, DIALException, str]
+    BaseChunkWithDefaults | DIALException | str
 ]
 
 
@@ -76,14 +71,13 @@ async def to_block_response(stream: ResponseStream) -> dict:
 async def to_streaming_response(
     stream: ResponseStreamWithStr,
 ) -> AsyncIterator[str]:
-
     first_chunk = await stream.__anext__()
 
     if isinstance(first_chunk, DIALException):
         raise first_chunk.to_fastapi_exception()
 
     def _chunk_to_str(
-        chunk: Union[BaseChunkWithDefaults, DIALException, str]
+        chunk: BaseChunkWithDefaults | DIALException | str,
     ) -> str:
         if isinstance(chunk, DIALException):
             return _format_chunk(chunk.json_error())
@@ -107,8 +101,8 @@ async def to_streaming_response(
 
 _T = TypeVar("_T")
 
-_HeartbeatObject = Union[_T, Callable[[], Union[_T, Awaitable[_T]]]]
-_HeartbeatCallback = Callable[[], Union[None, Awaitable[None]]]
+_HeartbeatObject = _T | Callable[[], _T | Awaitable[_T]]
+_HeartbeatCallback = Callable[[], None | Awaitable[None]]
 
 
 async def _eval_heartbeat_object(o: _HeartbeatObject[_T]) -> _T:
@@ -130,11 +124,11 @@ async def add_heartbeat(
     stream: AsyncIterator[_T],
     *,
     heartbeat_interval: float,
-    heartbeat_object: Optional[_HeartbeatObject] = None,
-    heartbeat_callback: Optional[_HeartbeatCallback] = None,
+    heartbeat_object: _HeartbeatObject | None = None,
+    heartbeat_callback: _HeartbeatCallback | None = None,
 ) -> AsyncIterator[_T]:
     async with CancelScope() as cs:
-        chunk_task: Optional[asyncio.Task[_T]] = None
+        chunk_task: asyncio.Task[_T] | None = None
 
         while True:
             if chunk_task is None:

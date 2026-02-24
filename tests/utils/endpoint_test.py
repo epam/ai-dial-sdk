@@ -1,5 +1,3 @@
-from typing import Dict, Union
-
 from fastapi import FastAPI
 from starlette.testclient import TestClient
 
@@ -16,8 +14,8 @@ class TestCase:
     endpoint: str
 
     request_body: dict
-    request_headers: Dict[str, str]
-    response: Union[Error, dict, str, None]
+    request_headers: dict[str, str]
+    response: Error | dict | str | None
 
     def __init__(
         self,
@@ -25,8 +23,8 @@ class TestCase:
         deployment: str,
         endpoint: str,
         request_body: dict,
-        response: Union[Error, dict, str, None],
-        request_headers: Union[Dict[str, str], None] = None,
+        response: Error | dict | str | None,
+        request_headers: dict[str, str] | None = None,
     ):
         self.app = app
         self.deployment = deployment
@@ -37,7 +35,6 @@ class TestCase:
 
 
 def run_endpoint_test(testcase: TestCase):
-
     client = TestClient(testcase.app)
 
     actual_response = client.post(
