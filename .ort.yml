@@ -12,6 +12,9 @@ excludes:
       comment: "Packages for testing only."
 resolutions:
   rule_violations:
+    - message: ".*PyPI::setuptools:78\\.1\\.1.*"
+      reason: "CANT_FIX_EXCEPTION"
+      comment: "BSD 3-Clause New or Revised License: https://github.com/pypa/setuptools/blob/v78.1.1/LICENSE"
     - message: ".*PyPI::httpcore:1\\.0\\.9.*"
       reason: "CANT_FIX_EXCEPTION"
       comment: "BSD 3-Clause New or Revised License: https://github.com/encode/httpcore/blob/1.0.9/LICENSE.md"
