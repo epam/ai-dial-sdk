@@ -92,5 +92,21 @@ select = [
     "I",    # flake8-isort
     "S",    # flake8-bandit
     "FURB", # refurb
-    "UP",   #  pyupgrade
+    "UP",   # pyupgrade
+]
+
+ignore = [
+    "E501", # string literal is too long
+    "S101", # Use of `assert` detected
+    "B904", # Within an `except` clause, raise exceptions with `raise ... from err` or `raise ... from None`
+]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = [
+    "B011", # Do not `assert False`
+    "B006", # Do not use mutable data structures for argument defaults
+    # "E731", # Do not assign a `lambda` expression, use a `def`
+]
+"*/__init__.py" = [
+    "F401", # imported but unused
 ]

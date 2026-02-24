@@ -1,5 +1,3 @@
-from typing import List, Optional
-
 import pytest
 
 from aidial_sdk import DIALApp
@@ -18,7 +16,7 @@ CHAT_COMPLETION_REQUEST = {
 }
 
 
-def create_request(max_prompt_tokens: Optional[int]):
+def create_request(max_prompt_tokens: int | None):
     return {
         "inputs": [
             {
@@ -30,7 +28,7 @@ def create_request(max_prompt_tokens: Optional[int]):
 
 
 def create_response(
-    model_max_prompt_tokens: int, max_prompt_tokens: Optional[int]
+    model_max_prompt_tokens: int, max_prompt_tokens: int | None
 ):
     if max_prompt_tokens is None:
         if model_max_prompt_tokens >= 4:
@@ -78,7 +76,7 @@ def echo(model_max_prompt_tokens: int):
     )
 
 
-testcases: List[TestCase] = [
+testcases: list[TestCase] = [
     TestCase(
         noop,
         deployment,

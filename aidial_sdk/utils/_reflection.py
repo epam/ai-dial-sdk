@@ -1,4 +1,4 @@
-from typing import Any, Optional
+from typing import Any
 
 
 def has_method_implemented(obj: Any, method_name: str) -> bool:
@@ -24,7 +24,7 @@ def has_method_implemented(obj: Any, method_name: str) -> bool:
     return base_method != this_method
 
 
-def get_method_implementation(obj: Any, method_name: str) -> Optional[Any]:
+def get_method_implementation(obj: Any, method_name: str) -> Any | None:
     """
     Get the method implementation of an object instance.
     """

@@ -1,7 +1,7 @@
 import json
 import warnings
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional, Type, TypeVar
+from typing import Any, TypeVar
 from urllib.parse import urljoin
 
 import fastapi
@@ -26,10 +26,10 @@ class FromRequestMixin(ABC, ExtraAllowModel):
     @classmethod
     @abstractmethod
     async def from_request(
-        cls: Type[T],
+        cls: type[T],
         request: fastapi.Request,
         deployment_id: str,
-        base_url: Optional[str],
+        base_url: str | None,
     ) -> T:
         pass
 
@@ -44,16 +44,15 @@ _DIAL_APPLICATION_ID_HEADER = "X-DIAL-APPLICATION-ID"
 
 
 class FromRequestDeploymentMixin(FromRequestMixin):
-
     headers: HeadersType
-    base_url: Optional[str] = None
+    base_url: str | None = None
     api_key_secret: SecretStr
-    jwt_secret: Optional[SecretStr] = None
-    bearer_token_secret: Optional[SecretStr] = None
+    jwt_secret: SecretStr | None = None
+    bearer_token_secret: SecretStr | None = None
     deployment_id: StrictStr
-    api_version: Optional[StrictStr] = None
-    unreliable_dial_application_properties: Optional[Dict[str, Any]] = None
-    dial_application_id: Optional[str] = None
+    api_version: StrictStr | None = None
+    unreliable_dial_application_properties: dict[str, Any] | None = None
+    dial_application_id: str | None = None
     original_request: fastapi.Request = Field(..., exclude=True)
 
     if PYDANTIC_V2:
@@ -65,7 +64,7 @@ class FromRequestDeploymentMixin(FromRequestMixin):
 
     async def request_dial_application_properties(
         self,
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         if self.unreliable_dial_application_properties:
             return self.unreliable_dial_application_properties
 
@@ -136,7 +135,7 @@ class FromRequestDeploymentMixin(FromRequestMixin):
         return self.api_key_secret.get_secret_value()
 
     @property
-    def jwt(self) -> Optional[str]:
+    def jwt(self) -> str | None:
         warnings.warn(
             "The jwt property is deprecated. "
             "It returns the complete Authorization header (including Bearer), "
@@ -148,7 +147,7 @@ class FromRequestDeploymentMixin(FromRequestMixin):
         return self.jwt_secret.get_secret_value() if self.jwt_secret else None
 
     @property
-    def bearer_token(self) -> Optional[str]:
+    def bearer_token(self) -> str | None:
         return (
             self.bearer_token_secret.get_secret_value()
             if self.bearer_token_secret
@@ -160,7 +159,7 @@ class FromRequestDeploymentMixin(FromRequestMixin):
         cls,
         request: fastapi.Request,
         deployment_id: StrictStr,
-        base_url: Optional[str],
+        base_url: str | None,
     ):
         headers = request.headers.mutablecopy()
 

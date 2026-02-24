@@ -31,7 +31,7 @@ async def handle(request: Request):
     headers = request.headers
 
     if lib == Library.requests:
-        response = requests.get(url, headers=headers)
+        response = requests.get(url, headers=headers, timeout=5)
         status_code = response.status_code
         content = response.json()
 
@@ -48,7 +48,7 @@ async def handle(request: Request):
             content = response.json()
 
     elif lib == Library.aiohttp:
-        async with aiohttp.ClientSession() as session:
+        async with aiohttp.ClientSession() as session:  # noqa: SIM117
             async with session.get(url, headers=headers) as response:
                 status_code = response.status
                 content = await response.json()

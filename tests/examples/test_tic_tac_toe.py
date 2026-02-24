@@ -1,5 +1,4 @@
 import random
-from typing import List
 
 import pytest
 
@@ -152,7 +151,7 @@ def test_ttt_second_move_o():
 
     init_conf = {"player": 2}
 
-    messages: List[dict] = [{"role": "user", "content": ""}]
+    messages: list[dict] = [{"role": "user", "content": ""}]
 
     response = client.post(
         "chat/completions",

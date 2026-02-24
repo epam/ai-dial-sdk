@@ -1,4 +1,4 @@
-from typing import Optional, cast, overload
+from typing import cast, overload
 
 from aidial_sdk.chat_completion.request import Attachment
 
@@ -9,12 +9,12 @@ def create_attachment(attachment: Attachment) -> Attachment: ...
 
 @overload
 def create_attachment(
-    type: Optional[str] = None,
-    title: Optional[str] = None,
-    data: Optional[str] = None,
-    url: Optional[str] = None,
-    reference_url: Optional[str] = None,
-    reference_type: Optional[str] = None,
+    type: str | None = None,
+    title: str | None = None,
+    data: str | None = None,
+    url: str | None = None,
+    reference_url: str | None = None,
+    reference_type: str | None = None,
 ) -> Attachment: ...
 
 
@@ -28,12 +28,12 @@ def create_attachment(*args, **kwargs) -> Attachment:
 
 
 def _attachment_from_fields(
-    type: Optional[str] = None,
-    title: Optional[str] = None,
-    data: Optional[str] = None,
-    url: Optional[str] = None,
-    reference_url: Optional[str] = None,
-    reference_type: Optional[str] = None,
+    type: str | None = None,
+    title: str | None = None,
+    data: str | None = None,
+    url: str | None = None,
+    reference_url: str | None = None,
+    reference_type: str | None = None,
 ) -> Attachment:
     return Attachment(
         type=type,

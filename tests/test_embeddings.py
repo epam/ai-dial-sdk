@@ -1,5 +1,3 @@
-from typing import List
-
 import pytest
 
 from aidial_sdk import DIALApp
@@ -24,7 +22,7 @@ def _expected_response(n: int) -> dict:
     }
 
 
-testcases: List[TestCase] = [
+testcases: list[TestCase] = [
     TestCase(
         app,
         deployment,

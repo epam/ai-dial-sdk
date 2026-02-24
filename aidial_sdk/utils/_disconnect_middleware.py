@@ -1,5 +1,7 @@
 import asyncio
-from typing import Any, MutableMapping
+import contextlib
+from collections.abc import MutableMapping
+from typing import Any
 
 from starlette.types import ASGIApp, Receive, Scope, Send
 
@@ -60,7 +62,5 @@ class DisconnectMiddleware:
         finally:
             if not poller_task.done():
                 poller_task.cancel()
-                try:
+                with contextlib.suppress(asyncio.CancelledError):
                     await poller_task
-                except asyncio.CancelledError:
-                    pass

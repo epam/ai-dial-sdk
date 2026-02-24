@@ -1,5 +1,4 @@
 from enum import Enum
-from typing import Tuple
 
 import nox
 
@@ -47,8 +46,12 @@ class UsePydanticV2(Enum):
     ],
 )
 @nox.parametrize("httpx", ["0.25.0", "0.27.0"])
-def test(session: nox.Session, pydantic: Tuple[str, UsePydanticV2], httpx: str) -> None:
+def test(
+    session: nox.Session, pydantic: tuple[str, UsePydanticV2], httpx: str
+) -> None:
     """Runs tests"""
     session.run("poetry", "install", external=True)
     session.install(f"pydantic=={pydantic[0]}", f"httpx=={httpx}")
-    session.run("pytest", *session.posargs, env={"PYDANTIC_V2": str(pydantic[1].value)})
+    session.run(
+        "pytest", *session.posargs, env={"PYDANTIC_V2": str(pydantic[1].value)}
+    )

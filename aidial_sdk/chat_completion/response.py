@@ -1,6 +1,7 @@
 import asyncio
+from collections.abc import Callable, Coroutine
 from time import time
-from typing import Any, Callable, Coroutine, List, Optional, Tuple
+from typing import Any
 from uuid import uuid4
 
 from typing_extensions import assert_never
@@ -43,7 +44,7 @@ class Response:
     _usage_generated: bool
 
     _default_chunk: DefaultChunk
-    _headers: List[Tuple[str, str]]
+    _headers: list[tuple[str, str]]
 
     def __init__(self, request: Request):
         self._queue = asyncio.Queue()
@@ -76,7 +77,7 @@ class Response:
         return self.request.stream
 
     @property
-    def headers(self) -> List[Tuple[str, str]]:
+    def headers(self) -> list[tuple[str, str]]:
         return self._headers
 
     async def _run_producer(self, producer: _Producer):
@@ -107,14 +108,13 @@ class Response:
             )
 
         # A list of chunks whose emitting is delayed up until the very last moment
-        delayed_chunks: List[BaseChunk] = []
+        delayed_chunks: list[BaseChunk] = []
 
         while True:
             chunk = await self._queue.get()
             self._queue.task_done()
 
             if isinstance(chunk, BaseChunk):
-
                 is_last_end_choice_chunk = (
                     isinstance(chunk, EndChoiceChunk)
                     and chunk.choice_index == self.n - 1
@@ -122,11 +122,7 @@ class Response:
 
                 is_top_level_chunk = isinstance(
                     chunk,
-                    (
-                        UsageChunk,
-                        UsagePerModelChunk,
-                        DiscardedMessagesChunk,
-                    ),
+                    UsageChunk | UsagePerModelChunk | DiscardedMessagesChunk,
                 )
 
                 if is_last_end_choice_chunk or is_top_level_chunk:
@@ -134,7 +130,7 @@ class Response:
                 else:
                     yield _create_chunk(chunk)
 
-            elif isinstance(chunk, (ExceptionChunk, EndChunk)):
+            elif isinstance(chunk, ExceptionChunk | EndChunk):
                 if delayed_chunks:
                     final_chunk = merge(*[d.to_dict() for d in delayed_chunks])
                     yield _create_chunk(ArbitraryChunk(chunk=final_chunk))
@@ -196,7 +192,7 @@ class Response:
         )
         self._last_usage_per_model_index += 1
 
-    def set_discarded_messages(self, discarded_messages: List[int]):
+    def set_discarded_messages(self, discarded_messages: list[int]):
         self._generation_started = True
 
         if self._discarded_messages_generated:
@@ -214,7 +210,7 @@ class Response:
         prompt_tokens: int = 0,
         completion_tokens: int = 0,
         *,
-        prompt_tokens_details: Optional[PromptTokensDetails] = None,
+        prompt_tokens_details: PromptTokensDetails | None = None,
     ):
         self._generation_started = True
 

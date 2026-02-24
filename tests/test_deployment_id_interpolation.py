@@ -24,9 +24,9 @@ class _DeploymentIdChecker(ChatCompletion, Embeddings):
     async def chat_completion(
         self, request: ChatRequest, response: ChatResponse
     ) -> None:
-        assert (
-            request.deployment_id == self.expected_deployment_id
-        ), f"Expected deployment_id='{self.expected_deployment_id}', got '{request.deployment_id}'"
+        assert request.deployment_id == self.expected_deployment_id, (
+            f"Expected deployment_id='{self.expected_deployment_id}', got '{request.deployment_id}'"
+        )
 
         assert "idx" in request.original_request.path_params
         assert (
@@ -38,9 +38,9 @@ class _DeploymentIdChecker(ChatCompletion, Embeddings):
             choice.append_content("test")
 
     async def embeddings(self, request: EmbeddingRequest) -> EmbeddingResponse:
-        assert (
-            request.deployment_id == self.expected_deployment_id
-        ), f"Expected deployment_id='{self.expected_deployment_id}', got '{request.deployment_id}'"
+        assert request.deployment_id == self.expected_deployment_id, (
+            f"Expected deployment_id='{self.expected_deployment_id}', got '{request.deployment_id}'"
+        )
 
         assert "idx" in request.original_request.path_params
         assert (

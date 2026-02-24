@@ -1,10 +1,10 @@
-from typing import List, Literal, Union
+from typing import Literal
 
 from aidial_sdk.utils.pydantic import ExtraAllowModel
 
 
 class Embedding(ExtraAllowModel):
-    embedding: Union[str, List[float]]
+    embedding: str | list[float]
     index: int
     object: Literal["embedding"] = "embedding"
 
@@ -15,7 +15,7 @@ class Usage(ExtraAllowModel):
 
 
 class EmbeddingResponse(ExtraAllowModel):
-    data: List[Embedding]
+    data: list[Embedding]
     model: str
     object: Literal["list"] = "list"
     usage: Usage

@@ -1,7 +1,6 @@
 import functools
 import warnings
 from http import HTTPStatus
-from typing import Dict, Optional
 
 from fastapi import HTTPException as FastAPIException
 from fastapi.responses import JSONResponse
@@ -14,11 +13,11 @@ class HTTPException(Exception):
         self,
         message: str,
         status_code: int = 500,
-        type: Optional[str] = "runtime_error",
-        param: Optional[str] = None,
-        code: Optional[str] = None,
-        display_message: Optional[str] = None,
-        headers: Optional[Dict[str, str]] = None,
+        type: str | None = "runtime_error",
+        param: str | None = None,
+        code: str | None = None,
+        display_message: str | None = None,
+        headers: dict[str, str] | None = None,
         **kwargs,
     ) -> None:
         super().__init__(message)

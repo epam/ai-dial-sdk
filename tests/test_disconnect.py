@@ -1,4 +1,5 @@
 import asyncio
+import contextlib
 
 import httpx
 import pytest
@@ -99,7 +100,5 @@ async def run_disconnect_test(
     await asyncio.wait_for(chat_completion.cancelled.wait(), timeout=1)
     assert chat_completion.is_cancelled
 
-    try:
+    with contextlib.suppress(httpx.ReadError):
         await task
-    except httpx.ReadError:
-        pass

@@ -1,5 +1,4 @@
 import dataclasses
-from typing import List
 
 import pytest
 
@@ -24,7 +23,7 @@ class TestCase:
         return type(self.obj).__name__
 
 
-_test_cases: List[TestCase] = [
+_test_cases: list[TestCase] = [
     TestCase(
         ToolCall(
             id="tool-call-id",

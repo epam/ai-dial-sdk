@@ -2,9 +2,10 @@ import copy
 import itertools
 import re
 from abc import ABC, abstractmethod
+from collections.abc import Callable, Iterable, Sequence
 from dataclasses import dataclass
 from operator import attrgetter
-from typing import Any, Callable, Iterable, List, Sequence, Union
+from typing import Any
 
 import pytest
 
@@ -65,20 +66,20 @@ class BeforeIdx(OrderConstraint):
 class Test:
     __test__ = False  # Hide from pytest test discovery
 
-    chunks: List[Any]
-    expected: Union[Any, Exception]
+    chunks: list[Any]
+    expected: Any | Exception
     desc: str
 
     fixed_order: bool
-    order_constraints: List[OrderConstraint]
+    order_constraints: list[OrderConstraint]
 
     def __init__(
         self,
-        chunks: List[Any],
+        chunks: list[Any],
         expected: Any,
         desc: str,
         fixed_order: bool = False,
-        order_constraints: List[OrderConstraint] = [],
+        order_constraints: list[OrderConstraint] = [],
     ):
         self.chunks = copy.deepcopy(chunks)
         self.expected = expected
@@ -104,12 +105,12 @@ class Test:
                 )
 
 
-def permute(cases: List[Test]) -> Iterable[Test]:
+def permute(cases: list[Test]) -> Iterable[Test]:
     for case in cases:
         yield from case.permutations()
 
 
-merge_chunks_cases: List[Test] = [
+merge_chunks_cases: list[Test] = [
     Test(chunks=[1, 2], expected=2, desc="Merge ints", fixed_order=True),
     Test(
         chunks=[1.0, 2.0], expected=2.0, desc="Merge floats", fixed_order=True
@@ -388,7 +389,7 @@ CONTENT_CHUNK1 = create_single_choice_chunk(delta={"content": "hello"})
 CONTENT_CHUNK2 = create_single_choice_chunk(delta={"content": " world"})
 
 
-merge_chat_completion_chunks_cases: List[Test] = [
+merge_chat_completion_chunks_cases: list[Test] = [
     Test(
         chunks=[1, 2],
         expected=Exception(

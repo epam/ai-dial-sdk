@@ -23,14 +23,12 @@ from aidial_sdk.chat_completion.request import (
     ResponseFormatJsonSchemaObject,
     ResponseFormatText,
     Role,
-)
-from aidial_sdk.chat_completion.request import Stage as RequestStage
-from aidial_sdk.chat_completion.request import (
     Tool,
     ToolCall,
     ToolChoice,
     ToolCustomFields,
 )
+from aidial_sdk.chat_completion.request import Stage as RequestStage
 from aidial_sdk.chat_completion.response import Response
 from aidial_sdk.chat_completion.stage import Stage
 from aidial_sdk.deployment.configuration import (

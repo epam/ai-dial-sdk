@@ -1,7 +1,8 @@
+from collections.abc import Mapping
 from enum import Enum
-from typing import Any, Dict, List, Literal, Mapping, Optional, Union
+from typing import Annotated, Any, Literal
 
-from typing_extensions import Annotated, assert_never
+from typing_extensions import assert_never
 
 from aidial_sdk._pydantic import (
     PYDANTIC_V2,
@@ -19,12 +20,12 @@ from aidial_sdk.utils.pydantic import ExtraAllowModel, IgnoreIndex
 
 
 class Attachment(ExtraAllowModel, IgnoreIndex):
-    type: Optional[StrictStr] = "text/markdown"
-    title: Optional[StrictStr] = None
-    data: Optional[StrictStr] = None
-    url: Optional[StrictStr] = None
-    reference_type: Optional[StrictStr] = None
-    reference_url: Optional[StrictStr] = None
+    type: StrictStr | None = "text/markdown"
+    title: StrictStr | None = None
+    data: StrictStr | None = None
+    url: StrictStr | None = None
+    reference_type: StrictStr | None = None
+    reference_url: StrictStr | None = None
 
     @model_validator(mode="after")
     @classmethod
@@ -51,16 +52,16 @@ class Attachment(ExtraAllowModel, IgnoreIndex):
 class Stage(ExtraAllowModel, IgnoreIndex):
     name: StrictStr
     status: Status
-    content: Optional[StrictStr] = None
-    attachments: Optional[List[Attachment]] = None
+    content: StrictStr | None = None
+    attachments: list[Attachment] | None = None
 
 
 class CustomContent(ExtraAllowModel):
-    stages: Optional[List[Stage]] = None
-    attachments: Optional[List[Attachment]] = None
-    state: Optional[dict] = None
-    form_value: Optional[Any] = None
-    form_schema: Optional[Any] = None
+    stages: list[Stage] | None = None
+    attachments: list[Attachment] | None = None
+    state: dict | None = None
+    form_value: Any | None = None
+    form_schema: Any | None = None
 
 
 class FunctionCall(ExtraAllowModel):
@@ -85,7 +86,7 @@ class Role(str, Enum):
 
 class ImageURL(ExtraAllowModel):
     url: StrictStr
-    detail: Optional[Literal["auto", "low", "high"]] = None
+    detail: Literal["auto", "low", "high"] | None = None
 
 
 class MessageContentImagePart(ExtraAllowModel):
@@ -103,31 +104,29 @@ class MessageContentRefusalPart(ExtraAllowModel):
     refusal: StrictStr
 
 
-MessageContentPart = Union[
-    MessageContentTextPart,
-    MessageContentImagePart,
-    MessageContentRefusalPart,
-]
+MessageContentPart = (
+    MessageContentTextPart | MessageContentImagePart | MessageContentRefusalPart
+)
 
 
 class CacheBreakpoint(ExtraAllowModel):
-    expire_at: Optional[StrictStr] = None
+    expire_at: StrictStr | None = None
 
 
 class MessageCustomFields(ExtraAllowModel):
-    cache_breakpoint: Optional[CacheBreakpoint] = None
+    cache_breakpoint: CacheBreakpoint | None = None
 
 
 class Message(ExtraAllowModel):
     role: Role
-    content: Optional[Union[StrictStr, List[MessageContentPart]]] = None
-    custom_content: Optional[CustomContent] = None
-    custom_fields: Optional[MessageCustomFields] = None
-    name: Optional[StrictStr] = None
-    tool_calls: Optional[List[ToolCall]] = None
-    tool_call_id: Optional[StrictStr] = None
-    function_call: Optional[FunctionCall] = None
-    refusal: Optional[StrictStr] = None
+    content: StrictStr | list[MessageContentPart] | None = None
+    custom_content: CustomContent | None = None
+    custom_fields: MessageCustomFields | None = None
+    name: StrictStr | None = None
+    tool_calls: list[ToolCall] | None = None
+    tool_call_id: StrictStr | None = None
+    function_call: FunctionCall | None = None
+    refusal: StrictStr | None = None
 
     def text(self) -> str:
         """
@@ -149,38 +148,38 @@ class Message(ExtraAllowModel):
 
 
 class Addon(ExtraAllowModel):
-    name: Optional[StrictStr] = None
-    url: Optional[StrictStr] = None
+    name: StrictStr | None = None
+    url: StrictStr | None = None
 
 
 class Function(ExtraAllowModel):
     name: StrictStr
     strict: bool = False
-    description: Optional[StrictStr] = None
-    parameters: Optional[Dict] = None
+    description: StrictStr | None = None
+    parameters: dict | None = None
 
 
 Temperature = Annotated[float, Field(ge=0, le=2)]
 TopP = Annotated[float, Field(ge=0, le=1)]
 N = Annotated[int, Field(ge=1, le=128)]
-Stop = Annotated[List[StrictStr], Field(max_length=4)]
+Stop = Annotated[list[StrictStr], Field(max_length=4)]
 Penalty = Annotated[float, Field(ge=-2, le=2)]
 
 
 class ToolCustomFields(ExtraAllowModel):
-    cache_breakpoint: Optional[CacheBreakpoint] = None
+    cache_breakpoint: CacheBreakpoint | None = None
 
 
 class Tool(ExtraAllowModel):
     type: Literal["function"]
     function: Function
-    custom_fields: Optional[ToolCustomFields] = None
+    custom_fields: ToolCustomFields | None = None
 
 
 class StaticFunction(ExtraAllowModel):
     name: str
-    description: Optional[str] = None
-    configuration: Optional[Dict[str, Any]] = None
+    description: str | None = None
+    configuration: dict[str, Any] | None = None
 
 
 class StaticTool(ExtraAllowModel):
@@ -210,17 +209,17 @@ if PYDANTIC_V2:
 
 
 class ResponseFormatJsonSchemaObject(ExtraAllowModel):
-    description: Optional[StrictStr] = None
+    description: StrictStr | None = None
     name: StrictStr
-    schema_: Dict[str, Any] = Field(..., alias="schema")
-    strict: Optional[StrictBool] = False
+    schema_: dict[str, Any] = Field(..., alias="schema")
+    strict: StrictBool | None = False
 
     if PYDANTIC_V2:
 
         @pyd2.model_serializer(mode="wrap")
         def serializer(
             self, nxt: pyd2.SerializerFunctionWrapHandler
-        ) -> Dict[str, Any]:
+        ) -> dict[str, Any]:
             ret = nxt(self)
             ret["schema"] = ret["schema_"]
             del ret["schema_"]
@@ -239,14 +238,12 @@ class ResponseFormatJsonSchema(ExtraAllowModel):
 
 
 class StreamOptions(ExtraAllowModel):
-    include_usage: Optional[bool]
+    include_usage: bool | None
 
 
-ResponseFormat = Union[
-    ResponseFormatText,
-    ResponseFormatJsonObject,
-    ResponseFormatJsonSchema,
-]
+ResponseFormat = (
+    ResponseFormatText | ResponseFormatJsonObject | ResponseFormatJsonSchema
+)
 
 
 class ReasoningEffort(str, Enum):
@@ -258,44 +255,40 @@ class ReasoningEffort(str, Enum):
 
 
 class AzureChatCompletionRequest(ExtraAllowModel):
-    model: Optional[StrictStr] = None
-    messages: List[Message]
-    functions: Optional[List[Function]] = None
-    function_call: Optional[Union[Literal["auto", "none"], FunctionChoice]] = (
-        None
-    )
-    tools: Optional[List[Union[Tool, StaticTool]]] = None
-    tool_choice: Optional[
-        Union[Literal["auto", "none", "required"], ToolChoice]
-    ] = None
+    model: StrictStr | None = None
+    messages: list[Message]
+    functions: list[Function] | None = None
+    function_call: Literal["auto", "none"] | FunctionChoice | None = None
+    tools: list[Tool | StaticTool] | None = None
+    tool_choice: Literal["auto", "none", "required"] | ToolChoice | None = None
     stream: bool = False
-    stream_options: Optional[StreamOptions] = None
-    temperature: Optional[Temperature] = None
-    top_p: Optional[TopP] = None
-    n: Optional[N] = None
-    stop: Optional[Union[StrictStr, Stop]] = None
-    max_tokens: Optional[PositiveInt] = None
-    max_completion_tokens: Optional[PositiveInt] = None
-    presence_penalty: Optional[Penalty] = None
-    frequency_penalty: Optional[Penalty] = None
-    logit_bias: Optional[Mapping[int, float]] = None
-    user: Optional[StrictStr] = None
-    seed: Optional[StrictInt] = None
-    logprobs: Optional[StrictBool] = None
-    top_logprobs: Optional[StrictInt] = None
-    reasoning_effort: Optional[ReasoningEffort] = None
-    response_format: Optional[ResponseFormat] = None
-    parallel_tool_calls: Optional[StrictBool] = None
+    stream_options: StreamOptions | None = None
+    temperature: Temperature | None = None
+    top_p: TopP | None = None
+    n: N | None = None
+    stop: StrictStr | Stop | None = None
+    max_tokens: PositiveInt | None = None
+    max_completion_tokens: PositiveInt | None = None
+    presence_penalty: Penalty | None = None
+    frequency_penalty: Penalty | None = None
+    logit_bias: Mapping[int, float] | None = None
+    user: StrictStr | None = None
+    seed: StrictInt | None = None
+    logprobs: StrictBool | None = None
+    top_logprobs: StrictInt | None = None
+    reasoning_effort: ReasoningEffort | None = None
+    response_format: ResponseFormat | None = None
+    parallel_tool_calls: StrictBool | None = None
 
 
 class ChatCompletionRequestCustomFields(ExtraAllowModel):
-    configuration: Optional[Dict[str, Any]] = None
+    configuration: dict[str, Any] | None = None
 
 
 class ChatCompletionRequest(AzureChatCompletionRequest):
-    addons: Optional[List[Addon]] = None
-    max_prompt_tokens: Optional[PositiveInt] = None
-    custom_fields: Optional[ChatCompletionRequestCustomFields] = None
+    addons: list[Addon] | None = None
+    max_prompt_tokens: PositiveInt | None = None
+    custom_fields: ChatCompletionRequestCustomFields | None = None
 
 
 class Request(ChatCompletionRequest, FromRequestDeploymentMixin):
