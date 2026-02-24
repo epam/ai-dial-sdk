@@ -15,13 +15,6 @@ install: init_env
 build: install
 	$(POETRY) build
 
-clean:
-	rm -rf $$($(POETRY) env info --path)
-	rm -rf .nox
-	rm -rf .pytest_cache
-	rm -rf dist
-	find . -type d -name __pycache__ | xargs rm -r
-
 publish: build
 	$(POETRY) publish -u __token__ -p $(PYPI_TOKEN) --skip-existing
 

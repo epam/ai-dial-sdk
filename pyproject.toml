@@ -48,12 +48,8 @@ requests = "^2.32"
 responses = "^0.25.3"
 
 [tool.poetry.group.lint.dependencies]
-flake8 = "^6.0.0"
-black = ">=23.3,<25.0"
-isort = "^5.12.0"
 pyright = "1.1.385"
-autoflake = "^2.2.0"
-
+ruff = "0.12.11"
 
 [tool.poetry.group.dev.dependencies]
 pre-commit = "^4.5.1"
@@ -65,49 +61,36 @@ build-backend = "poetry.core.masonry.api"
 [tool.pytest.ini_options]
 asyncio_default_fixture_loop_scope = "function"
 addopts = "--asyncio-mode=auto"
-testpaths = [
-    "tests"
-]
+testpaths = ["tests"]
 filterwarnings = [
     "error",
     # muting deprecation warnings coming from old pydantic
     "ignore::DeprecationWarning:pydantic.typing",
 ]
-markers = [
-    "slow: marker for slow running tests",
-]
+markers = ["slow: marker for slow running tests"]
 
 [tool.pyright]
 typeCheckingMode = "basic"
 reportDeprecated = "error"
 reportUnusedVariable = "error"
 reportIncompatibleMethodOverride = "error"
-exclude = [
-    ".git",
-    "**/.venv",
-    ".nox",
-    ".pytest_cache",
-    "**/__pycache__",
-    "build",
-    "examples/langchain_rag"
-]
 
-[tool.black]
+[tool.ruff]
 line-length = 80
+target-version = "py310"
 
-[tool.isort]
-line_length = 80
-profile = "black"
-
-[tool.autoflake]
-ignore_init_module_imports = true
-remove_all_unused_imports = true
-in_place = true
-recursive = true
-quiet = true
-exclude = [
-    ".nox",
-    ".pytest_cache",
-    "\\.venv",
-    "_pydantic.py"
+[tool.ruff.lint]
+select = [
+    "ERA",  # flake8-eradicate
+    "B",    # flake8-builtins
+    "C4",   # flake8-comprehensions
+    "SIM",  # flake8-simplify
+    "B9",   # flake8-bugbear
+    "E",    # pycodestyle
+    "W",    # pycodestyle
+    "F",    # pyflakes
+    "I",    # flake8-isort
+    "S",    # flake8-bandit
+    "FURB", # refurb
+    "UP",   #  pyupgrade
 ]
