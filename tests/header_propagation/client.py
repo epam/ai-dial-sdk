@@ -1,4 +1,5 @@
 from enum import Enum
+from urllib.parse import urlparse
 
 import aiohttp
 import httpx
@@ -29,6 +30,10 @@ async def handle(request: Request):
     url = request.url
     lib = request.lib
     headers = request.headers
+
+    parsed = urlparse(url)
+    if parsed.scheme not in ("http", "https") or not parsed.hostname:
+        raise ValueError("Invalid URL")
 
     if lib == Library.requests:
         response = requests.get(url, headers=headers, timeout=5)
