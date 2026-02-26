@@ -20,10 +20,12 @@ To migrate your code to Pydantic v2 models, you can follow these steps:
 """.strip()
 
 warnings.warn(
-    _WARN_MESSAGE_V2 if PYDANTIC_V2 else _WARN_MESSAGE_V1, DeprecationWarning
+    _WARN_MESSAGE_V2 if PYDANTIC_V2 else _WARN_MESSAGE_V1,
+    DeprecationWarning,
+    stacklevel=1,
 )
 
 try:
-    from pydantic.v1 import *  # type: ignore
+    from pydantic.v1 import *  # type: ignore  # noqa: F403
 except ImportError:
-    from pydantic import *  # type: ignore
+    from pydantic import *  # type: ignore  # noqa: F403

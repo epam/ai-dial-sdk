@@ -1,5 +1,3 @@
-from typing import List
-
 import pytest
 
 from aidial_sdk import DIALApp
@@ -44,7 +42,7 @@ noop = DIALApp().add_chat_completion(deployment, NoopApplication())
 echo = DIALApp().add_chat_completion(deployment, EchoApplication(0))
 
 
-testcases: List[TestCase] = [
+testcases: list[TestCase] = [
     TestCase(
         noop,
         deployment,

@@ -1,5 +1,5 @@
 from types import TracebackType
-from typing import Optional, Type, overload
+from typing import overload
 
 from aidial_sdk._pydantic import ValidationError
 from aidial_sdk.chat_completion._types import ChunkQueue
@@ -21,7 +21,7 @@ class Stage:
     _queue: ChunkQueue
     _choice_index: int
     _stage_index: int
-    _name: Optional[str]
+    _name: str | None
     _last_attachment_index: int
     _closed: bool
     _opened: bool
@@ -31,7 +31,7 @@ class Stage:
         queue: ChunkQueue,
         choice_index: int,
         stage_index: int,
-        name: Optional[str] = None,
+        name: str | None = None,
     ):
         self._queue = queue
         self._choice_index = choice_index
@@ -47,10 +47,10 @@ class Stage:
 
     def __exit__(
         self,
-        exc_type: Optional[Type[BaseException]],
-        exc: Optional[BaseException],
-        traceback: Optional[TracebackType],
-    ) -> Optional[bool]:
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> bool | None:
         if not self._closed:
             status = Status.FAILED if exc else Status.COMPLETED
             self.close(status)
@@ -87,12 +87,12 @@ class Stage:
     @overload
     def add_attachment(
         self,
-        type: Optional[str] = None,
-        title: Optional[str] = None,
-        data: Optional[str] = None,
-        url: Optional[str] = None,
-        reference_url: Optional[str] = None,
-        reference_type: Optional[str] = None,
+        type: str | None = None,
+        title: str | None = None,
+        data: str | None = None,
+        url: str | None = None,
+        reference_url: str | None = None,
+        reference_type: str | None = None,
     ) -> None: ...
 
     def add_attachment(self, *args, **kwargs) -> None:

@@ -1,4 +1,4 @@
-from typing import Literal, Optional
+from typing import Literal
 
 from aidial_sdk.chat_completion.choice_base import ChoiceBase
 from aidial_sdk.chat_completion.chunks import FunctionToolCallChunk
@@ -20,7 +20,7 @@ class FunctionToolCall:
         index: int,
         id: str,
         name: str,
-        arguments: Optional[str],
+        arguments: str | None,
     ) -> "FunctionToolCall":
         return cls(choice, index)._send_tool_call(
             id=id, type="function", name=name, arguments=arguments
@@ -34,10 +34,10 @@ class FunctionToolCall:
     def _send_tool_call(
         self,
         *,
-        id: Optional[str],
-        type: Optional[Literal["function"]],
-        name: Optional[str],
-        arguments: Optional[str],
+        id: str | None,
+        type: Literal["function"] | None,
+        name: str | None,
+        arguments: str | None,
     ) -> "FunctionToolCall":
         if not self._choice.opened:
             raise runtime_error("Trying to add tool call to an unopened choice")

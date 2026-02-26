@@ -1,5 +1,5 @@
 import copy
-from typing import Any, List, TypeVar, Union, cast
+from typing import Any, TypeVar, cast
 
 from aidial_sdk.utils._indexed_list import (
     INDEX_ERROR_MESSAGE,
@@ -8,7 +8,7 @@ from aidial_sdk.utils._indexed_list import (
 
 T = TypeVar("T")
 
-Path = List[Union[int, str]]
+Path = list[int | str]
 
 
 LIST_OF_DICTS_ERROR_MESSAGE = (
@@ -92,9 +92,9 @@ def merge_lists(target: list, source: list, path: Path) -> list:
         target.extend(copy.deepcopy(source))
         return target
 
-    assert (
-        is_target_indexed and is_source_indexed
-    ), CANNOT_MERGE_NON_INDEXED_AND_INDEXED_LISTS_ERROR_MESSAGE
+    assert is_target_indexed and is_source_indexed, (
+        CANNOT_MERGE_NON_INDEXED_AND_INDEXED_LISTS_ERROR_MESSAGE
+    )
 
     return merge_indexed_lists(target, source, path)
 
@@ -189,20 +189,20 @@ def merge_chat_completion_chunks(*chunks: _Chunk) -> _Chunk:
     The subsequent chunks are left unmodified.
     """
 
-    assert (
-        len(chunks) > 0
-    ), "At least one chat completion chunk must be provided"
+    assert len(chunks) > 0, (
+        "At least one chat completion chunk must be provided"
+    )
 
-    assert all(
-        isinstance(chunk, dict) for chunk in chunks
-    ), "The chat completion chunks are expected to be dictionaries"
+    assert all(isinstance(chunk, dict) for chunk in chunks), (
+        "The chat completion chunks are expected to be dictionaries"
+    )
 
     target, *sources = chunks
 
     for chunk in sources:
         source = cast(_Chunk, chunk.copy())
         for key, value in list(source.items()):
-            if not isinstance(value, (list, dict)) and value is not None:
+            if not isinstance(value, list | dict) and value is not None:
                 target[key] = value
                 del source[key]
         target = merge(target, source)

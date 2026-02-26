@@ -26,7 +26,8 @@ def _create_client(allow_extra: bool, validator: RequestValidator):
 @pytest.mark.parametrize("stream", [True, False])
 def test_extra_field_top_level(allow_extra: bool, stream: bool):
     client = _create_client(
-        allow_extra, lambda r: r.extra_field == "extra_value"  # type: ignore
+        allow_extra,
+        lambda r: r.extra_field == "extra_value",  # type: ignore
     )
 
     response = client.post(
@@ -50,7 +51,8 @@ def test_extra_field_top_level(allow_extra: bool, stream: bool):
 @pytest.mark.parametrize("stream", [True, False])
 def test_extra_field_message(allow_extra: bool, stream: bool):
     client = _create_client(
-        allow_extra, lambda r: r.messages[0].extra_field == "extra_value"  # type: ignore
+        allow_extra,
+        lambda r: r.messages[0].extra_field == "extra_value",  # type: ignore
     )
 
     response = client.post(

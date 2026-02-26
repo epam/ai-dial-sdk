@@ -1,6 +1,7 @@
 import itertools
 import json
-from typing import Iterable, List, Literal, Optional, Union
+from collections.abc import Iterable
+from typing import Literal
 
 from aidial_sdk.utils.json import remove_nones
 
@@ -8,10 +9,10 @@ from aidial_sdk.utils.json import remove_nones
 def create_chunk(
     *,
     id: str = "test_id",
-    model: Optional[str] = None,
+    model: str | None = None,
     created: int = 0,
-    choices: List[dict],
-    usage: Optional[dict] = None,
+    choices: list[dict],
+    usage: dict | None = None,
     **kwargs,
 ):
     return {
@@ -29,7 +30,7 @@ def create_single_choice_chunk(
     *,
     choice_idx: int = 0,
     delta: dict = {},
-    finish_reason: Optional[str] = None,
+    finish_reason: str | None = None,
     **kwargs,
 ):
     choice = {
@@ -44,10 +45,10 @@ def create_single_choice_chunk(
 def create_tool_call_chunk(
     idx: int,
     *,
-    type: Optional[Literal["function"]] = None,
-    id: Optional[str] = None,
-    name: Optional[str] = None,
-    arguments: Optional[str] = None,
+    type: Literal["function"] | None = None,
+    id: str | None = None,
+    name: str | None = None,
+    arguments: str | None = None,
 ):
     return create_single_choice_chunk(
         delta={
@@ -70,8 +71,8 @@ def create_tool_call_chunk(
 
 def create_function_call_chunk(
     *,
-    name: Optional[str] = None,
-    arguments: Optional[str] = None,
+    name: str | None = None,
+    arguments: str | None = None,
 ):
     return create_single_choice_chunk(
         delta={
@@ -83,7 +84,7 @@ def create_function_call_chunk(
     )
 
 
-def _check_sse_line(actual: str, expected: Union[str, dict]):
+def _check_sse_line(actual: str, expected: str | dict):
     if isinstance(expected, str):
         assert actual == expected
         return
@@ -99,7 +100,7 @@ def _check_sse_line(actual: str, expected: Union[str, dict]):
     assert actual_dict == expected
 
 
-ExpectedSSEStream = Iterable[Union[str, dict]]
+ExpectedSSEStream = Iterable[str | dict]
 
 
 def check_sse_stream(
@@ -112,12 +113,12 @@ def check_sse_stream(
     for a_line, e_obj in itertools.zip_longest(
         actual, expected, fillvalue=sentinel
     ):
-        assert (
-            a_line is not sentinel
-        ), "The list of actual values is shorter than the list of expected values"
-        assert (
-            e_obj is not sentinel
-        ), "The list of expected values is shorter than the list of actual values"
+        assert a_line is not sentinel, (
+            "The list of actual values is shorter than the list of expected values"
+        )
+        assert e_obj is not sentinel, (
+            "The list of expected values is shorter than the list of actual values"
+        )
 
         _check_sse_line(a_line, e_obj)  # type: ignore
 

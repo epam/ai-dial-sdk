@@ -9,15 +9,14 @@ It proves to be useful since
 2. the SDK client may call this method on SDK models even if the client uses Pydantic V1.
 """
 
+from collections.abc import Iterable, Mapping
 from datetime import date, datetime
-from typing import Any, Dict, Iterable, Mapping, Optional, Set, Union, cast
-
-from typing_extensions import Literal
+from typing import Any, Literal, cast
 
 import aidial_sdk._pydantic as pydantic
 from aidial_sdk._pydantic import PYDANTIC_V2
 
-_IncEx = Union[Set[int], Set[str], Dict[int, Any], Dict[str, Any], None]
+_IncEx = set[int] | set[str] | dict[int, Any] | dict[str, Any] | None
 
 
 class BaseModel(pydantic.BaseModel):
@@ -30,7 +29,7 @@ class BaseModel(pydantic.BaseModel):
         def model_dump(
             self,
             *,
-            mode: Union[Literal["json", "python"], str] = "python",
+            mode: Literal["json", "python"] | str = "python",
             include: _IncEx = None,
             exclude: _IncEx = None,
             by_alias: bool = False,
@@ -38,10 +37,10 @@ class BaseModel(pydantic.BaseModel):
             exclude_defaults: bool = False,
             exclude_none: bool = False,
             round_trip: bool = False,
-            warnings: Union[bool, Literal["none", "warn", "error"]] = True,
-            context: Optional[Dict[str, Any]] = None,
+            warnings: bool | Literal["none", "warn", "error"] = True,
+            context: dict[str, Any] | None = None,
             serialize_as_any: bool = False,
-        ) -> Dict[str, Any]:
+        ) -> dict[str, Any]:
             if mode not in {"json", "python"}:
                 raise ValueError("mode must be either 'json' or 'python'")
             if round_trip is not False:
@@ -64,7 +63,7 @@ class BaseModel(pydantic.BaseModel):
             )
 
             return (
-                cast(Dict[str, Any], _json_safe(dumped))
+                cast(dict[str, Any], _json_safe(dumped))
                 if mode == "json"
                 else dumped
             )
@@ -80,11 +79,11 @@ def _json_safe(data: object) -> object:
         }
 
     if isinstance(data, Iterable) and not isinstance(
-        data, (str, bytes, bytearray)
+        data, str | bytes | bytearray
     ):
         return [_json_safe(item) for item in data]
 
-    if isinstance(data, (datetime, date)):
+    if isinstance(data, datetime | date):
         return data.isoformat()
 
     return data

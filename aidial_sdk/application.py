@@ -1,8 +1,9 @@
 import logging.config
 import re
 import warnings
+from collections.abc import Callable, Coroutine
 from logging import Filter, LogRecord
-from typing import Any, Callable, Coroutine, Literal, Optional, Type, TypeVar
+from typing import Any, Literal, TypeVar
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
@@ -68,13 +69,13 @@ class PathFilter(Filter):
 
 class DIALApp(FastAPI):
     _allow_extra_request_fields: bool
-    _dial_url: Optional[str]
+    _dial_url: str | None
 
     def __init__(
         self,
-        dial_url: Optional[str] = None,
+        dial_url: str | None = None,
         propagate_auth_headers: bool = False,
-        telemetry_config: Optional[TelemetryConfig] = None,
+        telemetry_config: TelemetryConfig | None = None,
         add_healthcheck: bool = False,
         *,
         allow_extra_request_fields: bool = False,
@@ -147,9 +148,8 @@ class DIALApp(FastAPI):
         deployment_name: str,
         impl: ChatCompletion,
         *,
-        heartbeat_interval: Optional[float] = None,
+        heartbeat_interval: float | None = None,
     ) -> "DIALApp":
-
         self.add_api_route(
             f"/openai/deployments/{deployment_name}/chat/completions",
             self._chat_completion(
@@ -206,7 +206,7 @@ class DIALApp(FastAPI):
         deployment_id: str,
         endpoint_impl: Callable[[RequestType], Coroutine[Any, Any, Any]],
         endpoint: Literal["tokenize", "truncate_prompt", "configuration"],
-        request_type: Type["RequestType"],
+        request_type: type["RequestType"],
     ):
         async def _handler(original_request: Request) -> Response:
             request = await self._parse_request(
@@ -244,7 +244,7 @@ class DIALApp(FastAPI):
 
     async def _parse_request(
         self,
-        request: Type[RequestType],
+        request: type[RequestType],
         original_request: Request,
         deployment_id: str,
     ) -> RequestType:
@@ -265,7 +265,7 @@ class DIALApp(FastAPI):
         deployment_id: str,
         impl: ChatCompletion,
         *,
-        heartbeat_interval: Optional[float],
+        heartbeat_interval: float | None,
     ):
         async def _handler(original_request: Request):
             request = await self._parse_request(

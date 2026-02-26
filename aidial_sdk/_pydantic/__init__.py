@@ -8,7 +8,8 @@ This is the only place where `pydantic` imports
 are allowed in the DIAL SDK package.
 """
 
-from typing import TYPE_CHECKING, Mapping
+from collections.abc import Mapping
+from typing import TYPE_CHECKING
 
 from pydantic import VERSION
 
@@ -19,9 +20,8 @@ USE_PYDANTIC_V2 = env_bool("PYDANTIC_V2", False)
 PYDANTIC_V2 = INSTALLED_PYDANTIC_V2 and USE_PYDANTIC_V2
 
 if TYPE_CHECKING:
-    from pydantic import BaseModel
-    from pydantic import ConfigDict as ConfigDict
     from pydantic import (
+        BaseModel,
         Field,
         PositiveInt,
         SecretStr,
@@ -29,16 +29,16 @@ if TYPE_CHECKING:
         StrictInt,
         StrictStr,
         ValidationError,
+        model_validator,
     )
+    from pydantic import ConfigDict as ConfigDict
     from pydantic import field_validator as validator
-    from pydantic import model_validator
     from pydantic._internal._model_construction import ModelMetaclass
     from pydantic.fields import FieldInfo
     from pydantic.v1.validators import make_literal_validator
 
     HeadersType = Mapping[str, str]
 else:
-
     if PYDANTIC_V2:
         from typing import Annotated
 
@@ -53,9 +53,9 @@ else:
             StrictInt,
             StrictStr,
             ValidationError,
+            model_validator,
         )
         from pydantic import field_validator as validator
-        from pydantic import model_validator
         from pydantic._internal._model_construction import ModelMetaclass
         from pydantic.fields import FieldInfo
         from pydantic.v1.validators import make_literal_validator

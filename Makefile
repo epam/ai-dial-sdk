@@ -15,13 +15,6 @@ install: init_env
 build: install
 	$(POETRY) build
 
-clean:
-	rm -rf $$($(POETRY) env info --path)
-	rm -rf .nox
-	rm -rf .pytest_cache
-	rm -rf dist
-	find . -type d -name __pycache__ | xargs rm -r
-
 publish: build
 	$(POETRY) publish -u __token__ -p $(PYPI_TOKEN) --skip-existing
 
@@ -40,11 +33,15 @@ test_fast: install
 benchmark: install
 	python -m benchmark.benchmark_merge_chunks
 
+install_git_hooks: install
+	$(VENV_DIR)/bin/pre-commit install
+
 help:
 	@echo '===================='
 	@echo 'build                        - build the library'
 	@echo 'clean                        - clean virtual env and build artifacts'
 	@echo 'publish                      - publish the library to Pypi'
+	@echo 'install_git_hooks            - install the git hooks'
 	@echo '-- LINTING --'
 	@echo 'format                       - run code formatters'
 	@echo 'lint                         - run linters'

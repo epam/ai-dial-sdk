@@ -98,7 +98,6 @@ TEST_CASES = [
 
 @pytest.mark.parametrize("mock_data", TEST_CASES)
 def test_tools_parsing(mock_data):
-
     def _request_validator(r: Request):
         assert model_dump(r, exclude_none=True) == mock_data
         assert r.tools

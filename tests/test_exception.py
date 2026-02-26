@@ -1,10 +1,8 @@
-from typing import List, Tuple
-
 import pytest
 
 from aidial_sdk.exceptions import HTTPException, TruncatePromptSystemError
 
-test_cases: List[Tuple[HTTPException, str]] = [
+test_cases: list[tuple[HTTPException, str]] = [
     (
         HTTPException(
             message="message",

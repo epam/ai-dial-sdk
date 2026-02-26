@@ -1,5 +1,3 @@
-from typing import List
-
 import pytest
 
 from tests.applications.custom_endpoints import app
@@ -10,7 +8,7 @@ CHAT_COMPLETION_REQUEST = {"messages": [{"role": "user", "content": "ping"}]}
 
 deployment = "test-app"
 
-testcases: List[TestCase] = [
+testcases: list[TestCase] = [
     TestCase(
         app,
         "test-app1",

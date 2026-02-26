@@ -1,5 +1,5 @@
 import json
-from typing import Any, Set
+from typing import Any
 
 
 class IdHashable:
@@ -18,18 +18,18 @@ class IdHashable:
         return json.dumps(self.obj)
 
 
-def collect_mutable_objects(a: Any) -> Set[IdHashable]:
+def collect_mutable_objects(a: Any) -> set[IdHashable]:
     ret: set[IdHashable] = set()
 
     def _register(obj: Any):
-        if isinstance(obj, (dict, list)):
+        if isinstance(obj, dict | list):
             ret.add(IdHashable(obj))
 
     def _rec(obj: Any):
         _register(obj)
         if isinstance(obj, dict):
             list(map(_rec, obj.values()))
-        elif isinstance(obj, (list, tuple)):
+        elif isinstance(obj, list | tuple):
             list(map(_rec, obj))
 
     _rec(a)
@@ -37,5 +37,5 @@ def collect_mutable_objects(a: Any) -> Set[IdHashable]:
     return ret
 
 
-def collect_shared_mutable_objects(a: Any, b: Any) -> Set[IdHashable]:
+def collect_shared_mutable_objects(a: Any, b: Any) -> set[IdHashable]:
     return collect_mutable_objects(a) & collect_mutable_objects(b)

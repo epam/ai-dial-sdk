@@ -1,5 +1,3 @@
-from typing import List, Optional
-
 import pytest
 
 from aidial_sdk._pydantic import PYDANTIC_V2, BaseModel, ValidationError
@@ -19,12 +17,12 @@ class StaticConfiguration_OneButton(BaseModel, metaclass=FormMetaclass):
         class Config:
             chat_message_input_disabled = True
 
-    int_field: Optional[int] = Field(
+    int_field: int | None = Field(
         default=None, description="Int field description"
     )
 
     str_field: str
-    list_field: List[str]
+    list_field: list[str]
 
     int_button_field: int = Field(
         title="Integer Button field",
@@ -65,7 +63,7 @@ class StaticConfiguration_TwoButtons(BaseModel, metaclass=FormMetaclass):
 
 
 class StaticConfiguration_OptionalButton(BaseModel, metaclass=FormMetaclass):
-    int_button_field: Optional[int] = Field(
+    int_button_field: int | None = Field(
         default=None,
         buttons=[
             Button(const=10, title="Title1"),
@@ -497,7 +495,7 @@ def test_dynamic_configuration_optional_type_parsing_success():
     class Conf(BaseModel):
         int_field: int
         str_field: str
-        buttons_field: Optional[int]
+        buttons_field: int | None
 
     conf = form(
         chat_message_input_disabled=True,
@@ -530,7 +528,7 @@ def test_dynamic_configuration_decorator_optional_type_parsing_success():
     class Conf(BaseModel):
         int_field: int
         str_field: str
-        buttons_field: Optional[int]
+        buttons_field: int | None
 
     conf_value = {"int_field": 10, "str_field": "Test", "buttons_field": 10}
     parsed_conf = model_parse(Conf, conf_value)

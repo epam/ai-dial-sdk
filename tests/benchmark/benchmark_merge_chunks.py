@@ -1,6 +1,6 @@
 import itertools
 import timeit
-from typing import Iterable, List
+from collections.abc import Iterable
 
 from pydantic import BaseModel
 
@@ -117,7 +117,7 @@ base_case = ChunkGenerator(
 
 one_choice = base_case.model_copy(update={"n_choices": 1})
 
-cases: List[ChunkGenerator] = [
+cases: list[ChunkGenerator] = [
     base_case,
     base_case.model_copy(update={"n_choices": 20}),
     base_case.model_copy(update={"n_chunks_per_choice": 20}),

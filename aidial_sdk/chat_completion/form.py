@@ -1,18 +1,12 @@
 from __future__ import annotations
 
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import (
     Any,
-    Callable,
-    Dict,
     Generic,
-    List,
     Literal,
-    Optional,
-    Sequence,
-    Type,
     TypeVar,
-    Union,
     get_args,
 )
 
@@ -36,8 +30,8 @@ _SUPPORTED_BUTTON_TYPES = ["number", "integer", "boolean", "string"]
 class Button(Generic[_T]):
     const: _T
     title: str
-    confirmationMessage: Optional[str] = None
-    populateText: Optional[str] = None
+    confirmationMessage: str | None = None
+    populateText: str | None = None
     submit: bool = False
 
     def schema(self) -> dict:
@@ -57,13 +51,13 @@ class FormMetaclass(ModelMetaclass):
         mcs,  # pyright: ignore[reportSelfClsParameterName]
         name,
         bases,
-        namespace: Dict,
+        namespace: dict,
         **kwargs,
     ):
         # Inject buttons validators
 
-        button_fields: Dict[str, List[Button]] = {}
-        validators: Dict[str, Any] = {}
+        button_fields: dict[str, list[Button]] = {}
+        validators: dict[str, Any] = {}
 
         for field_name, field_info in namespace.items():
             if (buttons_extra := _extract_buttons_field(field_info)) is None:
@@ -87,7 +81,7 @@ class FormMetaclass(ModelMetaclass):
         model_config = ModelConfigWrapper.create(None, namespace)
         model_config["extra"] = "forbid"
 
-        def _on_schema(json_schema: Dict[str, Any]) -> None:
+        def _on_schema(json_schema: dict[str, Any]) -> None:
             _add_model_config_extensions(model_config, json_schema)
             _add_button_fields(name, json_schema, button_fields)
 
@@ -97,7 +91,7 @@ class FormMetaclass(ModelMetaclass):
 
 
 def _add_model_config_extensions(
-    model_config: ModelConfigWrapper, json_schema: Dict[str, Any]
+    model_config: ModelConfigWrapper, json_schema: dict[str, Any]
 ) -> None:
     if (
         disable_input := model_config["chat_message_input_disabled"]
@@ -107,8 +101,8 @@ def _add_model_config_extensions(
 
 def _add_button_fields(
     cls_name: str,
-    json_schema: Dict[str, Any],
-    button_fields: Dict[str, List[Button]],
+    json_schema: dict[str, Any],
+    button_fields: dict[str, list[Button]],
 ) -> None:
     for field_name, buttons in button_fields.items():
         prop = json_schema["properties"][field_name]
@@ -121,7 +115,7 @@ def _add_button_fields(
 
         if (anyOf := prop.pop("anyOf", None)) is not None:
             # Optional types are translated in Pydantic V2 to
-            # {'anyOf': [{'type': 'integer'}, {'type': 'null'}], 'default': null}
+            # the JSON schema {'anyOf': [{'type': 'integer'}, {'type': 'null'}], 'default': null}
             # which conflicts with the 'oneOf' definition.
             types = {schema["type"] for schema in anyOf}
             types.discard("null")
@@ -146,11 +140,11 @@ _Model = TypeVar("_Model", bound=BaseModel)
 
 def form(
     *,
-    chat_message_input_disabled: Optional[bool] = None,
-    **kwargs: Dict[str, Union[FieldInfo, Any]],
-) -> Callable[[Type[_Model]], Type[_Model]]:
-    def _create_class(cls: Type[_Model]) -> Type[_Model]:
-        namespace: Dict[str, Any] = {
+    chat_message_input_disabled: bool | None = None,
+    **kwargs: dict[str, FieldInfo | Any],
+) -> Callable[[type[_Model]], type[_Model]]:
+    def _create_class(cls: type[_Model]) -> type[_Model]:
+        namespace: dict[str, Any] = {
             "__module__": cls.__module__,
             "__qualname__": cls.__qualname__,
         }
@@ -163,7 +157,7 @@ def form(
             )
 
         # Inject button extensions
-        annotations: Dict[str, Any] = {}
+        annotations: dict[str, Any] = {}
 
         for name, field_info in kwargs.items():
             field_name = f"{cls.__name__}.{name}"
@@ -211,7 +205,7 @@ def _create_field_validator(field_name: str, enum_values: Sequence[Any]):
         return validator(field_name, allow_reuse=True)(_check_value)
 
 
-def _get_base_type(tp: Type[_T]) -> Type[_T]:
+def _get_base_type(tp: type[_T]) -> type[_T]:
     """Returns T if given Optional[T], otherwise returns the type unchanged."""
     args = get_args(tp)
     if len(args) == 2 and type(None) in args:
@@ -232,7 +226,7 @@ def _extract_buttons_field(field_info: Any) -> Any:
         return field_info.extra.get("buttons")  # type: ignore
 
 
-def _get_buttons(field_name: str, buttons: Any) -> List[Button]:
+def _get_buttons(field_name: str, buttons: Any) -> list[Button]:
     if not isinstance(buttons, list):
         raise ValueError(
             f"'buttons' parameter of the field descriptor for {field_name} must be a list, but got {type(buttons).__name__}."

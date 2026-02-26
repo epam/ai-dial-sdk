@@ -1,6 +1,6 @@
 import json
 from types import TracebackType
-from typing import Optional, Type, overload
+from typing import overload
 
 from aidial_sdk._pydantic import ValidationError
 from aidial_sdk.chat_completion._types import ChunkQueue
@@ -36,7 +36,7 @@ class Choice(ChoiceBase):
     _closed: bool
     _state_submitted: bool
     _schema_submitted: bool
-    _last_finish_reason: Optional[FinishReason]
+    _last_finish_reason: FinishReason | None
 
     def __init__(self, queue: ChunkQueue, choice_index: int):
         self._queue = queue
@@ -57,10 +57,10 @@ class Choice(ChoiceBase):
 
     def __exit__(
         self,
-        exc_type: Optional[Type[BaseException]],
-        exc: Optional[BaseException],
-        traceback: Optional[TracebackType],
-    ) -> Optional[bool]:
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> bool | None:
         if not exc and not self._closed:
             self.close()
         return False
@@ -101,7 +101,7 @@ class Choice(ChoiceBase):
         return ContentStream(self)
 
     def create_function_tool_call(
-        self, id: str, name: str, arguments: Optional[str] = None
+        self, id: str, name: str, arguments: str | None = None
     ) -> FunctionToolCall:
         function_tool_call = FunctionToolCall.create_and_send(
             self, self._last_tool_call_index, id, name, arguments
@@ -111,7 +111,7 @@ class Choice(ChoiceBase):
         return function_tool_call
 
     def create_function_call(
-        self, name: str, arguments: Optional[str] = None
+        self, name: str, arguments: str | None = None
     ) -> FunctionCall:
         function_call = FunctionCall.create_and_send(self, name, arguments)
         self._has_function_call = True
@@ -124,12 +124,12 @@ class Choice(ChoiceBase):
     @overload
     def add_attachment(
         self,
-        type: Optional[str] = None,
-        title: Optional[str] = None,
-        data: Optional[str] = None,
-        url: Optional[str] = None,
-        reference_url: Optional[str] = None,
-        reference_type: Optional[str] = None,
+        type: str | None = None,
+        title: str | None = None,
+        data: str | None = None,
+        url: str | None = None,
+        reference_url: str | None = None,
+        reference_type: str | None = None,
     ) -> None: ...
 
     def add_attachment(self, *args, **kwargs) -> None:
@@ -181,7 +181,7 @@ class Choice(ChoiceBase):
         self._schema_submitted = True
         self.send_chunk(FormSchemaChunk(self._index, form_schema))
 
-    def create_stage(self, name: Optional[str] = None) -> Stage:
+    def create_stage(self, name: str | None = None) -> Stage:
         if not self._opened:
             raise runtime_error("Trying to create stage to an unopened choice")
         if self._closed:
@@ -199,7 +199,7 @@ class Choice(ChoiceBase):
         self._opened = True
         self.send_chunk(StartChoiceChunk(choice_index=self._index))
 
-    def close(self, finish_reason: Optional[FinishReason] = None) -> None:
+    def close(self, finish_reason: FinishReason | None = None) -> None:
         if not self._opened:
             raise runtime_error("Trying to close an unopened choice")
         if self._closed:
