@@ -22,9 +22,10 @@
   - [Echo application example](#echo-application-example)
     - [Run](#run)
     - [Check](#check)
-- [Developer environment](#developer-environment)
+- [Development](#development)
+  - [Development Environment](#development-environment)
+  - [Setup](#setup)
   - [IDE configuration](#ide-configuration)
-- [Set up](#set-up)
   - [Lint](#lint)
   - [Test](#test)
   - [Git hooks](#git-hooks)
@@ -134,36 +135,43 @@ You will see the JSON response as:
 
 ---
 
-## Developer environment
+## Development
 
-> [!IMPORTANT]
-> This project uses [Python>=3.10](https://www.python.org/downloads/) and [Poetry>=2.1.1](https://python-poetry.org/) as a dependency manager.
->
-> Check out Poetry's [documentation on how to install it](https://python-poetry.org/docs/#installation) on your system before proceeding.
+### Development Environment
 
-To install requirements:
+This project requires [Python ≥3.11](https://www.python.org/downloads/) and [Poetry ≥2.1.1](https://python-poetry.org/) for dependency management.
 
-```sh
-poetry install
-```
+### Setup
 
-This will install all requirements for running the package, linting, formatting and tests.
+1. Install Poetry. See the official [installation guide](https://python-poetry.org/docs/#installation).
+
+2. *(Optional)* Specify custom Python or Poetry executables in `.env.dev`. This is useful if multiple versions are installed. By default, `python` and `poetry` are used.
+
+   ```sh
+   POETRY_PYTHON=path-to-python-exe
+   POETRY=path-to-poetry-exe
+   ```
+
+3. Create and activate the virtual environment:
+
+   ```sh
+   make init_env
+   source .venv/bin/activate
+   ```
+
+4. Install project dependencies (including linting, formatting, and test tools):
+
+   ```sh
+   make install
+   ```
 
 ### IDE configuration
 
 The recommended IDE is [VSCode](https://code.visualstudio.com/).
 Open the project in VSCode and install the recommended extensions.
+VS Code is configured to use the [Ruff formatter](https://docs.astral.sh/ruff/formatter/).
 
-The VSCode is configured to use PEP-8 compatible formatter [Black](https://black.readthedocs.io/en/stable/index.html).
-
-Alternatively you can use [PyCharm](https://www.jetbrains.com/pycharm/).
-
-Set-up the Black formatter for PyCharm [manually](https://black.readthedocs.io/en/stable/integrations/editors.html#pycharm-intellij-idea) or
-install PyCharm>=2023.2 with [built-in Black support](https://blog.jetbrains.com/pycharm/2023/07/2023-2/#black).
-
----
-
-## Set up
+Alternatively you can use [PyCharm](https://www.jetbrains.com/pycharm/) that has built-in [Ruff support](https://www.jetbrains.com/help/pycharm/lsp-tools.html#ruff).
 
 ### Lint
 
