@@ -1,13 +1,15 @@
 ARGS ?=
 VENV_DIR ?= .venv
-POETRY ?= $(VENV_DIR)/bin/poetry
-POETRY_VERSION ?= 2.1.1
+POETRY ?= poetry
+POETRY_PYTHON ?= python
+
+-include .env.dev
+export
 
 all: build
 
 init_env:
-	python -m venv $(VENV_DIR)
-	$(VENV_DIR)/bin/pip install poetry==$(POETRY_VERSION) --quiet
+	$(POETRY) env use $(POETRY_PYTHON)
 
 install: init_env
 	$(POETRY) install --all-extras
