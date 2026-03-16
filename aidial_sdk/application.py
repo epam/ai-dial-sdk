@@ -95,8 +95,7 @@ class DIALApp(FastAPI):
         self._allow_extra_request_fields = allow_extra_request_fields
         self._dial_url = dial_url
 
-        if telemetry_config is not None:
-            self.configure_telemetry(telemetry_config)
+        self.configure_telemetry(telemetry_config)
 
         if propagate_auth_headers:
             if not dial_url:
@@ -121,16 +120,19 @@ class DIALApp(FastAPI):
 
         self.add_exception_handler(DIALException, dial_exception_handler)
 
-    def configure_telemetry(self, config: TelemetryConfig):
+    def configure_telemetry(self, config: TelemetryConfig | None):
+        if config is None or config.is_noop():
+            return
+
         try:
             from aidial_sdk.telemetry.init import init_telemetry
+
+            init_telemetry(app=self, config=config)
         except ImportError:
             raise ValueError(
                 "Missing telemetry dependencies. "
                 "Install the package with the extras: aidial-sdk[telemetry]"
             )
-
-        init_telemetry(app=self, config=config)
 
     def add_embeddings(
         self, deployment_name: str, impl: Embeddings

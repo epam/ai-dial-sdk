@@ -47,3 +47,8 @@ class TelemetryConfig(BaseModel):
     metrics: MetricsConfig | None = (
         MetricsConfig() if OTEL_METRICS_EXPORTER else None
     )
+
+    def is_noop(self):
+        return (
+            self.logs is None and self.tracing is None and self.metrics is None
+        )
