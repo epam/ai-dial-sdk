@@ -6,3 +6,14 @@ from aidial_sdk.embeddings.request import (
     Request,
 )
 from aidial_sdk.embeddings.response import Embedding, Response, Usage
+
+__all__ = [
+    "Embeddings",
+    "Attachment",
+    "EmbeddingsMultiModalInput",
+    "EmbeddingsRequestCustomFields",
+    "Request",
+    "Embedding",
+    "Response",
+    "Usage",
+]
