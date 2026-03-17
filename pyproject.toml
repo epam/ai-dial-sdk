@@ -114,6 +114,3 @@ ignore = [
     "B006", # Do not use mutable data structures for argument defaults
     # "E731", # Do not assign a `lambda` expression, use a `def`
 ]
-"*/__init__.py" = [
-    "F401", # imported but unused
-]

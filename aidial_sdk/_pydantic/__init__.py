@@ -8,6 +8,8 @@ This is the only place where `pydantic` imports
 are allowed in the DIAL SDK package.
 """
 
+# ruff: noqa: F401
+
 from collections.abc import Mapping
 from typing import TYPE_CHECKING
 
