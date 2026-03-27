@@ -1,5 +1,6 @@
 from collections.abc import MutableMapping
 from contextvars import ContextVar
+from dataclasses import dataclass
 from typing import Any
 from urllib.parse import urlparse, urlunparse
 
@@ -8,21 +9,20 @@ from fastapi import FastAPI
 from starlette.types import ASGIApp, Receive, Scope, Send
 
 
+@dataclass
 class FastAPIMiddleware:
-    def __init__(
-        self,
-        app: ASGIApp,
-        api_key: ContextVar[str | None],
-    ) -> None:
-        self.app = app
-        self.api_key = api_key
+    app: ASGIApp
+    api_key: ContextVar[str | None]
+    conversation_id: ContextVar[str | None]
 
     async def __call__(
         self, scope: Scope, receive: Receive, send: Send
     ) -> None:
-        for header in scope.get("headers") or []:
-            if header[0] == b"api-key":
-                self.api_key.set(header[1].decode("utf-8"))
+        for key, value in scope.get("headers") or []:
+            if key == b"api-key":
+                self.api_key.set(value.decode("utf-8"))
+            if key == b"x-conversation-id":
+                self.conversation_id.set(value.decode("utf-8"))
 
         await self.app(scope, receive, send)
 
@@ -44,6 +44,7 @@ class HeaderPropagator:
     _app: FastAPI
     _dial_url: str
     _api_key: ContextVar[str | None]
+    _conversation_id: ContextVar[str | None]
     _enabled: bool
 
     _original_requests_send: Any | None
@@ -54,9 +55,8 @@ class HeaderPropagator:
         self._app = app
         self._dial_url = _normalize_url(dial_url)
 
-        self._api_key: ContextVar[str | None] = ContextVar(
-            "api_key", default=None
-        )
+        self._api_key = ContextVar("api_key", default=None)
+        self._conversation_id = ContextVar("conversation_id", default=None)
 
         self._enabled = False
         self._original_requests_send = None
@@ -79,7 +79,11 @@ class HeaderPropagator:
             self._deinstrument_requests()
 
     def _instrument_fast_api(self, app: FastAPI):
-        app.add_middleware(FastAPIMiddleware, api_key=self._api_key)
+        app.add_middleware(
+            FastAPIMiddleware,
+            api_key=self._api_key,
+            conversation_id=self._conversation_id,
+        )
 
     def _instrument_aiohttp(self):
         if self._original_aiohttp_request is not None:
@@ -179,8 +183,7 @@ class HeaderPropagator:
         self, url: str, headers: MutableMapping[str, str]
     ) -> None:
         if _normalize_url(url).startswith(self._dial_url):
-            api_key = self._api_key.get()
-            if api_key:
+            if api_key := self._api_key.get():
                 old_api_key = headers.get("api-key")
                 old_authz = headers.get("Authorization")
 
@@ -192,3 +195,6 @@ class HeaderPropagator:
                     headers["Authorization"] = f"Bearer {api_key}"
 
                 headers["api-key"] = api_key
+
+            if conversation_id := self._conversation_id.get():
+                headers["x-conversation-id"] = conversation_id
