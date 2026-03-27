@@ -44,7 +44,7 @@ httpx = "^0.25.0"
 respx = "^0.21.1"
 aiohttp = "^3.13.3"
 aioresponses = "^0.7.6"
-requests = "^2.32"
+requests = "^2.33"
 responses = "^0.25.3"
 
 [tool.poetry.group.lint.dependencies]
