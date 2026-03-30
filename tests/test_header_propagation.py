@@ -267,7 +267,7 @@ def test_conversation_id_propagation(
     with (
         mock_upstream(lib, upstream_url),
         create_client(
-            dial_url, headers_to_proxy=["x-conversation-id"]
+            dial_url, headers_to_proxy=["x-conVerSation-id"]
         ) as client,
     ):
         headers_for_dial_app = remove_nones(

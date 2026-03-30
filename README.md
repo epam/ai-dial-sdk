@@ -45,10 +45,11 @@ Applications and model adapters implemented using this framework will be compati
 
 ## Environment Variables
 
-| Variable     | Default | Description                                                                                                                                                                           |
-|--------------|---------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| DIAL_SDK_LOG | WARNING | DIAL SDK log level                                                                                                                                                                    |
-| PYDANTIC_V2  | False   | When `True` and Pydantic V2 is installed, DIAL SDK classes for requests/responses will be based on Pydantic V2 `BaseModel`. Otherwise, they will be based on Pydantic V1 `BaseModel`. |
+|Variable|Default|Description|
+|---|---|---|
+|DIAL_SDK_LOG|WARNING|DIAL SDK log level|
+|DIAL_SDK_HEADERS_TO_PROXY|``|A comma-separated list of headers that should be proxied from incoming requests to outgoing requests to the DIAL API. By default, no headers are proxied.|
+|PYDANTIC_V2|False|When `True` and Pydantic V2 is installed, DIAL SDK classes for requests/responses will be based on Pydantic V2 `BaseModel`. Otherwise, they will be based on Pydantic V1 `BaseModel`.|
 
 ---
 

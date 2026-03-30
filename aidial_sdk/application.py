@@ -32,6 +32,7 @@ from aidial_sdk.header_propagator import HeaderPropagator
 from aidial_sdk.telemetry.types import TelemetryConfig
 from aidial_sdk.utils._disconnect_middleware import DisconnectMiddleware
 from aidial_sdk.utils._reflection import get_method_implementation
+from aidial_sdk.utils.env import env_var_list
 from aidial_sdk.utils.log_config import LogConfig
 from aidial_sdk.utils.logging import log_debug, set_log_deployment
 from aidial_sdk.utils.pydantic import model_validate_extra_fields
@@ -98,6 +99,9 @@ class DIALApp(FastAPI):
 
         self.configure_telemetry(telemetry_config)
 
+        propagate_headers = propagate_headers or []
+        propagate_headers.extend(env_var_list("DIAL_SDK_HEADERS_TO_PROXY"))
+
         if propagate_auth_headers or propagate_headers:
             if not dial_url:
                 raise ValueError(
@@ -108,7 +112,7 @@ class DIALApp(FastAPI):
                 self,
                 dial_url=dial_url,
                 proxy_auth_headers=propagate_auth_headers,
-                headers_to_proxy=propagate_headers or [],
+                headers_to_proxy=propagate_headers,
             ).enable()
 
         if add_healthcheck:
