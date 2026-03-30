@@ -1,12 +1,12 @@
 <h1 align="center">
-         AI DIAL Python SDK
-    </h1>
+    AI DIAL Python SDK
+</h1>
+<p align="center">
     <p align="center">
-        <p align="center">
-        <a href="https://dialx.ai/">
-          <img src="https://dialx.ai/dialx_logo.svg" alt="About DIALX">
-        </a>
-    </p>
+    <a href="https://dialx.ai/">
+        <img src="https://dialx.ai/logo/dialx_logo.svg" alt="About DIALX">
+    </a>
+</p>
 <h4 align="center">
     <a href="https://pypi.org/project/aidial-sdk/">
         <img src="https://img.shields.io/pypi/v/aidial-sdk.svg" alt="PyPI version">
