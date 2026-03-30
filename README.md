@@ -1,12 +1,12 @@
 <h1 align="center">
-         AI DIAL Python SDK
-    </h1>
+    AI DIAL Python SDK
+</h1>
+<p align="center">
     <p align="center">
-        <p align="center">
-        <a href="https://dialx.ai/">
-          <img src="https://dialx.ai/dialx_logo.svg" alt="About DIALX">
-        </a>
-    </p>
+    <a href="https://dialx.ai/">
+        <img src="https://dialx.ai/logo/dialx_logo.svg" alt="About DIALX">
+    </a>
+</p>
 <h4 align="center">
     <a href="https://pypi.org/project/aidial-sdk/">
         <img src="https://img.shields.io/pypi/v/aidial-sdk.svg" alt="PyPI version">
@@ -45,10 +45,11 @@ Applications and model adapters implemented using this framework will be compati
 
 ## Environment Variables
 
-| Variable     | Default | Description                                                                                                                                                                           |
-|--------------|---------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| DIAL_SDK_LOG | WARNING | DIAL SDK log level                                                                                                                                                                    |
-| PYDANTIC_V2  | False   | When `True` and Pydantic V2 is installed, DIAL SDK classes for requests/responses will be based on Pydantic V2 `BaseModel`. Otherwise, they will be based on Pydantic V1 `BaseModel`. |
+|Variable|Default|Description|
+|---|---|---|
+|DIAL_SDK_LOG|WARNING|DIAL SDK log level|
+|DIAL_SDK_HEADERS_TO_PROXY|``|A comma-separated list of headers that should be proxied from incoming requests to outgoing requests to the DIAL API. By default, no headers are proxied.|
+|PYDANTIC_V2|False|When `True` and Pydantic V2 is installed, DIAL SDK classes for requests/responses will be based on Pydantic V2 `BaseModel`. Otherwise, they will be based on Pydantic V1 `BaseModel`.|
 
 ---
 
