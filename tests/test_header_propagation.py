@@ -61,10 +61,19 @@ def _all_urls() -> Generator[tuple[str, str, bool], Any, Any]:
 
 
 @contextlib.contextmanager
-def create_client(dial_url: str):
+def create_client(
+    dial_url: str,
+    proxy_auth_headers: bool = False,
+    headers_to_proxy: list[str] | None = None,
+):
     app = FastAPI()
     app.include_router(sender.router)
-    prop = HeaderPropagator(app, dial_url)
+    prop = HeaderPropagator(
+        app,
+        dial_url=dial_url,
+        proxy_auth_headers=proxy_auth_headers,
+        headers_to_proxy=headers_to_proxy or [],
+    )
     prop.enable()
     yield TestClient(app)
     prop.disable()
@@ -205,7 +214,7 @@ class TestCase:
 def test_api_key_propagation(lib: Lib, tc: TestCase):
     with (
         mock_upstream(lib, tc.upstream_url),
-        create_client(tc.dial_url) as client,
+        create_client(tc.dial_url, proxy_auth_headers=True) as client,
     ):
         headers_for_dial_app = {}
         if tc.key_for_dial_app:
@@ -255,7 +264,12 @@ def test_conversation_id_propagation(
     header_for_dial_app: str | None,
     header_for_upstream: str | None,
 ):
-    with mock_upstream(lib, upstream_url), create_client(dial_url) as client:
+    with (
+        mock_upstream(lib, upstream_url),
+        create_client(
+            dial_url, headers_to_proxy=["x-conversation-id"]
+        ) as client,
+    ):
         headers_for_dial_app = remove_nones(
             {"x-ConVersaTion-Id": header_for_dial_app}
         )
@@ -274,10 +288,10 @@ def test_conversation_id_propagation(
         )
 
         expected_value = None
-        if is_matching and header_for_dial_app:
-            expected_value = header_for_dial_app
-        elif header_for_upstream:
+        if header_for_upstream:
             expected_value = header_for_upstream
+        elif is_matching and header_for_dial_app:
+            expected_value = header_for_dial_app
 
         expected_headers = remove_nones({"x-conversation-id": expected_value})
 

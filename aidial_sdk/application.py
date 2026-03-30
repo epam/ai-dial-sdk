@@ -79,6 +79,7 @@ class DIALApp(FastAPI):
         add_healthcheck: bool = False,
         *,
         allow_extra_request_fields: bool = False,
+        propagate_headers: list[str] | None = None,
         **kwargs,
     ):
         if "propagation_auth_headers" in kwargs:
@@ -97,13 +98,18 @@ class DIALApp(FastAPI):
 
         self.configure_telemetry(telemetry_config)
 
-        if propagate_auth_headers:
+        if propagate_auth_headers or propagate_headers:
             if not dial_url:
                 raise ValueError(
-                    "dial_url is required if propagation auth headers is enabled"
+                    "dial_url is required if propagation of headers is enabled"
                 )
 
-            HeaderPropagator(self, dial_url).enable()
+            HeaderPropagator(
+                self,
+                dial_url=dial_url,
+                proxy_auth_headers=propagate_auth_headers,
+                headers_to_proxy=propagate_headers or [],
+            ).enable()
 
         if add_healthcheck:
             path = "/health"

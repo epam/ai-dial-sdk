@@ -12,17 +12,20 @@ from starlette.types import ASGIApp, Receive, Scope, Send
 @dataclass
 class FastAPIMiddleware:
     app: ASGIApp
-    api_key: ContextVar[str | None]
-    conversation_id: ContextVar[str | None]
+    headers_to_proxy: list[str]
+    request_headers: ContextVar[dict[str, str] | None]
 
     async def __call__(
         self, scope: Scope, receive: Receive, send: Send
     ) -> None:
+        headers: dict[str, str] = {}
         for key, value in scope.get("headers") or []:
-            if key == b"api-key":
-                self.api_key.set(value.decode("utf-8"))
-            if key == b"x-conversation-id":
-                self.conversation_id.set(value.decode("utf-8"))
+            key = key.decode("utf-8")
+            value = value.decode("utf-8")
+            if key in self.headers_to_proxy:
+                headers[key] = value
+
+        self.request_headers.set(headers)
 
         await self.app(scope, receive, send)
 
@@ -43,28 +46,44 @@ def _normalize_url(url: str) -> str:
 class HeaderPropagator:
     _app: FastAPI
     _dial_url: str
-    _api_key: ContextVar[str | None]
-    _conversation_id: ContextVar[str | None]
+
+    _headers_to_proxy: list[str]
+    _request_headers: ContextVar[dict[str, str] | None]
+
     _enabled: bool
 
     _original_requests_send: Any | None
     _original_httpx_build_requests: tuple[Any, Any] | None
     _original_aiohttp_request: Any | None
 
-    def __init__(self, app: FastAPI, dial_url: str):
+    def __init__(
+        self,
+        app: FastAPI,
+        *,
+        dial_url: str,
+        proxy_auth_headers: bool,
+        headers_to_proxy: list[str],
+    ):
         self._app = app
         self._dial_url = _normalize_url(dial_url)
 
-        self._api_key = ContextVar("api_key", default=None)
-        self._conversation_id = ContextVar("conversation_id", default=None)
+        self._headers_to_proxy = [s.lower() for s in headers_to_proxy]
+        if proxy_auth_headers:
+            self._headers_to_proxy.append("api-key")
+
+        self._request_headers = ContextVar("request_headers", default=None)
 
         self._enabled = False
         self._original_requests_send = None
         self._original_httpx_build_requests = None
         self._original_aiohttp_request = None
 
+    @property
+    def is_noop(self) -> bool:
+        return not self._headers_to_proxy
+
     def enable(self):
-        if not self._enabled:
+        if not self.is_noop and not self._enabled:
             self._enabled = True
             self._instrument_fast_api(self._app)
             self._instrument_aiohttp()
@@ -72,7 +91,7 @@ class HeaderPropagator:
             self._instrument_httpx()
 
     def disable(self):
-        if self._enabled:
+        if not self.is_noop and self._enabled:
             self._enabled = False
             self._deinstrument_aiohttp()
             self._deinstrument_httpx()
@@ -81,8 +100,8 @@ class HeaderPropagator:
     def _instrument_fast_api(self, app: FastAPI):
         app.add_middleware(
             FastAPIMiddleware,
-            api_key=self._api_key,
-            conversation_id=self._conversation_id,
+            headers_to_proxy=self._headers_to_proxy,
+            request_headers=self._request_headers,
         )
 
     def _instrument_aiohttp(self):
@@ -182,8 +201,13 @@ class HeaderPropagator:
     def _modify_headers(
         self, url: str, headers: MutableMapping[str, str]
     ) -> None:
-        if _normalize_url(url).startswith(self._dial_url):
-            if api_key := self._api_key.get():
+        if not _normalize_url(url).startswith(self._dial_url):
+            return
+
+        request_headers = self._request_headers.get() or {}
+
+        for header, value in request_headers.items():
+            if header == "api-key":
                 old_api_key = headers.get("api-key")
                 old_authz = headers.get("Authorization")
 
@@ -192,9 +216,9 @@ class HeaderPropagator:
                     and old_authz
                     and old_authz == f"Bearer {old_api_key}"
                 ):
-                    headers["Authorization"] = f"Bearer {api_key}"
+                    headers["Authorization"] = f"Bearer {value}"
 
-                headers["api-key"] = api_key
+                headers["api-key"] = value
 
-            if conversation_id := self._conversation_id.get():
-                headers["x-conversation-id"] = conversation_id
+            elif header not in headers:
+                headers[header] = value
