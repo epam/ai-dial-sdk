@@ -39,7 +39,7 @@ httpx = ["httpx (>=0.25.0,<1.0)"]
 pytest = "^8.2"
 pytest-asyncio = "^0.24.0"
 nox = "^2023.4.22"
-pillow = "^12.1.1"
+pillow = "^12.2.0"
 httpx = "^0.25.0"
 respx = "^0.21.1"
 aiohttp = "^3.13.4"
