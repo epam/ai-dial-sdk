@@ -275,6 +275,7 @@ class AzureChatCompletionRequest(ExtraAllowModel):
 
 class ChatCompletionRequestCustomFields(ExtraAllowModel):
     configuration: dict[str, Any] | None = None
+    cache_breakpoint: CacheBreakpoint | None = None
 
 
 class ChatCompletionRequest(AzureChatCompletionRequest):
