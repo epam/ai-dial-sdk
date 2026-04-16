@@ -18,10 +18,18 @@ def test_url_only():
 
 
 def test_neither_data_nor_url_raises():
-    with pytest.raises(ValidationError, match="Attachment must have either 'data' or 'url', but it's missing both"):
+    with pytest.raises(
+        ValidationError,
+        match="Attachment must have either 'data' or 'url', but it's missing both",
+    ):
         model_parse(Attachment, {})
 
 
 def test_both_data_and_url_raises():
-    with pytest.raises(ValidationError, match="Attachment must have either 'data' or 'url', but it has both"):
-        model_parse(Attachment, {"data": "base64...", "url": "https://example.com/file"})
+    with pytest.raises(
+        ValidationError,
+        match="Attachment must have either 'data' or 'url', but it has both",
+    ):
+        model_parse(
+            Attachment, {"data": "base64...", "url": "https://example.com/file"}
+        )
