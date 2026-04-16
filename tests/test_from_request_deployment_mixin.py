@@ -1,60 +1,73 @@
+import json
+
+import fastapi
 import pytest
 
-from aidial_sdk._pydantic import SecretStr, ValidationError
 from aidial_sdk.deployment.from_request_mixin import FromRequestDeploymentMixin
-from tests.utils.constants import _DUMMY_FASTAPI_REQUEST
-from tests.utils.pydantic import model_parse
+from aidial_sdk.exceptions import InvalidRequestError
 
 
-def _create_request(**kwargs) -> FromRequestDeploymentMixin:
-    data = {
-        "original_request": _DUMMY_FASTAPI_REQUEST,
-        "deployment_id": "test",
-        "headers": {},
-        **kwargs,
+def _make_request(
+    headers: dict[str, str], body: dict | None = None
+) -> fastapi.Request:
+    raw_headers = [(k.lower().encode(), v.encode()) for k, v in headers.items()]
+    scope = {
+        "type": "http",
+        "method": "POST",
+        "headers": raw_headers,
+        "query_string": b"",
     }
-    return model_parse(FromRequestDeploymentMixin, data)
+    body_bytes = json.dumps(body or {}).encode()
+
+    async def receive():
+        return {"type": "http.request", "body": body_bytes}
+
+    return fastapi.Request(scope, receive)
 
 
-def test_create_secrets_api_key_converted():
-    obj = _create_request(api_key="test-api-key")
-    assert obj.api_key_secret.get_secret_value() == "test-api-key"
-    assert obj.api_key == "test-api-key"
+async def _from_request(headers: dict[str, str]) -> FromRequestDeploymentMixin:
+    return await FromRequestDeploymentMixin.from_request(
+        _make_request(headers),
+        deployment_id="test-deployment-id",
+        base_url=None,
+    )
 
 
-def test_create_secrets_api_key_passthrough():
-    obj = _create_request(api_key_secret=SecretStr("test-api-key"))
-    assert obj.api_key_secret.get_secret_value() == "test-api-key"
-    assert obj.api_key == "test-api-key"
+async def test_api_key_extracted():
+    obj = await _from_request({"api-key": "my-key"})
+    assert obj.api_key_secret.get_secret_value() == "my-key"
+    assert obj.api_key == "my-key"
 
 
-def test_create_secrets_api_key_conflict_raises():
-    with pytest.raises(
-        ValidationError,
-        match="api_key and api_key_secret cannot be both provided",
-    ):
-        _create_request(
-            api_key="test-api-key",
-            api_key_secret=SecretStr("test-api-key"),
-        )
+async def test_api_key_missing_raises():
+    with pytest.raises(InvalidRequestError, match="Api-Key header is required"):
+        await _from_request({})
 
 
-def test_create_secrets_jwt_converted():
-    obj = _create_request(api_key="test-api-key", jwt="Bearer tok")
-    assert isinstance(obj.jwt_secret, SecretStr)
+async def test_bearer_authorization_extracted():
+    obj = await _from_request(
+        {"api-key": "my-key", "authorization": "Bearer tok"}
+    )
+
+    assert obj.jwt_secret is not None
     assert obj.jwt_secret.get_secret_value() == "Bearer tok"
+
     assert obj.bearer_token_secret is not None
     assert obj.bearer_token_secret.get_secret_value() == "tok"
     assert obj.bearer_token == "tok"  # noqa: S105
 
 
-def test_create_secrets_jwt_conflict_raises():
-    with pytest.raises(
-        ValidationError,
-        match="jwt and jwt_secret cannot be both provided",
-    ):
-        _create_request(
-            api_key="test-api-key",
-            jwt="Bearer tok",
-            jwt_secret=SecretStr("Bearer tok"),
-        )
+async def test_no_authorization_header():
+    obj = await _from_request({"api-key": "my-key"})
+    assert obj.jwt_secret is None
+    assert obj.bearer_token_secret is None
+    assert obj.bearer_token is None
+
+
+async def test_non_bearer_authorization_header():
+    obj = await _from_request(
+        {"api-key": "my-key", "authorization": "Token custom"}
+    )
+    assert obj.jwt_secret is not None
+    assert obj.jwt_secret.get_secret_value() == "Token custom"
+    assert obj.bearer_token is None
