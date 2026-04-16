@@ -92,5 +92,24 @@ def _json_safe(data: object) -> object:
 def model_validator(*, mode: Literal["before", "after"]) -> Any:
     if PYDANTIC_V2:
         return pydantic.model_validator(mode=mode)
-    else:
-        return pydantic.root_validator(pre=(mode == "before"))  # type: ignore
+
+    if mode == "before":
+        return pydantic.root_validator(pre=True)  # type: ignore
+
+    # In Pydantic V2, model_validator(mode="after") uses instance methods.
+    # For V1 compatibility, wrap the instance method as a classmethod root_validator.
+    def _wrap(fn: Any) -> Any:
+        @pydantic.root_validator(pre=False)  # type: ignore
+        @classmethod
+        def wrapped(cls: Any, values: Any) -> Any:
+            class _Proxy:
+                def __getattr__(self, name: str) -> Any:
+                    return values.get(name)
+
+            fn(_Proxy())
+            return values
+
+        wrapped.__name__ = fn.__name__
+        return wrapped
+
+    return _wrap
