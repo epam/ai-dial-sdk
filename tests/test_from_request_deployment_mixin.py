@@ -3,8 +3,10 @@ import json
 import fastapi
 import pytest
 
+from aidial_sdk._pydantic import SecretStr, ValidationError
 from aidial_sdk.deployment.from_request_mixin import FromRequestDeploymentMixin
 from aidial_sdk.exceptions import InvalidRequestError
+from tests.utils.pydantic import model_parse
 
 
 def _make_request(
@@ -23,6 +25,18 @@ def _make_request(
         return {"type": "http.request", "body": body_bytes}
 
     return fastapi.Request(scope, receive)
+
+
+def _make_model(**kwargs) -> FromRequestDeploymentMixin:
+    return model_parse(
+        FromRequestDeploymentMixin,
+        {
+            "original_request": _make_request({}),
+            "deployment_id": "test",
+            "headers": {},
+            **kwargs,
+        },
+    )
 
 
 async def _from_request(headers: dict[str, str]) -> FromRequestDeploymentMixin:
@@ -71,3 +85,23 @@ async def test_non_bearer_authorization_header():
     assert obj.jwt_secret is not None
     assert obj.jwt_secret.get_secret_value() == "Token custom"
     assert obj.bearer_token is None
+
+
+def test_create_secrets_api_key_conflict_raises():
+    with pytest.raises(
+        ValidationError,
+        match="api_key and api_key_secret cannot be both provided",
+    ):
+        _make_model(api_key="my-key", api_key_secret=SecretStr("my-key"))
+
+
+def test_create_secrets_jwt_conflict_raises():
+    with pytest.raises(
+        ValidationError,
+        match="jwt and jwt_secret cannot be both provided",
+    ):
+        _make_model(
+            api_key="my-key",
+            jwt="Bearer tok",
+            jwt_secret=SecretStr("Bearer tok"),
+        )
