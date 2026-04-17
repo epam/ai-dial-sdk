@@ -28,25 +28,17 @@ class Attachment(ExtraAllowModel, IgnoreIndex):
     reference_url: StrictStr | None = None
 
     @model_validator(mode="after")
-    @classmethod
-    def check_data_or_url(cls, values: Any):
-        if isinstance(values, cls):
-            data = values.data
-            url = values.url
-        else:
-            data = values.get("data")
-            url = values.get("url")
-
-        if data is None and url is None:
+    def check_data_or_url(self) -> "Attachment":
+        if self.data is None and self.url is None:
             raise ValueError(
                 "Attachment must have either 'data' or 'url', but it's missing both"
             )
-        if data is not None and url is not None:
+        if self.data is not None and self.url is not None:
             raise ValueError(
                 "Attachment must have either 'data' or 'url', but it has both"
             )
 
-        return values
+        return self
 
 
 class Stage(ExtraAllowModel, IgnoreIndex):
