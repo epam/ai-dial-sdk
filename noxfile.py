@@ -43,6 +43,8 @@ class UsePydanticV2(Enum):
         ("1.10.17", UsePydanticV2.NO),
         ("2.8.2", UsePydanticV2.NO),
         ("2.8.2", UsePydanticV2.YES),
+        ("2.13.1", UsePydanticV2.NO),
+        ("2.13.1", UsePydanticV2.YES),
     ],
 )
 @nox.parametrize("httpx", ["0.25.0", "0.27.0"])
