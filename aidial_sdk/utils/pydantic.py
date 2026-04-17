@@ -35,7 +35,7 @@ _Loc = tuple[int | str, ...]
 
 def _get_model_fields(obj: BaseModel) -> dict[str, FieldInfo]:
     if PYDANTIC_V2:
-        return obj.model_fields
+        return type(obj).model_fields
     else:
         return obj.__fields__  # type: ignore
 
