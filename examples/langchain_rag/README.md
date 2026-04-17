@@ -30,7 +30,7 @@ Upon start the Docker image exposes `openai/deployments/simple-rag/chat/completi
 The application could be tested by running it directly on your machine:
 
 ```sh
-python -m venv .venv
+python3.11 -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
 python -m app
@@ -39,8 +39,7 @@ python -m app
 Then you may call the application using DIAL API key:
 
 ```sh
-curl "http://localhost:5000/openai/deployments/simple-rag/chat/completions" \
-  -X POST \
+curl -v "http://localhost:5000/openai/deployments/simple-rag/chat/completions" \
   -H "Content-Type: application:json" \
   -H "api-key:${DIAL_API_KEY}" \
   -d '{
