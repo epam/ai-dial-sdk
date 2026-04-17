@@ -32,10 +32,11 @@ def get_env(name: str) -> str:
 
 
 DIAL_URL = get_env("DIAL_URL")
-EMBEDDINGS_MODEL = os.getenv("EMBEDDINGS_MODEL", "text-embedding-ada-002")
-CHAT_MODEL = os.getenv("CHAT_MODEL", "gpt-4")
+EMBEDDINGS_MODEL = os.getenv("EMBEDDINGS_MODEL", "gemini-embedding-2-preview")
+CHAT_MODEL = os.getenv("CHAT_MODEL", "gpt-5.2-2025-12-11")
 API_VERSION = os.getenv("API_VERSION", "2024-02-01")
 LANGCHAIN_DEBUG = os.getenv("LANGCHAIN_DEBUG", "false").lower() == "true"
+PORT = int(os.getenv("PORT", 5000))
 
 set_debug(LANGCHAIN_DEBUG)
 
@@ -109,6 +110,7 @@ class SimpleRAGApplication(ChatCompletion):
                     openai_embedding,
                     embedding_store,
                     namespace=sanitize_namespace(openai_embedding.model),
+                    key_encoder="sha256",
                 )
 
                 docsearch = Chroma.from_documents(
@@ -145,4 +147,4 @@ app.add_chat_completion("simple-rag", SimpleRAGApplication())
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, port=5000)
+    uvicorn.run(app, port=PORT)
