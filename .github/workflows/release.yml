@@ -4,11 +4,6 @@ on:
   push:
     branches: [development, release-*]
   workflow_dispatch:
-    inputs:
-      promote:
-        type: boolean
-        default: false
-        description: Promote release to stable (for release-* branches only)
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -18,7 +13,7 @@ jobs:
   release:
     uses: epam/ai-dial-ci/.github/workflows/python_package_release.yml@4.0.0
     with:
-      promote: ${{ github.event_name == 'workflow_dispatch' && inputs.promote }}
+      promote: true # HACK: skip RC phase, project does not require stabilization period before releasing stable versions
       python-version: "3.10"
       poetry-version: "2.2.1"
       code-checks-python-versions: '["3.10", "3.11", "3.12", "3.13"]'
