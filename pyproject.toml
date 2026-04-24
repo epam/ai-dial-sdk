@@ -1,6 +1,6 @@
 [project]
 name = "aidial-sdk"
-version = "0.0.0"
+version = "0.36.0"
 description = "Framework to create applications and model adapters for AI DIAL"
 authors = [{ name = "EPAM RAIL", email = "SpecialEPM-DIALDevTeam@epam.com" }]
 license = "Apache-2.0"
