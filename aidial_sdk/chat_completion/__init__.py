@@ -3,7 +3,6 @@ from aidial_sdk.chat_completion.choice import Choice
 from aidial_sdk.chat_completion.enums import FinishReason, Status
 from aidial_sdk.chat_completion.form import Button, FormMetaclass
 from aidial_sdk.chat_completion.request import (
-    Addon,
     Attachment,
     CacheBreakpoint,
     CustomContent,
@@ -53,7 +52,6 @@ from aidial_sdk.deployment.truncate_prompt import (
 )
 
 __all__ = [
-    "Addon",
     "Attachment",
     "Button",
     "CacheBreakpoint",
