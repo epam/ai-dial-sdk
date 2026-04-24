@@ -91,13 +91,38 @@ class MessageContentTextPart(ExtraAllowModel):
     text: StrictStr
 
 
+class InputFile(ExtraAllowModel):
+    file_data: StrictStr | None
+    file_id: StrictStr | None
+    filename: StrictStr | None
+
+
+class MessageContentFilePart(ExtraAllowModel):
+    type: Literal["file"]
+    file: InputFile
+
+
+class InputAudio(ExtraAllowModel):
+    data: StrictStr
+    format: Literal["wav", "mp3"] | StrictStr
+
+
+class MessageContentAudioPart(ExtraAllowModel):
+    type: Literal["input_audio"]
+    input_audio: InputAudio
+
+
 class MessageContentRefusalPart(ExtraAllowModel):
     type: Literal["refusal"]
     refusal: StrictStr
 
 
 MessageContentPart = (
-    MessageContentTextPart | MessageContentImagePart | MessageContentRefusalPart
+    MessageContentTextPart
+    | MessageContentImagePart
+    | MessageContentFilePart
+    | MessageContentAudioPart
+    | MessageContentRefusalPart
 )
 
 
