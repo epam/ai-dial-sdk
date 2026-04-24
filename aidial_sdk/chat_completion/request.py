@@ -139,11 +139,6 @@ class Message(ExtraAllowModel):
             assert_never(self.content)
 
 
-class Addon(ExtraAllowModel):
-    name: StrictStr | None = None
-    url: StrictStr | None = None
-
-
 class Function(ExtraAllowModel):
     name: StrictStr
     strict: bool = False
@@ -279,7 +274,6 @@ class ChatCompletionRequestCustomFields(ExtraAllowModel):
 
 
 class ChatCompletionRequest(AzureChatCompletionRequest):
-    addons: list[Addon] | None = None
     max_prompt_tokens: PositiveInt | None = None
     custom_fields: ChatCompletionRequestCustomFields | None = None
 
