@@ -92,9 +92,9 @@ class MessageContentTextPart(ExtraAllowModel):
 
 
 class InputFile(ExtraAllowModel):
-    file_data: StrictStr | None
-    file_id: StrictStr | None
-    filename: StrictStr | None
+    file_data: StrictStr | None = None
+    file_id: StrictStr | None = None
+    filename: StrictStr | None = None
 
 
 class MessageContentFilePart(ExtraAllowModel):
