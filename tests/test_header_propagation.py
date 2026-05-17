@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 from itertools import product
 from typing import Any, Literal
 
-import aioresponses
+import aiointercept
 import httpx
 import pytest
 import requests
@@ -119,13 +119,13 @@ def mock_httpx(url: str):
         yield
 
 
-@contextlib.contextmanager
-def mock_aiohttp(url: str):
-    with aioresponses.aioresponses() as mock:
+@contextlib.asynccontextmanager
+async def mock_aiohttp(url: str):
+    async with aiointercept.aiointercept(True) as mock:
 
-        def callback(url, **kwargs) -> aioresponses.CallbackResult:
+        def callback(url, **kwargs) -> aiointercept.CallbackResult:
             headers = CaseInsensitiveDict(kwargs.get("headers", {}))
-            return aioresponses.CallbackResult(payload=_get_headers(headers))
+            return aiointercept.CallbackResult(payload=_get_headers(headers))
 
         mock.get(url, callback=callback)
         yield
@@ -134,11 +134,11 @@ def mock_aiohttp(url: str):
 Lib = Literal["aiohttp", "requests", "httpx_sync", "httpx_async"]
 
 
-@contextlib.contextmanager
-def mock_upstream(lib: Lib, url: str):
+@contextlib.asynccontextmanager
+async def mock_upstream(lib: Lib, url: str):
     match lib:
         case "aiohttp":
-            with mock_aiohttp(url):
+            async with mock_aiohttp(url):
                 yield
         case "httpx_sync" | "httpx_async":
             with mock_httpx(url):
@@ -211,36 +211,34 @@ class TestCase:
 @pytest.mark.parametrize(
     "tc", TestCase.get_test_cases(), ids=lambda ts: ts.get_id()
 )
-def test_api_key_propagation(lib: Lib, tc: TestCase):
-    with (
-        mock_upstream(lib, tc.upstream_url),
-        create_client(tc.dial_url, proxy_auth_headers=True) as client,
-    ):
-        headers_for_dial_app = {}
-        if tc.key_for_dial_app:
-            headers_for_dial_app["aPi-kEy"] = tc.key_for_dial_app
-            if tc.add_authz:
-                headers_for_dial_app["auThorIzaTion"] = (
-                    f"Bearer {tc.key_for_dial_app}"
-                )
+async def test_api_key_propagation(lib: Lib, tc: TestCase):
+    async with mock_upstream(lib, tc.upstream_url):
+        with create_client(tc.dial_url, proxy_auth_headers=True) as client:
+            headers_for_dial_app = {}
+            if tc.key_for_dial_app:
+                headers_for_dial_app["aPi-kEy"] = tc.key_for_dial_app
+                if tc.add_authz:
+                    headers_for_dial_app["auThorIzaTion"] = (
+                        f"Bearer {tc.key_for_dial_app}"
+                    )
 
-        headers_for_upstream = {}
-        if tc.key_for_upstream:
-            headers_for_upstream["apI-keY"] = tc.key_for_upstream
-            if tc.add_authz:
-                headers_for_upstream["AuthoRization"] = (
-                    f"Bearer {tc.key_for_upstream}"
-                )
+            headers_for_upstream = {}
+            if tc.key_for_upstream:
+                headers_for_upstream["apI-keY"] = tc.key_for_upstream
+                if tc.add_authz:
+                    headers_for_upstream["AuthoRization"] = (
+                        f"Bearer {tc.key_for_upstream}"
+                    )
 
-        response = client.post(
-            "/",
-            json={
-                "url": tc.upstream_url,
-                "lib": lib,
-                "headers": headers_for_upstream,
-            },
-            headers=headers_for_dial_app,
-        )
+            response = client.post(
+                "/",
+                json={
+                    "url": tc.upstream_url,
+                    "lib": lib,
+                    "headers": headers_for_upstream,
+                },
+                headers=headers_for_dial_app,
+            )
 
         assert response.status_code == 200
         assert response.json() == tc.expected_headers
@@ -256,7 +254,7 @@ def test_api_key_propagation(lib: Lib, tc: TestCase):
 @pytest.mark.parametrize(
     "header_for_upstream", [None, "x-conversion-id-for-upstream"]
 )
-def test_conversation_id_propagation(
+async def test_conversation_id_propagation(
     lib: Lib,
     dial_url: str,
     upstream_url: str,
@@ -264,36 +262,34 @@ def test_conversation_id_propagation(
     header_for_dial_app: str | None,
     header_for_upstream: str | None,
 ):
-    with (
-        mock_upstream(lib, upstream_url),
-        create_client(
+    async with mock_upstream(lib, upstream_url):
+        with create_client(
             dial_url, headers_to_proxy=["x-conVerSation-id"]
-        ) as client,
-    ):
-        headers_for_dial_app = remove_nones(
-            {"x-ConVersaTion-Id": header_for_dial_app}
-        )
-        headers_for_upstream = remove_nones(
-            {"x-cOnvErsAtion-iD": header_for_upstream}
-        )
+        ) as client:
+            headers_for_dial_app = remove_nones(
+                {"x-ConVersaTion-Id": header_for_dial_app}
+            )
+            headers_for_upstream = remove_nones(
+                {"x-cOnvErsAtion-iD": header_for_upstream}
+            )
 
-        response = client.post(
-            "/",
-            json={
-                "url": upstream_url,
-                "lib": lib,
-                "headers": headers_for_upstream,
-            },
-            headers=headers_for_dial_app,
-        )
+            response = client.post(
+                "/",
+                json={
+                    "url": upstream_url,
+                    "lib": lib,
+                    "headers": headers_for_upstream,
+                },
+                headers=headers_for_dial_app,
+            )
 
-        expected_value = None
-        if header_for_upstream:
-            expected_value = header_for_upstream
-        elif is_matching and header_for_dial_app:
-            expected_value = header_for_dial_app
+            expected_value = None
+            if header_for_upstream:
+                expected_value = header_for_upstream
+            elif is_matching and header_for_dial_app:
+                expected_value = header_for_dial_app
 
-        expected_headers = remove_nones({"x-conversation-id": expected_value})
+            expected_headers = remove_nones({"x-conversation-id": expected_value})
 
         assert response.status_code == 200
         assert response.json() == expected_headers

@@ -1,3 +1,4 @@
+import types
 from collections.abc import MutableMapping
 from contextvars import ContextVar
 from dataclasses import dataclass
@@ -54,7 +55,7 @@ class HeaderPropagator:
 
     _original_requests_send: Any | None
     _original_httpx_build_requests: tuple[Any, Any] | None
-    _original_aiohttp_request: Any | None
+    _original_aiohttp_init: Any | None
 
     def __init__(
         self,
@@ -76,7 +77,7 @@ class HeaderPropagator:
         self._enabled = False
         self._original_requests_send = None
         self._original_httpx_build_requests = None
-        self._original_aiohttp_request = None
+        self._original_aiohttp_init = None
 
     @property
     def is_noop(self) -> bool:
@@ -105,37 +106,43 @@ class HeaderPropagator:
         )
 
     def _instrument_aiohttp(self):
-        if self._original_aiohttp_request is not None:
+        if self._original_aiohttp_init is not None:
             return
 
         try:
             import aiohttp
-            from multidict import CIMultiDict
         except ImportError:
             return
 
-        def instrumented_request(wrapped, instance, args, kwargs):
-            # Method signature: aiohttp.ClientSession._request(self, method, str_or_url, **kwargs)
-            url = str(args[1])
-            headers = CIMultiDict(kwargs.get("headers") or {})
-            self._modify_headers(url, headers)
-            if headers:
-                kwargs["headers"] = headers
+        async def _on_request_start(
+            session: aiohttp.ClientSession,
+            trace_config_ctx: types.SimpleNamespace,
+            params: aiohttp.TraceRequestStartParams,
+        ):
+            self._modify_headers(str(params.url), params.headers)
 
+        def instrumented_init(wrapped, instance, args, kwargs):
+            trace_config = aiohttp.TraceConfig()
+            trace_config.on_request_start.append(_on_request_start)
+
+            trace_configs = list(kwargs.get("trace_configs") or [])
+            trace_configs.append(trace_config)
+
+            kwargs["trace_configs"] = trace_configs
             return wrapped(*args, **kwargs)
 
-        self._original_aiohttp_request = aiohttp.ClientSession._request
+        self._original_aiohttp_init = aiohttp.ClientSession.__init__
         wrapt.wrap_function_wrapper(
-            aiohttp.ClientSession, "_request", instrumented_request
+            aiohttp.ClientSession, "__init__", instrumented_init
         )
 
     def _deinstrument_aiohttp(self):
-        if self._original_aiohttp_request is None:
+        if self._original_aiohttp_init is None:
             return
         import aiohttp
 
-        aiohttp.ClientSession._request = self._original_aiohttp_request
-        self._original_aiohttp_request = None
+        aiohttp.ClientSession.__init__ = self._original_aiohttp_init
+        self._original_aiohttp_init = None
 
     def _instrument_requests(self):
         if self._original_requests_send is not None:
