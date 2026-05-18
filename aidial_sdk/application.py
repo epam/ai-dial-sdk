@@ -32,7 +32,7 @@ from aidial_sdk.header_propagator import HeaderPropagator
 from aidial_sdk.telemetry.types import TelemetryConfig
 from aidial_sdk.utils._disconnect_middleware import DisconnectMiddleware
 from aidial_sdk.utils._reflection import get_method_implementation
-from aidial_sdk.utils.env import env_var_list
+from aidial_sdk.utils.env import env_float, env_var_list
 from aidial_sdk.utils.log_config import LogConfig
 from aidial_sdk.utils.logging import log_debug, set_log_deployment
 from aidial_sdk.utils.pydantic import model_validate_extra_fields
@@ -279,6 +279,10 @@ class DIALApp(FastAPI):
         *,
         heartbeat_interval: float | None,
     ):
+        heartbeat_interval = heartbeat_interval or env_float(
+            "DIAL_SDK_SSE_HEARTBEAT_INTERVAL"
+        )
+
         async def _handler(original_request: Request):
             request = await self._parse_request(
                 ChatCompletionRequest, original_request, deployment_id
