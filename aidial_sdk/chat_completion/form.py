@@ -15,7 +15,6 @@ from aidial_sdk._pydantic import (
     BaseModel,
     FieldInfo,
     ModelMetaclass,
-    make_literal_validator,
     validator,
 )
 from aidial_sdk._pydantic._model_config import ModelConfigWrapper
@@ -191,9 +190,26 @@ def form(
     return _create_class
 
 
+def _make_literal_validator(
+    literal_type: Any,
+) -> Callable[[Any], Any]:
+    """Pure-Python equivalent of pydantic.v1's make_literal_validator."""
+    permitted_choices = get_args(literal_type)
+    allowed_choices = {v: v for v in permitted_choices}
+
+    def literal_validator(v: Any) -> Any:
+        try:
+            return allowed_choices[v]
+        except (KeyError, TypeError):
+            cs = ", ".join(repr(c) for c in permitted_choices)
+            raise ValueError(f"unexpected value; permitted: {cs}")
+
+    return literal_validator
+
+
 def _create_field_validator(field_name: str, enum_values: Sequence[Any]):
     literal_type = Literal[enum_values]
-    literal_validator = make_literal_validator(literal_type)
+    literal_validator = _make_literal_validator(literal_type)
 
     if PYDANTIC_V2:
         return validator(field_name)(literal_validator)

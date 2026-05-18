@@ -24,7 +24,12 @@ if not PYDANTIC_V2:
         raise ImportError("The Field helper is only supported in Pydantic v2")
 
 else:
+    import re
+
+    import annotated_types
+    from pydantic import types
     from pydantic.aliases import AliasChoices, AliasPath
+    from pydantic.config import JsonDict
     from pydantic.fields import Field as PydanticField
     from pydantic_core import PydanticUndefined
 
@@ -35,7 +40,9 @@ else:
     def Field(
         default: Any = PydanticUndefined,
         *,
-        default_factory: Callable[[], Any] | None = _Unset,
+        default_factory: Callable[[], Any]
+        | Callable[[dict[str, Any]], Any]
+        | None = _Unset,
         alias: str | None = _Unset,
         alias_priority: int | None = _Unset,
         validation_alias: str | AliasPath | AliasChoices | None = _Unset,
@@ -44,21 +51,21 @@ else:
         description: str | None = _Unset,
         examples: list[Any] | None = _Unset,
         exclude: bool | None = _Unset,
-        discriminator: str | None = _Unset,
-        json_schema_extra: dict[str, Any]
-        | Callable[[dict[str, Any]], None]
+        discriminator: str | types.Discriminator | None = _Unset,
+        json_schema_extra: JsonDict
+        | Callable[[JsonDict], None]
         | None = _Unset,
         frozen: bool | None = _Unset,
         validate_default: bool | None = _Unset,
         repr: bool = _Unset,
         init_var: bool | None = _Unset,
         kw_only: bool | None = _Unset,
-        pattern: str | None = _Unset,
+        pattern: str | re.Pattern[str] | None = _Unset,
         strict: bool | None = _Unset,
-        gt: float | None = _Unset,
-        ge: float | None = _Unset,
-        lt: float | None = _Unset,
-        le: float | None = _Unset,
+        gt: annotated_types.SupportsGt | None = _Unset,
+        ge: annotated_types.SupportsGe | None = _Unset,
+        lt: annotated_types.SupportsLt | None = _Unset,
+        le: annotated_types.SupportsLe | None = _Unset,
         multiple_of: float | None = _Unset,
         allow_inf_nan: bool | None = _Unset,
         max_digits: int | None = _Unset,
@@ -77,7 +84,7 @@ else:
             else:
 
                 def _extra(x: dict[str, Any]) -> None:
-                    json_schema_extra({**x, "buttons": buttons})
+                    json_schema_extra({**x, "buttons": buttons})  # type: ignore
 
                 new_extra = _extra
         else:
@@ -85,7 +92,7 @@ else:
 
         return PydanticField(
             default=default,
-            default_factory=default_factory,
+            default_factory=default_factory,  # type: ignore
             alias=alias,
             alias_priority=alias_priority,
             validation_alias=validation_alias,
