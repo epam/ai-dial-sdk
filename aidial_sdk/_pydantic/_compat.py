@@ -16,7 +16,7 @@ from typing import Any, Literal, cast
 import aidial_sdk._pydantic as pydantic
 from aidial_sdk._pydantic import PYDANTIC_V2
 
-_IncEx = set[int] | set[str] | dict[int, Any] | dict[str, Any] | None
+_IncEx = set[int] | set[str] | Mapping[int, Any] | Mapping[str, Any]
 
 
 class BaseModel(pydantic.BaseModel):
@@ -30,9 +30,9 @@ class BaseModel(pydantic.BaseModel):
             self,
             *,
             mode: Literal["json", "python"] | str = "python",
-            include: _IncEx = None,
-            exclude: _IncEx = None,
-            by_alias: bool = False,
+            include: _IncEx | None = None,
+            exclude: _IncEx | None = None,
+            by_alias: bool | None = None,
             exclude_unset: bool = False,
             exclude_defaults: bool = False,
             exclude_none: bool = False,
@@ -40,6 +40,7 @@ class BaseModel(pydantic.BaseModel):
             warnings: bool | Literal["none", "warn", "error"] = True,
             context: dict[str, Any] | None = None,
             serialize_as_any: bool = False,
+            **kwargs,
         ) -> dict[str, Any]:
             if mode not in {"json", "python"}:
                 raise ValueError("mode must be either 'json' or 'python'")
@@ -56,10 +57,11 @@ class BaseModel(pydantic.BaseModel):
             dumped = super().dict(  # pyright: ignore[reportDeprecated]
                 include=include,
                 exclude=exclude,
-                by_alias=by_alias,
+                by_alias=bool(by_alias),
                 exclude_unset=exclude_unset,
                 exclude_defaults=exclude_defaults,
                 exclude_none=exclude_none,
+                **kwargs,
             )
 
             return (
