@@ -38,7 +38,7 @@ class UsePydanticV2(Enum):
 @nox.session(python=["3.10", "3.11", "3.12", "3.13", "3.14"])
 # Testing against earliest and latest supported versions of the dependencies
 @nox.parametrize(
-    "pydantic",
+    "pydantic_info",
     [
         ("1.10.17", UsePydanticV2.NO, False),
         ("2.8.2", UsePydanticV2.NO, False),
@@ -48,18 +48,20 @@ class UsePydanticV2(Enum):
         ("2.13.1", UsePydanticV2.YES, True),
     ],
 )
-@nox.parametrize("httpx", ["0.25.0", "0.27.0"])
+@nox.parametrize("httpx_version", ["0.25.0", "0.27.0"])
 def test(
-    session: nox.Session, pydantic: tuple[str, UsePydanticV2, bool], httpx: str
+    session: nox.Session,
+    pydantic_info: tuple[str, UsePydanticV2, bool],
+    httpx_version: str,
 ) -> None:
     """Runs tests"""
-    pydantic_version, use_pydantic_v2, python_314_supported = pydantic
+    pydantic_version, use_pydantic_v2, python_314_supported = pydantic_info
 
     if session.python == "3.14" and not python_314_supported:
-        session.skip("Python 3.14 is support since Pydantic v2.12")
+        session.skip("Python 3.14 is supported since Pydantic v2.12")
 
     session.run("poetry", "install", external=True)
-    session.install(f"pydantic=={pydantic_version}", f"httpx=={httpx}")
+    session.install(f"pydantic=={pydantic_version}", f"httpx=={httpx_version}")
     session.run(
         "pytest",
         *session.posargs,
