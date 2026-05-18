@@ -35,7 +35,7 @@ class UsePydanticV2(Enum):
     NO = "0"
 
 
-@nox.session(python=["3.10", "3.11", "3.12", "3.13"])
+@nox.session(python=["3.10", "3.11", "3.12", "3.13", "3.14"])
 # Testing against earliest and latest supported versions of the dependencies
 @nox.parametrize(
     "pydantic",
