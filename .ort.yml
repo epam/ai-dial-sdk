@@ -27,6 +27,6 @@ resolutions:
     - message: ".*PyPI::starlette:0\\.49\\.1.*"
       reason: "CANT_FIX_EXCEPTION"
       comment: "BSD 3-Clause New or Revised License: https://github.com/Kludex/starlette/blob/0.49.1/LICENSE.md"
-    - message: ".*PyPI::(typing-extensions|urllib3).*"
+    - message: ".*PyPI::(typing-extensions|urllib3|pydantic).*"
       reason: "CANT_FIX_EXCEPTION"
       comment: "ORT cannot pick up license information"
