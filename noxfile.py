@@ -57,8 +57,11 @@ def test(
     """Runs tests"""
     pydantic_version, use_pydantic_v2, python_314_supported = pydantic_info
 
-    if session.python == "3.14" and not python_314_supported:
-        session.skip("Python 3.14 is supported since Pydantic v2.12")
+    if session.python == "3.14":
+        if not python_314_supported:
+            session.skip("Python 3.14 is supported since Pydantic v2.12")
+        if httpx_version == "0.25.0":
+            session.skip("Earlier versions of httpx do not support Python 3.14")
 
     session.run("poetry", "install", external=True)
     session.install(f"pydantic=={pydantic_version}", f"httpx=={httpx_version}")
