@@ -40,20 +40,28 @@ class UsePydanticV2(Enum):
 @nox.parametrize(
     "pydantic",
     [
-        ("1.10.17", UsePydanticV2.NO),
-        ("2.8.2", UsePydanticV2.NO),
-        ("2.8.2", UsePydanticV2.YES),
-        ("2.13.1", UsePydanticV2.NO),
-        ("2.13.1", UsePydanticV2.YES),
+        ("1.10.17", UsePydanticV2.NO, False),
+        ("2.8.2", UsePydanticV2.NO, False),
+        ("2.8.2", UsePydanticV2.YES, False),
+        # Python 3.14 is supported since Pydantic v2.12
+        ("2.13.1", UsePydanticV2.NO, True),
+        ("2.13.1", UsePydanticV2.YES, True),
     ],
 )
 @nox.parametrize("httpx", ["0.25.0", "0.27.0"])
 def test(
-    session: nox.Session, pydantic: tuple[str, UsePydanticV2], httpx: str
+    session: nox.Session, pydantic: tuple[str, UsePydanticV2, bool], httpx: str
 ) -> None:
     """Runs tests"""
+    pydantic_version, use_pydantic_v2, python_314_supported = pydantic
+
+    if session.python == "3.14" and not python_314_supported:
+        session.skip("Python 3.14 is support since Pydantic v2.12")
+
     session.run("poetry", "install", external=True)
-    session.install(f"pydantic=={pydantic[0]}", f"httpx=={httpx}")
+    session.install(f"pydantic=={pydantic_version}", f"httpx=={httpx}")
     session.run(
-        "pytest", *session.posargs, env={"PYDANTIC_V2": str(pydantic[1].value)}
+        "pytest",
+        *session.posargs,
+        env={"PYDANTIC_V2": str(use_pydantic_v2.value)},
     )
