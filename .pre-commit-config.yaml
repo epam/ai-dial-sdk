@@ -1,0 +1,16 @@
+repos:
+  - repo: local
+    hooks:
+      - id: make-format
+        name: Make Format
+        pass_filenames: false
+        entry: make format
+        language: system
+        stages: [pre-push]
+
+      - id: make-lint
+        name: Make Lint
+        pass_filenames: false
+        entry: make lint
+        language: system
+        stages: [pre-push]

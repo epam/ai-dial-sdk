@@ -1,8 +1,8 @@
-from typing import List, Literal, Union
+from typing import Literal
 
+from aidial_sdk._pydantic._compat import BaseModel
 from aidial_sdk.chat_completion.request import ChatCompletionRequest
 from aidial_sdk.deployment.from_request_mixin import FromRequestDeploymentMixin
-from aidial_sdk.pydantic_v1 import BaseModel
 
 
 class TokenizeInputRequest(BaseModel):
@@ -15,11 +15,11 @@ class TokenizeInputString(BaseModel):
     value: str
 
 
-TokenizeInput = Union[TokenizeInputRequest, TokenizeInputString]
+TokenizeInput = TokenizeInputRequest | TokenizeInputString
 
 
 class TokenizeRequest(FromRequestDeploymentMixin):
-    inputs: List[TokenizeInput]
+    inputs: list[TokenizeInput]
 
 
 class TokenizeSuccess(BaseModel):
@@ -32,8 +32,8 @@ class TokenizeError(BaseModel):
     error: str
 
 
-TokenizeOutput = Union[TokenizeSuccess, TokenizeError]
+TokenizeOutput = TokenizeSuccess | TokenizeError
 
 
 class TokenizeResponse(BaseModel):
-    outputs: List[TokenizeOutput]
+    outputs: list[TokenizeOutput]

@@ -8,6 +8,7 @@ import respx
 from starlette.testclient import TestClient
 
 from aidial_sdk import DIALApp, HTTPException
+from aidial_sdk._pydantic import SecretStr
 from aidial_sdk.chat_completion import ChatCompletion, Request, Response
 from aidial_sdk.deployment.configuration import (
     ConfigurationRequest,
@@ -21,7 +22,6 @@ from aidial_sdk.deployment.truncate_prompt import (
     TruncatePromptResponse,
 )
 from aidial_sdk.exceptions import InternalServerError
-from aidial_sdk.pydantic_v1 import SecretStr
 
 
 class TestApp(ChatCompletion):

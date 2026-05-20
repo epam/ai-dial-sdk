@@ -26,7 +26,6 @@ So we resort here to testing purely the output of the application and check the 
 
 import asyncio
 from contextlib import contextmanager
-from typing import List, Optional, Union
 from unittest.mock import patch
 
 import pytest
@@ -71,10 +70,10 @@ def mock_add_heartbeat(**extra_kwargs):
 class TestCase(BaseModel):
     __test__ = False
 
-    intervals: List[float]
+    intervals: list[float]
     throw_exception: bool
-    heartbeat_interval: Optional[float]
-    expected: List[Union[str, dict]]
+    heartbeat_interval: float | None
+    expected: list[str | dict]
 
 
 @pytest.mark.slow
@@ -167,7 +166,6 @@ class TestCase(BaseModel):
                 BEAT,
                 CHOICE_OPEN,
                 content("1"),
-                CHOICE_CLOSE,
                 ERROR,
             ],
         ),

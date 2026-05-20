@@ -1,6 +1,7 @@
 import asyncio
+from collections.abc import Callable, Coroutine
 from time import time
-from typing import Any, Callable, Coroutine, Dict, List, Mapping, Optional
+from typing import Any
 from uuid import uuid4
 
 from typing_extensions import assert_never
@@ -49,7 +50,7 @@ class Response:
     _usage_generated: bool
 
     _default_chunk: DefaultChunk
-    _headers: Dict[str, str]
+    _headers: list[tuple[str, str]]
 
     def __init__(self, request: Request):
         self._queue = asyncio.Queue()
@@ -71,7 +72,7 @@ class Response:
             ),
         )
 
-        self._headers = {}
+        self._headers = []
 
     @property
     def n(self) -> int:
@@ -82,7 +83,7 @@ class Response:
         return self.request.stream
 
     @property
-    def headers(self) -> Mapping[str, str]:
+    def headers(self) -> list[tuple[str, str]]:
         return self._headers
 
     async def _run_producer(self, producer: _Producer):
@@ -113,14 +114,13 @@ class Response:
             )
 
         # A list of chunks whose emitting is delayed up until the very last moment
-        delayed_chunks: List[BaseChunk] = []
+        delayed_chunks: list[BaseChunk] = []
 
         while True:
             chunk = await self._queue.get()
             self._queue.task_done()
 
             if isinstance(chunk, BaseChunk):
-
                 is_last_end_choice_chunk = (
                     isinstance(chunk, EndChoiceChunk)
                     and chunk.choice_index == self.n - 1
@@ -128,11 +128,7 @@ class Response:
 
                 is_top_level_chunk = isinstance(
                     chunk,
-                    (
-                        UsageChunk,
-                        UsagePerModelChunk,
-                        DiscardedMessagesChunk,
-                    ),
+                    UsageChunk | UsagePerModelChunk | DiscardedMessagesChunk,
                 )
 
                 if is_last_end_choice_chunk or is_top_level_chunk:
@@ -140,7 +136,7 @@ class Response:
                 else:
                     yield _create_chunk(chunk)
 
-            elif isinstance(chunk, (ExceptionChunk, EndChunk)):
+            elif isinstance(chunk, ExceptionChunk | EndChunk):
                 if delayed_chunks:
                     final_chunk = merge(*[d.to_dict() for d in delayed_chunks])
                     yield _create_chunk(ArbitraryChunk(chunk=final_chunk))
@@ -202,7 +198,7 @@ class Response:
         )
         self._last_usage_per_model_index += 1
 
-    def set_discarded_messages(self, discarded_messages: List[int]):
+    def set_discarded_messages(self, discarded_messages: list[int]):
         self._generation_started = True
 
         if self._discarded_messages_generated:
@@ -220,7 +216,7 @@ class Response:
         prompt_tokens: int = 0,
         completion_tokens: int = 0,
         *,
-        prompt_tokens_details: Optional[PromptTokensDetails] = None,
+        prompt_tokens_details: PromptTokensDetails | None = None,
     ):
         self._generation_started = True
 
@@ -263,22 +259,24 @@ class Response:
 
         self._default_chunk["id"] = response_id
 
-    def set_header(self, key: str, value: str):
-        if key in self._headers:
+    def append_header(self, key: str, value: str):
+        if self._generation_started and self.stream:
             raise runtime_error(
-                f"Trying to set the response header {key!r} twice"
+                "Trying to set a header after start of generation",
             )
-        self._headers[key] = value
+        self._headers.append((key, value))
 
     def set_cache_breakpoint(
         self,
         *,
         cache_breakpoint_path: CacheBreakpointPath,
-        cache_expire_at: Optional[str] = None,
-        cache_metadata: Optional[str] = None,
+        cache_expire_at: str | None = None,
+        cache_metadata: str | None = None,
     ):
-        self.set_header(DIAL_CACHE_BREAKPOINT_PATH, cache_breakpoint_path.path)
+        self.append_header(
+            DIAL_CACHE_BREAKPOINT_PATH, cache_breakpoint_path.path
+        )
         if cache_expire_at is not None:
-            self.set_header(DIAL_CACHE_EXPIRE_AT, cache_expire_at)
+            self.append_header(DIAL_CACHE_EXPIRE_AT, cache_expire_at)
         if cache_metadata is not None:
-            self.set_header(DIAL_CACHE_EXTRA_METADATA, cache_metadata)
+            self.append_header(DIAL_CACHE_EXTRA_METADATA, cache_metadata)

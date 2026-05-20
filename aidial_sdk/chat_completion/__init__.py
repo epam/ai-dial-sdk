@@ -4,14 +4,17 @@ from aidial_sdk.chat_completion.choice import Choice
 from aidial_sdk.chat_completion.enums import FinishReason, Status
 from aidial_sdk.chat_completion.form import Button, FormMetaclass
 from aidial_sdk.chat_completion.request import (
-    Addon,
     Attachment,
     CacheBreakpoint,
     CustomContent,
     Function,
     FunctionCall,
     FunctionChoice,
+    InputAudio,
+    InputFile,
     Message,
+    MessageContentAudioPart,
+    MessageContentFilePart,
     MessageContentImagePart,
     MessageContentPart,
     MessageContentRefusalPart,
@@ -24,14 +27,12 @@ from aidial_sdk.chat_completion.request import (
     ResponseFormatJsonSchemaObject,
     ResponseFormatText,
     Role,
-)
-from aidial_sdk.chat_completion.request import Stage as RequestStage
-from aidial_sdk.chat_completion.request import (
     Tool,
     ToolCall,
     ToolChoice,
     ToolCustomFields,
 )
+from aidial_sdk.chat_completion.request import Stage as RequestStage
 from aidial_sdk.chat_completion.response import Response
 from aidial_sdk.chat_completion.stage import Stage
 from aidial_sdk.deployment.configuration import (
@@ -50,3 +51,53 @@ from aidial_sdk.deployment.truncate_prompt import (
     TruncatePromptResponse,
     TruncatePromptSuccess,
 )
+
+__all__ = [
+    "Attachment",
+    "Button",
+    "CacheBreakpoint",
+    "CacheBreakpointPath",
+    "ChatCompletion",
+    "Choice",
+    "ConfigurationRequest",
+    "ConfigurationResponse",
+    "CustomContent",
+    "FinishReason",
+    "FormMetaclass",
+    "Function",
+    "FunctionCall",
+    "FunctionChoice",
+    "InputAudio",
+    "InputFile",
+    "Message",
+    "MessageContentAudioPart",
+    "MessageContentFilePart",
+    "MessageContentImagePart",
+    "MessageContentPart",
+    "MessageContentRefusalPart",
+    "MessageContentTextPart",
+    "MessageCustomFields",
+    "Request",
+    "RequestStage",
+    "Response",
+    "ResponseFormat",
+    "ResponseFormatJsonObject",
+    "ResponseFormatJsonSchema",
+    "ResponseFormatJsonSchemaObject",
+    "ResponseFormatText",
+    "Role",
+    "Stage",
+    "Status",
+    "TokenizeError",
+    "TokenizeRequest",
+    "TokenizeResponse",
+    "TokenizeSuccess",
+    "Tool",
+    "ToolCall",
+    "ToolChoice",
+    "ToolCustomFields",
+    "TruncatePromptError",
+    "TruncatePromptRequest",
+    "TruncatePromptResponse",
+    "TruncatePromptSuccess",
+]

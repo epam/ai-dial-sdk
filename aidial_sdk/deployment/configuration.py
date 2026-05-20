@@ -1,7 +1,7 @@
 import fastapi
 
 from aidial_sdk.deployment.from_request_mixin import FromRequestDeploymentMixin
-from aidial_sdk.pydantic_v1 import BaseModel
+from aidial_sdk.utils.pydantic import ExtraAllowModel
 
 
 class ConfigurationRequest(FromRequestDeploymentMixin):
@@ -10,6 +10,5 @@ class ConfigurationRequest(FromRequestDeploymentMixin):
         return {}
 
 
-class ConfigurationResponse(BaseModel):
-    class Config:
-        extra = "allow"
+class ConfigurationResponse(ExtraAllowModel):
+    pass

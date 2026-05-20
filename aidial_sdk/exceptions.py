@@ -1,7 +1,6 @@
 import functools
 import warnings
 from http import HTTPStatus
-from typing import Dict, Optional
 
 from fastapi import HTTPException as FastAPIException
 from fastapi.responses import JSONResponse
@@ -14,11 +13,12 @@ class HTTPException(Exception):
         self,
         message: str,
         status_code: int = 500,
-        type: Optional[str] = "runtime_error",
-        param: Optional[str] = None,
-        code: Optional[str] = None,
-        display_message: Optional[str] = None,
-        headers: Optional[Dict[str, str]] = None,
+        type: str | None = "runtime_error",
+        param: str | None = None,
+        code: str | None = None,
+        display_message: str | None = None,
+        headers: dict[str, str] | None = None,
+        **kwargs,
     ) -> None:
         super().__init__(message)
         status_code = int(status_code)
@@ -30,22 +30,22 @@ class HTTPException(Exception):
         self.code = code or str(status_code)
         self.display_message = display_message
         self.headers = headers
+        self.extra_fields = kwargs
 
     def __repr__(self):
         # headers field is omitted deliberately
         # since it may contain sensitive information
-        return (
-            "%s(message=%r, status_code=%r, type=%r, param=%r, code=%r, display_message=%r)"
-            % (
-                self.__class__.__name__,
-                self.message,
-                self.status_code,
-                self.type,
-                self.param,
-                self.code,
-                self.display_message,
-            )
-        )
+        error = {
+            "message": self.message,
+            "status_code": self.status_code,
+            "type": self.type,
+            "param": self.param,
+            "code": self.code,
+            "display_message": self.display_message,
+            **self.extra_fields,
+        }
+        args = ", ".join([f"{k}={v!r}" for k, v in error.items()])
+        return f"{self.__class__.__name__}({args})"
 
     def json_error(self) -> dict:
         return {
@@ -56,6 +56,7 @@ class HTTPException(Exception):
                     "param": self.param,
                     "code": self.code,
                     "display_message": self.display_message,
+                    **self.extra_fields,
                 }
             )
         }

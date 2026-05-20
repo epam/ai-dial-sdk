@@ -1,5 +1,4 @@
 import asyncio
-from typing import Optional
 
 import pytest
 
@@ -31,7 +30,7 @@ async def _wait_forever():
     await asyncio.Event().wait()
 
 
-async def _wait(counter: Counter, secs: Optional[int] = None):
+async def _wait(counter: Counter, secs: int | None = None):
     try:
         if secs is None:
             await _wait_forever()
@@ -46,7 +45,6 @@ async def _wait(counter: Counter, secs: Optional[int] = None):
 
 
 def chat_completion_wait_forever(counter: Counter):
-
     async def _chat_completion(*args, **kwargs):
         await _wait(counter)
 
@@ -54,7 +52,6 @@ def chat_completion_wait_forever(counter: Counter):
 
 
 def chat_completion_gather(counter: Counter):
-
     async def _chat_completion(*args, **kwargs):
         tasks = (asyncio.create_task(_wait(counter)) for _ in range(10))
         await asyncio.gather(*tasks)
@@ -63,7 +60,6 @@ def chat_completion_gather(counter: Counter):
 
 
 def chat_completion_create_task(counter: Counter):
-
     async def _chat_completion(*args, **kwargs):
         # Saving tasks in a set to avoid potential deallocation by GC
         # https://docs.python.org/3/library/asyncio-task.html#asyncio.create_task
@@ -91,7 +87,6 @@ def chat_completion_create_task(counter: Counter):
 async def test_cancellation(
     with_heartbeat: bool, chat_completion, expected_cancelled, expected_done
 ):
-
     response = ChatCompletionResponse(DUMMY_DIAL_REQUEST)
 
     counter = Counter()

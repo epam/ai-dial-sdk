@@ -1,27 +1,61 @@
+from collections.abc import Iterator, Mapping
 from enum import Enum
-from typing import Any, Iterator, List, Tuple, Union
+from typing import Any
 
-from pydantic.v1.error_wrappers import ErrorWrapper, ValidationError
-from pydantic.v1.errors import ExtraError
-
-from aidial_sdk.pydantic_v1 import BaseModel
+from aidial_sdk._pydantic import PYDANTIC_V2, ConfigDict, FieldInfo
+from aidial_sdk._pydantic._compat import BaseModel, model_validator
 
 
 class ExtraAllowModel(BaseModel):
-    class Config:
-        extra = "allow"
+    if PYDANTIC_V2:
+        model_config = ConfigDict(extra="allow")
+    else:
+
+        class Config:
+            extra = "allow"
 
 
-_Loc = Tuple[Union[int, str], ...]
+class IgnoreIndex(BaseModel):
+    @model_validator(mode="before")
+    @classmethod
+    def strip_index(cls, data: Any) -> Any:
+        if (
+            isinstance(data, Mapping)
+            and (idx := data.get("index")) is not None
+            and isinstance(idx, int)
+        ):
+            d = dict(data)
+            d.pop("index")
+            return d
+        return data
+
+
+_Loc = tuple[int | str, ...]
+
+
+def _get_model_fields(obj: BaseModel) -> dict[str, FieldInfo]:
+    if PYDANTIC_V2:
+        return type(obj).model_fields
+    else:
+        return obj.__fields__  # type: ignore
+
+
+def _get_model_config_field(obj: BaseModel, field_name: str) -> Any | None:
+    if PYDANTIC_V2:
+        return obj.model_config.get(field_name)
+    else:
+        return getattr(obj.Config, field_name, None)  # type: ignore
 
 
 def _model_iterate_fields(
     obj: Any, any_types: bool, loc: _Loc
-) -> Iterator[Tuple[BaseModel, _Loc]]:
+) -> Iterator[tuple[BaseModel, _Loc]]:
     if isinstance(obj, BaseModel):
         yield (obj, loc)
-        any_types = getattr(obj.Config, "arbitrary_types_allowed", False)
-        for field in obj.__fields__:
+        any_types = (
+            _get_model_config_field(obj, "arbitrary_types_allowed") or False
+        )
+        for field in _get_model_fields(obj):
             value = getattr(obj, field)
             yield from _model_iterate_fields(value, any_types, loc + (field,))
 
@@ -33,7 +67,7 @@ def _model_iterate_fields(
         for key, val in obj.items():
             yield from _model_iterate_fields(val, any_types, loc + (key,))
 
-    elif isinstance(obj, (str, int, float, bool, type(None), Enum)):
+    elif isinstance(obj, str | int | float | bool | type(None) | Enum):
         pass
 
     else:
@@ -41,14 +75,44 @@ def _model_iterate_fields(
         assert any_types, err_message
 
 
-def model_validate_extra_fields(root_model: BaseModel) -> None:
-    errors: List[ErrorWrapper] = []
+if PYDANTIC_V2:
+    from pydantic import ValidationError
+    from pydantic_core import InitErrorDetails, PydanticCustomError
 
-    for model, loc in _model_iterate_fields(root_model, False, ()):
-        declared = set(model.__fields__.keys())
-        for key in model.__dict__:
-            if key not in declared:
-                errors.append(ErrorWrapper(ExtraError(), loc=loc + (key,)))
+    def model_validate_extra_fields(root_model: BaseModel) -> None:
+        errors: list[InitErrorDetails] = []
 
-    if errors:
-        raise ValidationError(errors, root_model.__class__)
+        extra_error_type = PydanticCustomError(
+            "extra_forbidden", "Extra inputs are not permitted"
+        )
+
+        for model, loc in _model_iterate_fields(root_model, False, ()):
+            for key, value in (model.model_extra or {}).items():
+                errors.append(
+                    {
+                        "type": extra_error_type,
+                        "loc": loc + (key,),
+                        "input": value,
+                    }
+                )
+
+        if errors:
+            raise ValidationError.from_exception_data(
+                type(root_model).__name__, errors
+            )
+
+else:
+    from pydantic.v1.error_wrappers import ErrorWrapper, ValidationError
+    from pydantic.v1.errors import ExtraError
+
+    def model_validate_extra_fields(root_model: BaseModel) -> None:
+        errors: list[ErrorWrapper] = []
+
+        for model, loc in _model_iterate_fields(root_model, False, ()):
+            declared = set(_get_model_fields(model).keys())
+            for key in model.__dict__:
+                if key not in declared:
+                    errors.append(ErrorWrapper(ExtraError(), loc=loc + (key,)))
+
+        if errors:
+            raise ValidationError(errors, root_model.__class__)  # type: ignore

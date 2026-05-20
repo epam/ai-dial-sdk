@@ -1,6 +1,6 @@
-from typing import List, Literal, Optional, Union
+from typing import Literal
 
-from aidial_sdk.pydantic_v1 import BaseModel
+from pydantic import BaseModel
 
 # 1 for X
 # 2 for O
@@ -31,19 +31,19 @@ class Move(BaseModel):
         return f"{col}{row}"
 
     @staticmethod
-    def col_lines() -> List[List["Move"]]:
+    def col_lines() -> list[list["Move"]]:
         return [
             [Move(row=row, col=col) for row in range(3)] for col in range(3)
         ]
 
     @staticmethod
-    def row_lines() -> List[List["Move"]]:
+    def row_lines() -> list[list["Move"]]:
         return [
             [Move(row=row, col=col) for col in range(3)] for row in range(3)
         ]
 
     @staticmethod
-    def diag_lines() -> List[List["Move"]]:
+    def diag_lines() -> list[list["Move"]]:
         return [
             [Move(row=i, col=i) for i in range(3)],
             [Move(row=i, col=2 - i) for i in range(3)],
@@ -51,7 +51,7 @@ class Move(BaseModel):
 
 
 class Board(BaseModel):
-    cells: List[List[Optional[Player]]] = [[None] * 3] * 3
+    cells: list[list[Player | None]] = [[None] * 3] * 3
     """Current state of the game board"""
 
     @property
@@ -73,10 +73,10 @@ class Board(BaseModel):
         return self.status != "Unfinished"
 
     @property
-    def status(self) -> Union[Player, Literal["Draw", "Unfinished"]]:
+    def status(self) -> Player | Literal["Draw", "Unfinished"]:
         """Returns the winner of the game, None if the game is not yet finished"""
         for line in Move.col_lines() + Move.row_lines() + Move.diag_lines():
-            cells: List[Optional[Player]] = [self.get(move) for move in line]
+            cells: list[Player | None] = [self.get(move) for move in line]
             if (
                 all(cells)
                 and len(set(cells)) == 1
@@ -90,16 +90,16 @@ class Board(BaseModel):
         return "Unfinished"
 
     @property
-    def possible_moves(self) -> List[Move]:
+    def possible_moves(self) -> list[Move]:
         """Returns the list of possible moves"""
-        ret: List[Move] = []
+        ret: list[Move] = []
         for row_idx, row in enumerate(self.cells):
             for col_idx, cell in enumerate(row):
                 if cell is None:
                     ret.append(Move(row=row_idx, col=col_idx))
         return ret
 
-    def get(self, move: Move) -> Optional[Player]:
+    def get(self, move: Move) -> Player | None:
         """Returns the player who made the move"""
         return self.cells[move.row][move.col]
 

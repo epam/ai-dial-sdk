@@ -1,17 +1,17 @@
-from typing import List, Literal, Union
+from typing import Literal
 
+from aidial_sdk._pydantic._compat import BaseModel
 from aidial_sdk.chat_completion.request import ChatCompletionRequest
 from aidial_sdk.deployment.from_request_mixin import FromRequestDeploymentMixin
-from aidial_sdk.pydantic_v1 import BaseModel
 
 
 class TruncatePromptRequest(FromRequestDeploymentMixin):
-    inputs: List[ChatCompletionRequest]
+    inputs: list[ChatCompletionRequest]
 
 
 class TruncatePromptSuccess(BaseModel):
     status: Literal["success"] = "success"
-    discarded_messages: List[int]
+    discarded_messages: list[int]
 
 
 class TruncatePromptError(BaseModel):
@@ -19,8 +19,8 @@ class TruncatePromptError(BaseModel):
     error: str
 
 
-TruncatePromptResult = Union[TruncatePromptSuccess, TruncatePromptError]
+TruncatePromptResult = TruncatePromptSuccess | TruncatePromptError
 
 
 class TruncatePromptResponse(BaseModel):
-    outputs: List[TruncatePromptResult]
+    outputs: list[TruncatePromptResult]

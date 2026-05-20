@@ -1,6 +1,5 @@
 import asyncio
 from asyncio import exceptions
-from typing import Optional, Set
 
 
 class CancelScope:
@@ -11,15 +10,14 @@ class CancelScope:
     """
 
     def __init__(self):
-        self._tasks: Set[asyncio.Task] = set()
-        self._on_completed_fut: Optional[asyncio.Future] = None
+        self._tasks: set[asyncio.Task] = set()
+        self._on_completed_fut: asyncio.Future | None = None
         self._cancelling: bool = False
 
     async def __aenter__(self):
         return self
 
     async def __aexit__(self, exc_type, exc, tb):
-
         cancelled_error = (
             exc if isinstance(exc, exceptions.CancelledError) else None
         )

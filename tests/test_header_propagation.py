@@ -1,7 +1,9 @@
+import contextlib
 import json
-import re
+from collections.abc import Generator, Mapping
+from dataclasses import dataclass, field
 from itertools import product
-from typing import Mapping, Optional
+from typing import Any, Literal
 
 import aioresponses
 import httpx
@@ -12,36 +14,81 @@ import respx
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from requests.structures import CaseInsensitiveDict
+from typing_extensions import assert_never
 
 from aidial_sdk.header_propagator import HeaderPropagator
 from aidial_sdk.utils.json import remove_nones
 from tests.header_propagation.client import app as sender
-from tests.utils.text import removeprefix
-
-DIAL_URL = "http://dial.example.com"
-NON_DIAL_URL = "http://non-dial.example.com"
-API_KEY = "test-api-key"
-
-URL_PATTERN = re.compile(rf"{re.escape(DIAL_URL)}|{re.escape(NON_DIAL_URL)}")
-HOSTS = [removeprefix(url, "http://") for url in [DIAL_URL, NON_DIAL_URL]]
 
 
-@pytest.fixture
-def client():
+@dataclass
+class Urls:
+    dial_url: str
+    matching_urls: list[str] = field(default_factory=list)
+    non_matching_urls: list[str] = field(default_factory=list)
+
+    def to_gen(self) -> Generator[tuple[str, str, bool], Any, Any]:
+        for m in self.matching_urls:
+            yield (self.dial_url, m, True)
+        for m in self.non_matching_urls:
+            yield (self.dial_url, m, False)
+
+
+def _all_urls() -> Generator[tuple[str, str, bool], Any, Any]:
+    _non_dial_url = "http://external.com"
+
+    _http_upstream_urls = [
+        "http://dial.com",
+        "http://dial.com/foo/bar",
+        "http://dial.com:80/foo/bar",
+    ]
+
+    _https_upstream_urls = [
+        "https://dial.com",
+        "https://dial.com/foo/bar",
+        "https://dial.com:443/foo/bar",
+    ]
+
+    _urls = [
+        Urls("http://dial.com", _http_upstream_urls, [_non_dial_url]),
+        Urls("http://dial.com:80", _http_upstream_urls, [_non_dial_url]),
+        Urls("https://dial.com", _https_upstream_urls, [_non_dial_url]),
+        Urls("https://dial.com:443", _https_upstream_urls, [_non_dial_url]),
+    ]
+
+    for url in _urls:
+        yield from url.to_gen()
+
+
+@contextlib.contextmanager
+def create_client(
+    dial_url: str,
+    proxy_auth_headers: bool = False,
+    headers_to_proxy: list[str] | None = None,
+):
     app = FastAPI()
     app.include_router(sender.router)
-    HeaderPropagator(app, DIAL_URL).enable()
-    return TestClient(app)
+    prop = HeaderPropagator(
+        app,
+        dial_url=dial_url,
+        proxy_auth_headers=proxy_auth_headers,
+        headers_to_proxy=headers_to_proxy or [],
+    )
+    prop.enable()
+    yield TestClient(app)
+    prop.disable()
 
 
 def _get_headers(headers: Mapping[str, str]) -> dict:
-    api_key = headers.get("Api-Key")
-    authz = headers.get("Authorization")
-    return remove_nones({"api-key": api_key, "authorization": authz})
+    ret = {}
+    for header in ("Api-Key", "Authorization", "X-Conversation-ID"):
+        if value := headers.get(header):
+            ret[header.lower()] = value
+    return ret
 
 
-@pytest.fixture
-def mock_requests():
+@contextlib.contextmanager
+def mock_requests(url: str):
     with responses.mock as mock:
 
         def callback(request: requests.PreparedRequest):
@@ -53,92 +100,200 @@ def mock_requests():
 
         mock.add_callback(
             responses.GET,
-            URL_PATTERN,
+            url,
             callback=callback,
             content_type="application/json",
         )
 
-        yield mock
+        yield
 
 
-@pytest.fixture
-def mock_httpx():
+@contextlib.contextmanager
+def mock_httpx(url: str):
     with respx.mock as mock:
 
-        @respx.route(method="GET", host__in=HOSTS, path="/")
+        @mock.route(method="GET", url=url)
         def handler(request: httpx.Request):
             return httpx.Response(200, json=_get_headers(request.headers))
 
-        yield mock
+        yield
 
 
-@pytest.fixture
-def mock_aiohttp():
+@contextlib.contextmanager
+def mock_aiohttp(url: str):
     with aioresponses.aioresponses() as mock:
 
         def callback(url, **kwargs) -> aioresponses.CallbackResult:
             headers = CaseInsensitiveDict(kwargs.get("headers", {}))
             return aioresponses.CallbackResult(payload=_get_headers(headers))
 
-        mock.get(URL_PATTERN, callback=callback)
-        yield mock
+        mock.get(url, callback=callback)
+        yield
+
+
+Lib = Literal["aiohttp", "requests", "httpx_sync", "httpx_async"]
+
+
+@contextlib.contextmanager
+def mock_upstream(lib: Lib, url: str):
+    match lib:
+        case "aiohttp":
+            with mock_aiohttp(url):
+                yield
+        case "httpx_sync" | "httpx_async":
+            with mock_httpx(url):
+                yield
+        case "requests":
+            with mock_requests(url):
+                yield
+        case _:
+            assert_never(lib)
+
+
+@dataclass
+class TestCase:
+    __test__ = False
+
+    dial_url: str
+    upstream_url: str
+    key_for_dial_app: str | None
+    key_for_upstream: str | None
+    add_authz: bool
+
+    _urls_are_matching: bool
+
+    @classmethod
+    def get_test_cases(cls):
+        for dial_url, upstream_url, is_matching in _all_urls():
+            for key_for_dial_app, key_for_upstream, add_authz in product(
+                ["test-api-key", None],
+                ["dummy-api-key", None],
+                [True, False],
+            ):
+                yield cls(
+                    dial_url=dial_url,
+                    upstream_url=upstream_url,
+                    key_for_dial_app=key_for_dial_app,
+                    key_for_upstream=key_for_upstream,
+                    add_authz=add_authz,
+                    _urls_are_matching=is_matching,
+                )
+
+    @property
+    def expected_headers(self) -> dict:
+        expected_key = (
+            self.key_for_dial_app if self._urls_are_matching else None
+        ) or self.key_for_upstream
+
+        ret = {}
+        if expected_key:
+            ret["api-key"] = expected_key
+            if self.add_authz and self.key_for_upstream:
+                ret["authorization"] = f"Bearer {expected_key}"
+
+        return ret
+
+    def get_id(self) -> str:
+        return "-".join(
+            [
+                self.dial_url,
+                self.upstream_url,
+                str(self.key_for_dial_app),
+                str(self.key_for_upstream),
+                str(self.add_authz),
+            ]
+        )
 
 
 @pytest.mark.parametrize(
-    "lib, url, key_to_propagate, key_for_upstream, add_authz",
-    product(
-        ["aiohttp", "requests", "httpx_sync", "httpx_async"],
-        [DIAL_URL, NON_DIAL_URL],
-        ["test-api-key", None],
-        ["dummy-api-key", None],
-        [True, False],
-    ),
+    "lib", ["aiohttp", "requests", "httpx_sync", "httpx_async"]
 )
-def test_send_request(
-    client: TestClient,
-    mock_requests,
-    mock_httpx,
-    mock_aiohttp,
-    lib: str,
-    url: str,
-    key_to_propagate: Optional[str],
-    key_for_upstream: Optional[str],
-    add_authz: bool,
+@pytest.mark.parametrize(
+    "tc", TestCase.get_test_cases(), ids=lambda ts: ts.get_id()
+)
+def test_api_key_propagation(lib: Lib, tc: TestCase):
+    with (
+        mock_upstream(lib, tc.upstream_url),
+        create_client(tc.dial_url, proxy_auth_headers=True) as client,
+    ):
+        headers_for_dial_app = {}
+        if tc.key_for_dial_app:
+            headers_for_dial_app["aPi-kEy"] = tc.key_for_dial_app
+            if tc.add_authz:
+                headers_for_dial_app["auThorIzaTion"] = (
+                    f"Bearer {tc.key_for_dial_app}"
+                )
+
+        headers_for_upstream = {}
+        if tc.key_for_upstream:
+            headers_for_upstream["apI-keY"] = tc.key_for_upstream
+            if tc.add_authz:
+                headers_for_upstream["AuthoRization"] = (
+                    f"Bearer {tc.key_for_upstream}"
+                )
+
+        response = client.post(
+            "/",
+            json={
+                "url": tc.upstream_url,
+                "lib": lib,
+                "headers": headers_for_upstream,
+            },
+            headers=headers_for_dial_app,
+        )
+
+        assert response.status_code == 200
+        assert response.json() == tc.expected_headers
+
+
+@pytest.mark.parametrize(
+    "lib", ["aiohttp", "requests", "httpx_sync", "httpx_async"]
+)
+@pytest.mark.parametrize("dial_url, upstream_url, is_matching", _all_urls())
+@pytest.mark.parametrize(
+    "header_for_dial_app", [None, "x-conversion-id-for-dial-app"]
+)
+@pytest.mark.parametrize(
+    "header_for_upstream", [None, "x-conversion-id-for-upstream"]
+)
+def test_conversation_id_propagation(
+    lib: Lib,
+    dial_url: str,
+    upstream_url: str,
+    is_matching: bool,
+    header_for_dial_app: str | None,
+    header_for_upstream: str | None,
 ):
-    headers_to_propagate = {}
-    if key_to_propagate:
-        headers_to_propagate["api-key"] = key_to_propagate
-        if add_authz:
-            headers_to_propagate["authorization"] = f"Bearer {key_to_propagate}"
+    with (
+        mock_upstream(lib, upstream_url),
+        create_client(
+            dial_url, headers_to_proxy=["x-conVerSation-id"]
+        ) as client,
+    ):
+        headers_for_dial_app = remove_nones(
+            {"x-ConVersaTion-Id": header_for_dial_app}
+        )
+        headers_for_upstream = remove_nones(
+            {"x-cOnvErsAtion-iD": header_for_upstream}
+        )
 
-    headers_for_upstream = {}
-    if key_for_upstream:
-        headers_for_upstream["api-key"] = key_for_upstream
-        if add_authz:
-            headers_for_upstream["authorization"] = f"Bearer {key_for_upstream}"
+        response = client.post(
+            "/",
+            json={
+                "url": upstream_url,
+                "lib": lib,
+                "headers": headers_for_upstream,
+            },
+            headers=headers_for_dial_app,
+        )
 
-    response = client.post(
-        "/",
-        json={"url": url, "lib": lib, "headers": headers_for_upstream},
-        headers=headers_to_propagate,
-    )
-    assert response.status_code == 200, response.json()
+        expected_value = None
+        if header_for_upstream:
+            expected_value = header_for_upstream
+        elif is_matching and header_for_dial_app:
+            expected_value = header_for_dial_app
 
-    expected_key = (
-        key_to_propagate if url == DIAL_URL else None
-    ) or key_for_upstream
+        expected_headers = remove_nones({"x-conversation-id": expected_value})
 
-    expected_headers = {}
-    if expected_key:
-        expected_headers["api-key"] = expected_key
-        if add_authz and key_for_upstream:
-            expected_headers["authorization"] = f"Bearer {expected_key}"
-
-    # NOTE: aioresponses doesn't call trace_configs in the mocked version,
-    # and since we are patching the request via a dedicated trace config,
-    # we can't test the header propagation for aiohttp.
-    # https://github.com/pnuckowski/aioresponses/issues/246
-    if lib == "aiohttp":
-        expected_headers = headers_for_upstream
-
-    assert response.json() == expected_headers
+        assert response.status_code == 200
+        assert response.json() == expected_headers

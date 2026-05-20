@@ -1,5 +1,3 @@
-from typing import List
-
 import pytest
 
 from aidial_sdk import DIALApp
@@ -16,9 +14,9 @@ deployment = "test-app"
 app = DIALApp().add_chat_completion(deployment, NoopApplication())
 
 
-testcases: List[TestCase] = [
-    TestCase(app, deployment, "rate", RATE_REQUEST_OK2, None),
-    TestCase(app, deployment, "rate", RATE_REQUEST_OK1, None),
+testcases: list[TestCase] = [
+    TestCase(app, deployment, "rate", RATE_REQUEST_OK2, ""),
+    TestCase(app, deployment, "rate", RATE_REQUEST_OK1, ""),
     TestCase(
         app, deployment, "rate", RATE_REQUEST_FAIL, extra_fields_error("foo")
     ),

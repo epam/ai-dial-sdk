@@ -1,5 +1,3 @@
-from typing import List
-
 from aidial_sdk import HTTPException as DIALException
 from aidial_sdk.chat_completion import Message
 
@@ -8,7 +6,7 @@ def sanitize_namespace(namespace: str) -> str:
     return "".join(c if c.isalnum() or c in "._-/" else "-" for c in namespace)
 
 
-def get_last_attachment_url(messages: List[Message]) -> str:
+def get_last_attachment_url(messages: list[Message]) -> str:
     for message in reversed(messages):
         if (
             message.custom_content is not None

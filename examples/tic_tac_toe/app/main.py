@@ -3,14 +3,13 @@ A DIAL application that is configurable by the user.
 """
 
 import random
-from typing import Optional
 
-import uvicorn
+from pydantic import BaseModel
 
 from aidial_sdk import DIALApp
 from aidial_sdk.chat_completion import ChatCompletion, Request, Response
 from aidial_sdk.chat_completion.form import Button, FormMetaclass, form
-from aidial_sdk.pydantic_v1 import BaseModel, Field
+from aidial_sdk.pydantic.v2 import ConfigDict, Field
 
 from .game import O_PLAYER, X_PLAYER, Board, Move, Player
 from .request import (
@@ -27,16 +26,16 @@ from .request import (
 class InitConfiguration(BaseModel, metaclass=FormMetaclass):
     # The flag disables the chat message input field.
     # This forces the user to interact with the buttons.
-    class Config:
-        chat_message_input_disabled = True
+    model_config = ConfigDict(chat_message_input_disabled=True)
 
     player: Player = Field(
         description="Select tic-tac-toe player",
-        # The 'buttons' parameter of the field descriptor accepts a list of Button objects with the following properties:
+        # The `buttons` parameter of the field descriptor accepts a list of Button objects with the following properties:
         # * submit (bool): Whether the button should submit the whole form on click.
         # * title (str): The caption text displayed on the button.
         # * const (int|float): The value that will be submitted when the button is clicked.
         # * confirmationMessage (str): The message that will be displayed to the user before submitting the form in a Yes/No confirmation dialog.
+        # * populateText (str): the text that will be populated to the chat input field when the button is clicked
         buttons=[
             Button(
                 const=X_PLAYER,
@@ -53,15 +52,24 @@ class InitConfiguration(BaseModel, metaclass=FormMetaclass):
         ],
     )
 
+    # DIAL requires that the value matching this schema is passed to the application
+    # in `custom_fields.configuration` field of the chat completion request.
+    # Therefore, fields specified as required (such as `player`) must be populated by the user,
+    # meaning the user must click one of the provided buttons.
+    #
+    # If the button click isn't necessary, the field can be marked
+    # as optional using an appropriate type hint:
+    # `player: Optional[Player] = ...` or `player: Player | None = ...`.
+
 
 # The form defines the move the user in making during the tic-tac-toe game.
 # The bot suggest a list of available moves to the user.
 # The user pick one of the move by its index in the list and returns this data structure to the application.
 # Note that the form doesn't have any buttons, since the moves are determined dynamically.
-# The buttons are added to the model dynamically using the class decorator "form".
+# The buttons will be added to the model dynamically
+# in the `chat_completion` handler via the class decorator "form".
 class MoveForm(BaseModel):
-    class Config:
-        chat_message_input_disabled = True
+    model_config = ConfigDict(chat_message_input_disabled=True)
 
     move: int
 
@@ -74,16 +82,15 @@ class MoveOutcome(BaseModel):
 
 # ChatCompletion is an abstract class for applications and model adapters
 class TicTacToeApplication(ChatCompletion):
-
     async def configuration(self, request):
         # Return the schema of the initial configuration
-        return InitConfiguration.schema()
+        return InitConfiguration.model_json_schema()
 
     async def chat_completion(
         self, request: Request, response: Response
     ) -> None:
         # Retrieve the configuration from the request and parse it
-        init_conf = InitConfiguration.parse_obj(get_configuration(request))
+        init_conf = InitConfiguration.model_validate(get_configuration(request))
         user_player = init_conf.player
 
         if len(request.messages) == 1:
@@ -93,13 +100,13 @@ class TicTacToeApplication(ChatCompletion):
         else:
             # Retrieve the user move from the last user message
             if form_value := get_message_form_value(request.messages[-1]):
-                user_form = MoveForm.parse_obj(form_value)
+                user_form = MoveForm.model_validate(form_value)
                 user_move = Move.from_button_value(user_form.move)
 
             # Retrieve the game board from the last bot message
             state_dict = get_message_state(request.messages[-2])
             assert state_dict is not None
-            board = Board.parse_obj(state_dict)
+            board = Board.model_validate(state_dict)
 
         # Make a move by the bot
         move_outcome = TicTacToeApplication.make_bot_move(
@@ -136,14 +143,14 @@ class TicTacToeApplication(ChatCompletion):
                 _MoveForm = form(move=move_selector)(MoveForm)
 
                 # Save the form schema in the bot message
-                choice.set_form_schema(_MoveForm.schema())
+                choice.set_form_schema(_MoveForm.model_json_schema())
 
             # Save the game board in the bot message
-            choice.set_state(board.dict())
+            choice.set_state(board.model_dump())
 
     @staticmethod
     def make_bot_move(
-        board: Board, user_player: Player, user_move: Optional[Move]
+        board: Board, user_player: Player, user_move: Move | None
     ) -> MoveOutcome:
         """Helper function that advances the game board according to the bot and user moves."""
 
@@ -179,7 +186,7 @@ class TicTacToeApplication(ChatCompletion):
         else:
             # Otherwise, make a random move by the bot
             moves = board.possible_moves
-            bot_move = random.choice(moves)
+            bot_move = random.choice(moves)  # noqa: S311
             board = board.make_move(bot_move)
             bot_response = "I moved to " + bot_move.print() + ". "
 
@@ -196,7 +203,3 @@ class TicTacToeApplication(ChatCompletion):
 # DIALApp extends FastAPI to provide a user-friendly interface for routing requests to your applications
 app = DIALApp()
 app.add_chat_completion("app", TicTacToeApplication())
-
-# Run built app
-if __name__ == "__main__":
-    uvicorn.run(app, port=5000)

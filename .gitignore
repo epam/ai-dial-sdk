@@ -8,6 +8,7 @@ dist/
 .nox
 .idea/
 .env
+.env.dev
 ~*
 .vscode/launch.json
 .python-version

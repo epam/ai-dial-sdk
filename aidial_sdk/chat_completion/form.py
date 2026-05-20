@@ -1,32 +1,37 @@
+from __future__ import annotations
+
+from collections.abc import Callable, Sequence
 from dataclasses import dataclass
 from typing import (
     Any,
-    Callable,
-    Dict,
     Generic,
-    List,
     Literal,
-    Optional,
-    Type,
     TypeVar,
-    Union,
     get_args,
 )
 
-from pydantic.v1.fields import FieldInfo
-from pydantic.v1.validators import make_literal_validator
-
-from aidial_sdk.pydantic_v1 import BaseModel, ModelMetaclass, validator
+from aidial_sdk._pydantic import (
+    PYDANTIC_V2,
+    BaseModel,
+    FieldInfo,
+    ModelMetaclass,
+    make_literal_validator,
+    validator,
+)
+from aidial_sdk._pydantic._model_config import ModelConfigWrapper
 
 _T = TypeVar("_T")
+
+
+_SUPPORTED_BUTTON_TYPES = ["number", "integer", "boolean", "string"]
 
 
 @dataclass
 class Button(Generic[_T]):
     const: _T
     title: str
-    confirmationMessage: Optional[str] = None
-    populateText: Optional[str] = None
+    confirmationMessage: str | None = None
+    populateText: str | None = None
     submit: bool = False
 
     def schema(self) -> dict:
@@ -42,94 +47,92 @@ class Button(Generic[_T]):
 
 
 class FormMetaclass(ModelMetaclass):
-    def __new__(mcs, name, bases, namespace: dict, **kwargs):
+    def __new__(
+        mcs,  # pyright: ignore[reportSelfClsParameterName]
+        name,
+        bases,
+        namespace: dict,
+        **kwargs,
+    ):
         # Inject buttons validators
 
-        validators = {}
-        for field_name, field_info in namespace.items():
-            if not isinstance(field_info, FieldInfo):
-                continue
+        button_fields: dict[str, list[Button]] = {}
+        validators: dict[str, Any] = {}
 
-            buttons_extra = field_info.extra.get("buttons")
-            if not buttons_extra:
+        for field_name, field_info in namespace.items():
+            if (buttons_extra := _extract_buttons_field(field_info)) is None:
                 continue
 
             buttons = _get_buttons(f"{name}.{field_name}", buttons_extra)
+            if not buttons:
+                continue
 
-            consts = tuple(button.const for button in buttons)
-            literal_type = Literal[consts]
-            literal_validator = make_literal_validator(literal_type)
+            button_fields[field_name] = buttons
 
-            def _make_check_value(literal_validator):
-                def check_value(value, values, config, field):
-                    return literal_validator(value)
-
-                return check_value
-
-            validators[f"_validate_{field_name}"] = validator(
-                field_name, allow_reuse=True
-            )(_make_check_value(literal_validator))
+            enum_values = tuple(button.const for button in buttons)
+            validators[f"_validate_{field_name}"] = _create_field_validator(
+                field_name, enum_values
+            )
 
         namespace.update(validators)
 
-        cls = super().__new__(mcs, name, bases, namespace, **kwargs)
+        # Inject JSON schema post processing
 
-        # Inject schema post processing
+        model_config = ModelConfigWrapper.create(None, namespace)
+        model_config["extra"] = "forbid"
 
-        if (config := getattr(cls, "Config", None)) is None:
+        def _on_schema(json_schema: dict[str, Any]) -> None:
+            _add_model_config_extensions(model_config, json_schema)
+            _add_button_fields(name, json_schema, button_fields)
 
-            class Config:
-                pass
+        model_config.post_process_schema(_on_schema)
 
-            config = cls.Config = Config
-
-        config.extra = "forbid"  # type: ignore
-
-        old_schema_extra = getattr(config, "schema_extra", None)
-
-        def new_schema_extra(
-            schema: Dict[str, Any], model: Type[BaseModel]
-        ) -> None:
-            if old_schema_extra:
-                old_schema_extra(schema, model)
-
-            _handle_config_extensions(config, schema)
-            _handle_buttons_extension(schema)
-
-        config.schema_extra = staticmethod(new_schema_extra)  # type: ignore
-
-        return cls
+        return super().__new__(mcs, name, bases, namespace, **kwargs)
 
 
-def _handle_config_extensions(config: Any, schema: Dict[str, Any]) -> None:
+def _add_model_config_extensions(
+    model_config: ModelConfigWrapper, json_schema: dict[str, Any]
+) -> None:
     if (
-        disable_input := getattr(config, "chat_message_input_disabled", None)
+        disable_input := model_config["chat_message_input_disabled"]
     ) is not None:
-        schema["dial:chatMessageInputDisabled"] = disable_input is True
+        json_schema["dial:chatMessageInputDisabled"] = disable_input is True
 
 
-def _handle_buttons_extension(schema: Dict[str, Any]) -> None:
-    for prop_name, prop in schema.get("properties", {}).items():
-        if buttons := prop.pop("buttons", None):
-            button_schemas: List[dict] = []
-            for button in buttons:
-                assert isinstance(button, Button)
-                button_schemas.append(button.schema())
-            prop["dial:widget"] = "buttons"
-            prop["oneOf"] = button_schemas
+def _add_button_fields(
+    cls_name: str,
+    json_schema: dict[str, Any],
+    button_fields: dict[str, list[Button]],
+) -> None:
+    for field_name, buttons in button_fields.items():
+        prop = json_schema["properties"][field_name]
+        prop.pop("buttons", None)
 
-            # NOTE: The meta schema of the DIAL forms only supports
-            # 'number' type, so we convert 'integer' to 'number'.
-            # Could be removed once this restriction is lifted.
-            if prop["type"] == "integer":
-                prop["type"] = "number"
+        button_schemas = [button.schema() for button in buttons]
 
-            # NOTE: The meta schema of the DIAL forms only supports 'number' type.
-            # Could be removed once this restriction is lifted.
-            if prop["type"] != "number":
+        prop["dial:widget"] = "buttons"
+        prop["oneOf"] = button_schemas
+
+        if (anyOf := prop.pop("anyOf", None)) is not None:
+            # Optional types are translated in Pydantic V2 to
+            # the JSON schema {'anyOf': [{'type': 'integer'}, {'type': 'null'}], 'default': null}
+            # which conflicts with the 'oneOf' definition.
+            types = {schema["type"] for schema in anyOf}
+            types.discard("null")
+            if len(types) != 1:
                 raise ValueError(
-                    f"Button value must be a number. However, field {schema['title']}.{prop_name} has type {prop['type']!r}."
+                    f"Field {cls_name}.{field_name} has conflicting types {types}."
                 )
+            prop["type"] = types.pop()
+            prop.pop("default", None)
+
+        if prop["type"] not in _SUPPORTED_BUTTON_TYPES:
+            ts = ", ".join(f"{ty!r}" for ty in _SUPPORTED_BUTTON_TYPES)
+
+            raise ValueError(
+                f"Button value must be a one of the following types: {ts}. "
+                f"However, field {cls_name}.{field_name} has type {prop['type']!r}."
+            )
 
 
 _Model = TypeVar("_Model", bound=BaseModel)
@@ -137,48 +140,50 @@ _Model = TypeVar("_Model", bound=BaseModel)
 
 def form(
     *,
-    chat_message_input_disabled: Optional[bool] = None,
-    **kwargs: Dict[str, Union[FieldInfo, Any]],
-) -> Callable[[Type[_Model]], Type[_Model]]:
-    def _create_class(cls: Type[_Model]) -> Type[_Model]:
-        namespace: Dict[str, Any] = {}
-        annotations: Dict[str, Any] = {}
+    chat_message_input_disabled: bool | None = None,
+    **kwargs: dict[str, FieldInfo | Any],
+) -> Callable[[type[_Model]], type[_Model]]:
+    def _create_class(cls: type[_Model]) -> type[_Model]:
+        namespace: dict[str, Any] = {
+            "__module__": cls.__module__,
+            "__qualname__": cls.__qualname__,
+        }
 
-        # Injecting config extensions
+        # Inject model config extensions
+        model_config = ModelConfigWrapper.create(cls, namespace)
         if chat_message_input_disabled is not None:
-            conf_fields = {
-                "chat_message_input_disabled": chat_message_input_disabled
-            }
-            conf_cls = getattr(cls, "Config", object)
-            namespace["Config"] = type("Config", (conf_cls,), conf_fields)
+            model_config["chat_message_input_disabled"] = (
+                chat_message_input_disabled
+            )
 
-        # Injecting button extensions
+        # Inject button extensions
+        annotations: dict[str, Any] = {}
+
         for name, field_info in kwargs.items():
-            buttons_extra = field_info.extra.get("buttons")  # type: ignore
             field_name = f"{cls.__name__}.{name}"
 
-            if not buttons_extra:
+            if (buttons_extra := _extract_buttons_field(field_info)) is None:
                 raise ValueError(
                     f"Field descriptor of {field_name} is missing 'buttons' parameter."
                 )
+
             buttons = _get_buttons(field_name, buttons_extra)
-
-            namespace[name] = field_info
-
             button_type = type(buttons[0].const)
+
             if field_type := cls.__annotations__.get(name):
-                annotations[name] = field_type
-                field_type_base = _get_base_type(field_type)
-                if field_type_base != button_type:
+                field_base_type = _get_base_type(field_type)
+                if field_base_type != button_type:
                     raise ValueError(
-                        f"Field {field_name} has type {field_type_base} "
+                        f"Field {field_name} has type {field_base_type} "
                         f"but buttons are of type {button_type}."
                     )
             else:
-                annotations[name] = button_type
+                field_type = button_type
 
-        if annotations:
-            namespace["__annotations__"] = annotations
+            namespace[name] = field_info
+            annotations[name] = field_type
+
+        namespace["__annotations__"] = annotations
 
         cls_name = f"_{cls.__name__}"
         return FormMetaclass(cls_name, (cls,), namespace)  # type: ignore
@@ -186,7 +191,21 @@ def form(
     return _create_class
 
 
-def _get_base_type(tp: Type[_T]) -> Type[_T]:
+def _create_field_validator(field_name: str, enum_values: Sequence[Any]):
+    literal_type = Literal[enum_values]
+    literal_validator = make_literal_validator(literal_type)
+
+    if PYDANTIC_V2:
+        return validator(field_name)(literal_validator)
+    else:
+
+        def _check_value(value, values, config, field):
+            return literal_validator(value)
+
+        return validator(field_name, allow_reuse=True)(_check_value)
+
+
+def _get_base_type(tp: type[_T]) -> type[_T]:
     """Returns T if given Optional[T], otherwise returns the type unchanged."""
     args = get_args(tp)
     if len(args) == 2 and type(None) in args:
@@ -194,7 +213,20 @@ def _get_base_type(tp: Type[_T]) -> Type[_T]:
     return tp
 
 
-def _get_buttons(field_name: str, buttons: Any) -> List[Button]:
+def _extract_buttons_field(field_info: Any) -> Any:
+    if not isinstance(field_info, FieldInfo):
+        return None
+
+    if PYDANTIC_V2:
+        extra = field_info.json_schema_extra
+        if not isinstance(extra, dict):
+            return None
+        return extra.get("buttons")
+    else:
+        return field_info.extra.get("buttons")  # type: ignore
+
+
+def _get_buttons(field_name: str, buttons: Any) -> list[Button]:
     if not isinstance(buttons, list):
         raise ValueError(
             f"'buttons' parameter of the field descriptor for {field_name} must be a list, but got {type(buttons).__name__}."

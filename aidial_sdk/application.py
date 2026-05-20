@@ -1,8 +1,9 @@
 import logging.config
 import re
 import warnings
+from collections.abc import Callable, Coroutine
 from logging import Filter, LogRecord
-from typing import Any, Callable, Coroutine, Literal, Optional, Type, TypeVar
+from typing import Any, Literal, TypeVar
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
@@ -12,6 +13,8 @@ from aidial_sdk._errors import (
     fastapi_exception_handler,
     pydantic_validation_exception_handler,
 )
+from aidial_sdk._pydantic import ValidationError
+from aidial_sdk._pydantic._compat import BaseModel
 from aidial_sdk.chat_completion.base import ChatCompletion
 from aidial_sdk.chat_completion.request import Request as ChatCompletionRequest
 from aidial_sdk.chat_completion.response import (
@@ -26,9 +29,10 @@ from aidial_sdk.embeddings.base import Embeddings
 from aidial_sdk.embeddings.request import Request as EmbeddingsRequest
 from aidial_sdk.exceptions import HTTPException as DIALException
 from aidial_sdk.header_propagator import HeaderPropagator
-from aidial_sdk.pydantic_v1 import BaseModel, ValidationError
 from aidial_sdk.telemetry.types import TelemetryConfig
+from aidial_sdk.utils._disconnect_middleware import DisconnectMiddleware
 from aidial_sdk.utils._reflection import get_method_implementation
+from aidial_sdk.utils.env import env_float, env_var_list
 from aidial_sdk.utils.log_config import LogConfig
 from aidial_sdk.utils.logging import log_debug, set_log_deployment
 from aidial_sdk.utils.pydantic import model_validate_extra_fields
@@ -38,9 +42,19 @@ from aidial_sdk.utils.streaming import (
     to_streaming_response,
 )
 
-logging.config.dictConfig(LogConfig().dict())
+logging.config.dictConfig(LogConfig().model_dump())
 
 RequestType = TypeVar("RequestType", bound=FromRequestMixin)
+
+
+def _interpolate_deployment_id(deployment_id: str, path_params: dict) -> str:
+    result = deployment_id
+    for key, value in path_params.items():
+        # Replace {key} or {key:type} patterns with actual value
+        # Pattern matches {key} or {key:int}, {key:path}, etc.
+        pattern = r"\{" + re.escape(key) + r"(?::[^}]*)?\}"
+        result = re.sub(pattern, str(value), result)
+    return result
 
 
 class PathFilter(Filter):
@@ -56,16 +70,17 @@ class PathFilter(Filter):
 
 class DIALApp(FastAPI):
     _allow_extra_request_fields: bool
-    _dial_url: Optional[str]
+    _dial_url: str | None
 
     def __init__(
         self,
-        dial_url: Optional[str] = None,
+        dial_url: str | None = None,
         propagate_auth_headers: bool = False,
-        telemetry_config: Optional[TelemetryConfig] = None,
+        telemetry_config: TelemetryConfig | None = None,
         add_healthcheck: bool = False,
         *,
         allow_extra_request_fields: bool = False,
+        headers_to_proxy: list[str] | None = None,
         **kwargs,
     ):
         if "propagation_auth_headers" in kwargs:
@@ -82,21 +97,30 @@ class DIALApp(FastAPI):
         self._allow_extra_request_fields = allow_extra_request_fields
         self._dial_url = dial_url
 
-        if telemetry_config is not None:
-            self.configure_telemetry(telemetry_config)
+        self.configure_telemetry(telemetry_config)
 
-        if propagate_auth_headers:
+        headers_to_proxy = headers_to_proxy or []
+        headers_to_proxy.extend(env_var_list("DIAL_SDK_HEADERS_TO_PROXY"))
+
+        if propagate_auth_headers or headers_to_proxy:
             if not dial_url:
                 raise ValueError(
-                    "dial_url is required if propagation auth headers is enabled"
+                    "dial_url is required if propagation of headers is enabled"
                 )
 
-            HeaderPropagator(self, dial_url).enable()
+            HeaderPropagator(
+                self,
+                dial_url=dial_url,
+                proxy_auth_headers=propagate_auth_headers,
+                headers_to_proxy=headers_to_proxy,
+            ).enable()
 
         if add_healthcheck:
             path = "/health"
             self.add_api_route(path, DIALApp._healthcheck, methods=["GET"])
             logging.getLogger("uvicorn.access").addFilter(PathFilter(path))
+
+        self.add_middleware(DisconnectMiddleware)
 
         self.add_exception_handler(
             ValidationError, pydantic_validation_exception_handler
@@ -106,16 +130,19 @@ class DIALApp(FastAPI):
 
         self.add_exception_handler(DIALException, dial_exception_handler)
 
-    def configure_telemetry(self, config: TelemetryConfig):
+    def configure_telemetry(self, config: TelemetryConfig | None):
+        if config is None or config.is_noop():
+            return
+
         try:
             from aidial_sdk.telemetry.init import init_telemetry
+
+            init_telemetry(app=self, config=config)
         except ImportError:
             raise ValueError(
                 "Missing telemetry dependencies. "
                 "Install the package with the extras: aidial-sdk[telemetry]"
             )
-
-        init_telemetry(app=self, config=config)
 
     def add_embeddings(
         self, deployment_name: str, impl: Embeddings
@@ -133,9 +160,8 @@ class DIALApp(FastAPI):
         deployment_name: str,
         impl: ChatCompletion,
         *,
-        heartbeat_interval: Optional[float] = None,
+        heartbeat_interval: float | None = None,
     ) -> "DIALApp":
-
         self.add_api_route(
             f"/openai/deployments/{deployment_name}/chat/completions",
             self._chat_completion(
@@ -192,11 +218,9 @@ class DIALApp(FastAPI):
         deployment_id: str,
         endpoint_impl: Callable[[RequestType], Coroutine[Any, Any, Any]],
         endpoint: Literal["tokenize", "truncate_prompt", "configuration"],
-        request_type: Type["RequestType"],
+        request_type: type["RequestType"],
     ):
         async def _handler(original_request: Request) -> Response:
-            set_log_deployment(deployment_id)
-
             request = await self._parse_request(
                 request_type, original_request, deployment_id
             )
@@ -207,7 +231,7 @@ class DIALApp(FastAPI):
             if isinstance(response, dict):
                 response_json = response
             elif isinstance(response, BaseModel):
-                response_json = response.dict()
+                response_json = response.model_dump()
             else:
                 raise ValueError(
                     f"Unexpected response type from {endpoint}: {type(response)}"
@@ -221,8 +245,6 @@ class DIALApp(FastAPI):
 
     def _rate_response(self, deployment_id: str, impl: ChatCompletion):
         async def _handler(original_request: Request):
-            set_log_deployment(deployment_id)
-
             request = await self._parse_request(
                 RateRequest, original_request, deployment_id
             )
@@ -234,12 +256,17 @@ class DIALApp(FastAPI):
 
     async def _parse_request(
         self,
-        request: Type[RequestType],
+        request: type[RequestType],
         original_request: Request,
         deployment_id: str,
     ) -> RequestType:
+        interpolated_deployment_id = _interpolate_deployment_id(
+            deployment_id, original_request.path_params
+        )
+        set_log_deployment(interpolated_deployment_id)
+
         ret = await request.from_request(
-            original_request, deployment_id, self._dial_url
+            original_request, interpolated_deployment_id, self._dial_url
         )
         if not self._allow_extra_request_fields:
             model_validate_extra_fields(ret)
@@ -250,11 +277,13 @@ class DIALApp(FastAPI):
         deployment_id: str,
         impl: ChatCompletion,
         *,
-        heartbeat_interval: Optional[float],
+        heartbeat_interval: float | None,
     ):
-        async def _handler(original_request: Request):
-            set_log_deployment(deployment_id)
+        heartbeat_interval = heartbeat_interval or env_float(
+            "DIAL_SDK_SSE_HEARTBEAT_INTERVAL"
+        )
 
+        async def _handler(original_request: Request) -> Response:
             request = await self._parse_request(
                 ChatCompletionRequest, original_request, deployment_id
             )
@@ -272,30 +301,29 @@ class DIALApp(FastAPI):
                         heartbeat_object=": heartbeat\n\n",
                     )
 
-                return StreamingResponse(
+                resp = StreamingResponse(
                     await to_streaming_response(stream),
                     media_type="text/event-stream",
-                    headers=response.headers,
                 )
             else:
                 response_json = await to_block_response(stream)
-
                 log_debug(f"response: {response_json}")
-                return JSONResponse(
-                    content=response_json,
-                    headers=response.headers,
-                )
+                resp = JSONResponse(content=response_json)
+
+            for key, value in response.headers:
+                resp.headers.append(key, value)
+
+            return resp
 
         return _handler
 
     def _embeddings(self, deployment_id: str, impl: Embeddings):
         async def _handler(original_request: Request):
-            set_log_deployment(deployment_id)
             request = await self._parse_request(
                 EmbeddingsRequest, original_request, deployment_id
             )
             response = await impl.embeddings(request)
-            response_json = response.dict()
+            response_json = response.model_dump()
             return JSONResponse(content=response_json)
 
         return _handler

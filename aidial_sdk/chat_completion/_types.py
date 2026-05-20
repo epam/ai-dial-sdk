@@ -1,5 +1,5 @@
 import asyncio
-from typing import TYPE_CHECKING, Union
+from typing import TYPE_CHECKING
 
 from aidial_sdk.chat_completion.chunks import (
     BaseChunk,
@@ -8,6 +8,6 @@ from aidial_sdk.chat_completion.chunks import (
 )
 
 if TYPE_CHECKING:
-    ChunkQueue = asyncio.Queue[Union[BaseChunk, ExceptionChunk, EndChunk]]
+    ChunkQueue = asyncio.Queue[BaseChunk | ExceptionChunk | EndChunk]
 else:
     ChunkQueue = asyncio.Queue

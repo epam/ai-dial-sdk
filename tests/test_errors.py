@@ -1,8 +1,9 @@
 import dataclasses
-from typing import Any, Dict, List
+from typing import Any
 
 import pytest
 
+from aidial_sdk.exceptions import HTTPException
 from tests.applications.broken import (
     ImmediatelyBrokenApplication,
     RuntimeBrokenApplication,
@@ -33,10 +34,10 @@ class ErrorTestCase:
     content: Any
     response_code: int
     response_error: dict
-    response_headers: Dict[str, str] = dataclasses.field(default_factory=dict)
+    response_headers: dict[str, str] = dataclasses.field(default_factory=dict)
 
 
-error_testcases: List[ErrorTestCase] = [
+error_testcases: list[ErrorTestCase] = [
     ErrorTestCase("fastapi_exception", 500, DEFAULT_RUNTIME_ERROR),
     ErrorTestCase("value_error_exception", 500, DEFAULT_RUNTIME_ERROR),
     ErrorTestCase("zero_division_exception", 500, DEFAULT_RUNTIME_ERROR),
@@ -59,6 +60,19 @@ error_testcases: List[ErrorTestCase] = [
                 "message": "Test error",
                 "type": "runtime_error",
                 "display_message": "I'm broken",
+                "code": "503",
+            }
+        },
+    ),
+    ErrorTestCase(
+        "sdk_exception_with_extra_fields",
+        503,
+        {
+            "error": {
+                "message": "Test error",
+                "type": "runtime_error",
+                "details": "error details",
+                "status": 503,
                 "code": "503",
             }
         },
@@ -110,7 +124,6 @@ def test_error(test_case: ErrorTestCase):
             "messages": [{"role": "user", "content": test_case.content}],
             "stream": False,
         },
-        headers={"Api-Key": "TEST_API_KEY"},
     )
 
     assert response.status_code == test_case.response_code
@@ -130,7 +143,6 @@ def test_streaming_error(test_case: ErrorTestCase):
             "messages": [{"role": "user", "content": test_case.content}],
             "stream": True,
         },
-        headers={"Api-Key": "TEST_API_KEY"},
     )
 
     assert response.status_code == test_case.response_code
@@ -152,9 +164,8 @@ def test_runtime_streaming_error(test_case: ErrorTestCase):
     check_sse_stream(
         response.iter_lines(),
         [
-            create_single_choice_chunk({"role": "assistant"}),
-            create_single_choice_chunk({"content": "Test content"}),
-            create_single_choice_chunk({}, "stop"),
+            create_single_choice_chunk(delta={"role": "assistant"}),
+            create_single_choice_chunk(delta={"content": "Test content"}),
             test_case.response_error,
         ],
     )
@@ -173,3 +184,20 @@ def test_no_api_key():
 
     assert response.status_code == 400
     assert response.json() == API_KEY_IS_MISSING
+
+
+def test_error_repr():
+    assert (
+        repr(
+            HTTPException(
+                message="a",
+                status_code=404,
+                type="c",
+                param="d",
+                code="e",
+                display_message="f",
+                g="h",
+            )
+        )
+        == "HTTPException(message='a', status_code=404, type='c', param='d', code='e', display_message='f', g='h')"
+    )

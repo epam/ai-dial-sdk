@@ -1,4 +1,4 @@
-from typing import Callable, Optional, Set
+from collections.abc import Callable
 
 from aidial_sdk.chat_completion.request import (
     ChatCompletionRequest,
@@ -19,6 +19,7 @@ from aidial_sdk.deployment.truncate_prompt import (
     TruncatePromptResult,
     TruncatePromptSuccess,
 )
+from tests.utils.pydantic import model_copy
 
 
 def word_count_string(string: str) -> int:
@@ -45,7 +46,7 @@ def word_count_tokenize(request: TokenizeInput) -> TokenizeOutput:
 
 
 def make_batched_tokenize(
-    tokenize: Callable[[TokenizeInput], TokenizeOutput]
+    tokenize: Callable[[TokenizeInput], TokenizeOutput],
 ) -> Callable[[TokenizeRequest], TokenizeResponse]:
     def ret(request: TokenizeRequest) -> TokenizeResponse:
         return TokenizeResponse(
@@ -60,18 +61,18 @@ def default_truncate_prompt(
     count_request_tokens: Callable[[ChatCompletionRequest], int],
     model_max_prompt_tokens: int,
 ) -> TruncatePromptResult:
-    def _count_tokens_selected(indices: Set[int]) -> int:
+    def _count_tokens_selected(indices: set[int]) -> int:
         messages = [
             message
             for idx, message in enumerate(request.messages)
             if idx in indices
         ]
-        sub_request = request.copy(update={"messages": messages})
+        sub_request = model_copy(request, update={"messages": messages})
         return count_request_tokens(sub_request)
 
     all_indices = set(range(0, len(request.messages)))
 
-    max_prompt_tokens: Optional[int] = request.max_prompt_tokens
+    max_prompt_tokens: int | None = request.max_prompt_tokens
     if max_prompt_tokens is None:
         token_count = _count_tokens_selected(all_indices)
         if token_count > model_max_prompt_tokens:
@@ -83,7 +84,7 @@ def default_truncate_prompt(
 
     token_count: int = 0
     found_user_message = False
-    selected_indices: Set[int] = set()
+    selected_indices: set[int] = set()
 
     for idx in reversed(range(0, len(request.messages))):
         message = request.messages[idx]
@@ -120,9 +121,7 @@ def default_truncate_prompt(
         token_count = new_token_count
 
     discarded_indices = all_indices - selected_indices
-    return TruncatePromptSuccess(
-        discarded_messages=list(sorted(discarded_indices))
-    )
+    return TruncatePromptSuccess(discarded_messages=sorted(discarded_indices))
 
 
 def make_batched_truncate_prompt(

@@ -1,9 +1,8 @@
-from typing import Dict, Union
-
 from fastapi import FastAPI
 from starlette.testclient import TestClient
 
 from tests.utils.errors import Error
+from tests.utils.json import match_objects
 
 
 class TestCase:
@@ -15,8 +14,8 @@ class TestCase:
     endpoint: str
 
     request_body: dict
-    request_headers: Dict[str, str]
-    response: Union[Error, dict, None]
+    request_headers: dict[str, str]
+    response: Error | dict | str | None
 
     def __init__(
         self,
@@ -24,19 +23,18 @@ class TestCase:
         deployment: str,
         endpoint: str,
         request_body: dict,
-        response: Union[Error, dict, None],
-        request_headers: Dict[str, str] = {},
+        response: Error | dict | str | None,
+        request_headers: dict[str, str] | None = None,
     ):
         self.app = app
         self.deployment = deployment
         self.endpoint = endpoint
         self.request_body = request_body
         self.response = response
-        self.request_headers = request_headers
+        self.request_headers = request_headers or {}
 
 
 def run_endpoint_test(testcase: TestCase):
-
     client = TestClient(testcase.app)
 
     actual_response = client.post(
@@ -46,7 +44,7 @@ def run_endpoint_test(testcase: TestCase):
     )
 
     if actual_response.text == "":
-        actual_response_body = None
+        actual_response_body = ""
     else:
         actual_response_body = actual_response.json()
 
@@ -58,5 +56,6 @@ def run_endpoint_test(testcase: TestCase):
         expected_response_code = 200
         expected_response_body = expected_response
 
-    assert actual_response_body == expected_response_body
+    if expected_response_body is not None:
+        assert match_objects(expected_response_body, actual_response_body)
     assert actual_response.status_code == expected_response_code

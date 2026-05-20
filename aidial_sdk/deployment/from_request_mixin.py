@@ -1,10 +1,20 @@
 import json
+import warnings
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Mapping, Optional, Type, TypeVar
+from typing import Any, TypeVar
 from urllib.parse import urljoin
 
 import fastapi
 
+from aidial_sdk._pydantic import (
+    PYDANTIC_V2,
+    ConfigDict,
+    Field,
+    HeadersType,
+    SecretStr,
+    StrictStr,
+)
+from aidial_sdk._pydantic._compat import model_validator
 from aidial_sdk.deployment._headers import (
     DIAL_APPLICATION_ID,
     DIAL_APPLICATION_PROPERTIES,
@@ -17,7 +27,6 @@ from aidial_sdk.deployment._headers import (
     DIAL_UPSTREAM_KEY,
 )
 from aidial_sdk.exceptions import InternalServerError, InvalidRequestError
-from aidial_sdk.pydantic_v1 import Field, SecretStr, StrictStr, root_validator
 from aidial_sdk.utils.logging import log_debug
 from aidial_sdk.utils.pydantic import ExtraAllowModel
 
@@ -28,10 +37,10 @@ class FromRequestMixin(ABC, ExtraAllowModel):
     @classmethod
     @abstractmethod
     async def from_request(
-        cls: Type[T],
+        cls: type[T],
         request: fastapi.Request,
         deployment_id: str,
-        base_url: Optional[str],
+        base_url: str | None,
     ) -> T:
         pass
 
@@ -42,34 +51,38 @@ class FromRequestMixin(ABC, ExtraAllowModel):
 
 
 class FromRequestDeploymentMixin(FromRequestMixin):
-    base_url: Optional[str] = None
-    deployment_id: str
-
-    # Extracted from query parameters
-    api_version: Optional[str] = None
-
-    # Extracted from headers
+    headers: HeadersType
+    base_url: str | None = None
     api_key_secret: SecretStr
-    jwt_secret: Optional[SecretStr] = None
-    dial_application_id: Optional[str] = None
-    cache_breakpoint_path: Optional[str] = None
-    cache_extra_metadata: Optional[str] = None
-    conversation_id: Optional[str] = None
-    job_title: Optional[str] = None
-    upstream_endpoint: Optional[str] = None
-    upstream_key: Optional[str] = None
-    upstream_extra_data: Optional[str] = None
-    unreliable_dial_application_properties: Optional[Dict[str, Any]] = None
+    jwt_secret: SecretStr | None = None
+    bearer_token_secret: SecretStr | None = None
+    deployment_id: StrictStr
+    api_version: StrictStr | None = None
+    unreliable_dial_application_properties: dict[str, Any] | None = None
+    dial_application_id: str | None = None
 
-    headers: Mapping[str, str]
+    conversation_id: str | None = None
+    job_title: str | None = None
+
+    upstream_endpoint: str | None = None
+    upstream_key: str | None = None
+    upstream_extra_data: str | None = None
+
+    cache_breakpoint_path: str | None = None
+    cache_extra_metadata: str | None = None
+
     original_request: fastapi.Request = Field(..., exclude=True)
 
-    class Config:
-        arbitrary_types_allowed = True
+    if PYDANTIC_V2:
+        model_config = ConfigDict(arbitrary_types_allowed=True)
+    else:
+
+        class Config:
+            arbitrary_types_allowed = True
 
     async def request_dial_application_properties(
         self,
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         if self.unreliable_dial_application_properties:
             return self.unreliable_dial_application_properties
 
@@ -117,7 +130,8 @@ class FromRequestDeploymentMixin(FromRequestMixin):
                 f"Unable to retrieve application properties for the application {self.dial_application_id!r}: {ex}",
             )
 
-    @root_validator(pre=True)
+    @model_validator(mode="before")
+    @classmethod
     def create_secrets(cls, values: dict):
         if "api_key" in values:
             if "api_key_secret" not in values:
@@ -132,7 +146,6 @@ class FromRequestDeploymentMixin(FromRequestMixin):
                 values["jwt_secret"] = SecretStr(values.pop("jwt"))
             else:
                 raise ValueError("jwt and jwt_secret cannot be both provided")
-
         return values
 
     @property
@@ -140,17 +153,32 @@ class FromRequestDeploymentMixin(FromRequestMixin):
         return self.api_key_secret.get_secret_value()
 
     @property
-    def jwt(self) -> Optional[str]:
+    def jwt(self) -> str | None:
+        warnings.warn(
+            "The jwt property is deprecated. "
+            "It returns the complete Authorization header (including Bearer), "
+            "which is inconsistent with the expected raw JWT value. "
+            "Use bearer_token to obtain the token without the prefix.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         return self.jwt_secret.get_secret_value() if self.jwt_secret else None
+
+    @property
+    def bearer_token(self) -> str | None:
+        return (
+            self.bearer_token_secret.get_secret_value()
+            if self.bearer_token_secret
+            else None
+        )
 
     @classmethod
     async def from_request(
         cls,
         request: fastapi.Request,
         deployment_id: StrictStr,
-        base_url: Optional[str],
+        base_url: str | None,
     ):
-
         headers = request.headers.mutablecopy()
 
         api_key = headers.get("Api-Key")
@@ -158,7 +186,11 @@ class FromRequestDeploymentMixin(FromRequestMixin):
             raise InvalidRequestError("Api-Key header is required")
         del headers["Api-Key"]
 
-        jwt = headers.get("Authorization")
+        authorization = headers.get("Authorization")
+        if authorization and authorization.startswith("Bearer "):
+            bearer_token = authorization.removeprefix("Bearer ")
+        else:
+            bearer_token = None
         del headers["Authorization"]
 
         application_properties = None
@@ -174,7 +206,12 @@ class FromRequestDeploymentMixin(FromRequestMixin):
         return cls(
             **(await cls.get_request_body(request)),
             api_key_secret=SecretStr(api_key),
-            jwt_secret=SecretStr(jwt) if jwt else None,
+            jwt_secret=(
+                SecretStr(authorization) if authorization else None
+            ),  # Preserve the full Authorization header as jwt for backward-compat (the original sdk behavior)
+            bearer_token_secret=(
+                SecretStr(bearer_token) if bearer_token else None
+            ),
             deployment_id=deployment_id,
             api_version=request.query_params.get("api-version"),
             headers=headers,

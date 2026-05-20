@@ -1,6 +1,7 @@
 from types import TracebackType
-from typing import Optional, Type, overload
+from typing import overload
 
+from aidial_sdk._pydantic import ValidationError
 from aidial_sdk.chat_completion._types import ChunkQueue
 from aidial_sdk.chat_completion.chunks import (
     AttachmentStageChunk,
@@ -11,7 +12,6 @@ from aidial_sdk.chat_completion.chunks import (
 )
 from aidial_sdk.chat_completion.enums import Status
 from aidial_sdk.chat_completion.request import Attachment
-from aidial_sdk.pydantic_v1 import ValidationError
 from aidial_sdk.utils._attachment import create_attachment
 from aidial_sdk.utils._content_stream import ContentStream
 from aidial_sdk.utils.errors import runtime_error
@@ -21,7 +21,7 @@ class Stage:
     _queue: ChunkQueue
     _choice_index: int
     _stage_index: int
-    _name: Optional[str]
+    _name: str | None
     _last_attachment_index: int
     _closed: bool
     _opened: bool
@@ -31,7 +31,7 @@ class Stage:
         queue: ChunkQueue,
         choice_index: int,
         stage_index: int,
-        name: Optional[str] = None,
+        name: str | None = None,
     ):
         self._queue = queue
         self._choice_index = choice_index
@@ -47,15 +47,13 @@ class Stage:
 
     def __exit__(
         self,
-        exc_type: Optional[Type[BaseException]],
-        exc: Optional[BaseException],
-        traceback: Optional[TracebackType],
-    ) -> Optional[bool]:
-        if not exc:
-            if not self._closed:
-                self.close(Status.COMPLETED)
-        else:
-            self.close(Status.FAILED)
+        exc_type: type[BaseException] | None,
+        exc: BaseException | None,
+        traceback: TracebackType | None,
+    ) -> bool | None:
+        if not self._closed:
+            status = Status.FAILED if exc else Status.COMPLETED
+            self.close(status)
 
         return False
 
@@ -89,12 +87,12 @@ class Stage:
     @overload
     def add_attachment(
         self,
-        type: Optional[str] = None,
-        title: Optional[str] = None,
-        data: Optional[str] = None,
-        url: Optional[str] = None,
-        reference_url: Optional[str] = None,
-        reference_type: Optional[str] = None,
+        type: str | None = None,
+        title: str | None = None,
+        data: str | None = None,
+        url: str | None = None,
+        reference_url: str | None = None,
+        reference_type: str | None = None,
     ) -> None: ...
 
     def add_attachment(self, *args, **kwargs) -> None:
@@ -109,7 +107,7 @@ class Stage:
                 choice_index=self._choice_index,
                 stage_index=self._stage_index,
                 attachment_index=self._last_attachment_index,
-                **create_attachment(*args, **kwargs).dict(),
+                **create_attachment(*args, **kwargs).model_dump(),
             )
         except ValidationError as e:
             raise runtime_error(e.errors()[0]["msg"])

@@ -1,15 +1,15 @@
 from abc import ABC, abstractmethod
-from typing import Any, Dict, List, Literal, Optional, TypedDict
+from typing import Any, Literal, TypedDict
 
+from aidial_sdk._pydantic._compat import BaseModel
 from aidial_sdk.chat_completion.enums import FinishReason, Status
 from aidial_sdk.exceptions import HTTPException as DIALException
-from aidial_sdk.pydantic_v1 import BaseModel, root_validator
 from aidial_sdk.utils.json import remove_nones
 
 
 class BaseChunk(ABC):
     @abstractmethod
-    def to_dict(self) -> Dict[str, Any]:
+    def to_dict(self) -> dict[str, Any]:
         pass
 
 
@@ -28,7 +28,7 @@ class BaseChunkWithDefaults:
         self.chunk = chunk
         self.defaults = defaults
 
-    def to_dict(self, *, with_defaults: bool) -> Dict[str, Any]:
+    def to_dict(self, *, with_defaults: bool) -> dict[str, Any]:
         if with_defaults:
             return {**self.chunk.to_dict(), **self.defaults}
         else:
@@ -99,19 +99,19 @@ class ContentChunk(BaseChunk):
 class FunctionToolCallChunk(BaseChunk):
     choice_index: int
     call_index: int
-    id: Optional[str]
-    type: Optional[Literal["function"]]
-    name: Optional[str]
-    arguments: Optional[str]
+    id: str | None
+    type: Literal["function"] | None
+    name: str | None
+    arguments: str | None
 
     def __init__(
         self,
         choice_index: int,
         call_index: int,
-        id: Optional[str],
-        type: Optional[Literal["function"]],
-        name: Optional[str],
-        arguments: Optional[str],
+        id: str | None,
+        type: Literal["function"] | None,
+        name: str | None,
+        arguments: str | None,
     ):
         self.choice_index = choice_index
         self.call_index = call_index
@@ -152,14 +152,14 @@ class FunctionToolCallChunk(BaseChunk):
 
 class FunctionCallChunk(BaseChunk):
     choice_index: int
-    name: Optional[str]
-    arguments: Optional[str]
+    name: str | None
+    arguments: str | None
 
     def __init__(
         self,
         choice_index: int,
-        name: Optional[str],
-        arguments: Optional[str],
+        name: str | None,
+        arguments: str | None,
     ):
         self.choice_index = choice_index
         self.name = name
@@ -189,11 +189,9 @@ class FunctionCallChunk(BaseChunk):
 class StartStageChunk(BaseChunk):
     choice_index: int
     stage_index: int
-    name: Optional[str]
+    name: str | None
 
-    def __init__(
-        self, choice_index: int, stage_index: int, name: Optional[str]
-    ):
+    def __init__(self, choice_index: int, stage_index: int, name: str | None):
         self.choice_index = choice_index
         self.stage_index = stage_index
         self.name = name
@@ -288,9 +286,9 @@ class ContentStageChunk(BaseChunk):
 
 class FormSchemaChunk(BaseChunk):
     choice_index: int
-    form_schema: str
+    form_schema: dict
 
-    def __init__(self, choice_index: int, form_schema: Any):
+    def __init__(self, choice_index: int, form_schema: dict):
         self.choice_index = choice_index
         self.form_schema = form_schema
 
@@ -348,26 +346,15 @@ class Attachment(BaseModel):
     choice_index: int
     attachment_index: int
 
-    type: Optional[str]
-    title: Optional[str]
-    data: Optional[str]
-    url: Optional[str]
-    reference_url: Optional[str]
-    reference_type: Optional[str]
+    type: str | None
+    title: str | None
+    data: str | None
+    url: str | None
+    reference_url: str | None
+    reference_type: str | None
 
-    @root_validator
-    def check_data_or_url(cls, values):
-        data, url = values.get("data"), values.get("url")
-
-        if data is None and url is None:
-            raise ValueError("Trying to add attachment without data and url")
-        if data is not None and url is not None:
-            raise ValueError("Trying to add attachment with data and url")
-
-        return values
-
-    def attachment_dict(self, index: int):
-        attachment: Dict[str, Any] = {"index": index}
+    def attachment_dict(self) -> dict:
+        attachment: dict[str, Any] = {"index": self.attachment_index}
 
         if self.type:
             attachment["type"] = self.type
@@ -398,9 +385,7 @@ class AttachmentChunk(Attachment, BaseChunk):
                     "finish_reason": None,
                     "delta": {
                         "custom_content": {
-                            "attachments": [
-                                self.attachment_dict(self.attachment_index)
-                            ]
+                            "attachments": [self.attachment_dict()]
                         }
                     },
                 }
@@ -423,11 +408,7 @@ class AttachmentStageChunk(Attachment, BaseChunk):
                             "stages": [
                                 {
                                     "index": self.stage_index,
-                                    "attachments": [
-                                        self.attachment_dict(
-                                            self.attachment_index
-                                        )
-                                    ],
+                                    "attachments": [self.attachment_dict()],
                                     "status": None,
                                 }
                             ]
@@ -441,9 +422,9 @@ class AttachmentStageChunk(Attachment, BaseChunk):
 
 class StateChunk(BaseChunk):
     choice_index: int
-    state: Any
+    state: dict
 
-    def __init__(self, choice_index: int, state: Any):
+    def __init__(self, choice_index: int, state: dict):
         self.state = state
         self.choice_index = choice_index
 
@@ -463,13 +444,13 @@ class StateChunk(BaseChunk):
 class UsageChunk(BaseChunk):
     prompt_tokens: int
     completion_tokens: int
-    prompt_tokens_details: Optional[PromptTokensDetails]
+    prompt_tokens_details: PromptTokensDetails | None
 
     def __init__(
         self,
         prompt_tokens: int,
         completion_tokens: int,
-        prompt_tokens_details: Optional[PromptTokensDetails],
+        prompt_tokens_details: PromptTokensDetails | None,
     ):
         self.prompt_tokens = prompt_tokens
         self.completion_tokens = completion_tokens
@@ -526,9 +507,9 @@ class UsagePerModelChunk(BaseChunk):
 
 
 class DiscardedMessagesChunk(BaseChunk):
-    discarded_messages: List[int]
+    discarded_messages: list[int]
 
-    def __init__(self, discarded_messages: List[int]):
+    def __init__(self, discarded_messages: list[int]):
         self.discarded_messages = discarded_messages
 
     def to_dict(self):
@@ -540,9 +521,9 @@ class DiscardedMessagesChunk(BaseChunk):
 
 
 class ArbitraryChunk(BaseChunk):
-    chunk: Dict[str, Any]
+    chunk: dict[str, Any]
 
-    def __init__(self, chunk: Dict[str, Any]):
+    def __init__(self, chunk: dict[str, Any]):
         self.chunk = chunk
 
     def to_dict(self):
