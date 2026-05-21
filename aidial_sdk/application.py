@@ -283,7 +283,7 @@ class DIALApp(FastAPI):
             "DIAL_SDK_SSE_HEARTBEAT_INTERVAL"
         )
 
-        async def _handler(original_request: Request):
+        async def _handler(original_request: Request) -> Response:
             request = await self._parse_request(
                 ChatCompletionRequest, original_request, deployment_id
             )

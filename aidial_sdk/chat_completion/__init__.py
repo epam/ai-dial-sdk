@@ -1,3 +1,4 @@
+from aidial_sdk.chat_completion._cache import CacheBreakpointPath
 from aidial_sdk.chat_completion.base import ChatCompletion
 from aidial_sdk.chat_completion.choice import Choice
 from aidial_sdk.chat_completion.enums import FinishReason, Status
@@ -55,6 +56,7 @@ __all__ = [
     "Attachment",
     "Button",
     "CacheBreakpoint",
+    "CacheBreakpointPath",
     "ChatCompletion",
     "Choice",
     "ConfigurationRequest",

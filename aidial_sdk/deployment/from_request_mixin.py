@@ -15,6 +15,17 @@ from aidial_sdk._pydantic import (
     StrictStr,
 )
 from aidial_sdk._pydantic._compat import model_validator
+from aidial_sdk.deployment._headers import (
+    DIAL_APPLICATION_ID,
+    DIAL_APPLICATION_PROPERTIES,
+    DIAL_CACHE_BREAKPOINT_PATH,
+    DIAL_CACHE_EXTRA_METADATA,
+    DIAL_CONVERSATION_ID,
+    DIAL_JOB_TITLE,
+    DIAL_UPSTREAM_ENDPOINT,
+    DIAL_UPSTREAM_EXTRA_DATA,
+    DIAL_UPSTREAM_KEY,
+)
 from aidial_sdk.exceptions import InternalServerError, InvalidRequestError
 from aidial_sdk.utils.logging import log_debug
 from aidial_sdk.utils.pydantic import ExtraAllowModel
@@ -39,10 +50,6 @@ class FromRequestMixin(ABC, ExtraAllowModel):
         pass
 
 
-_DIAL_APPLICATION_PROPERTIES_HEADER = "X-DIAL-APPLICATION-PROPERTIES"
-_DIAL_APPLICATION_ID_HEADER = "X-DIAL-APPLICATION-ID"
-
-
 class FromRequestDeploymentMixin(FromRequestMixin):
     headers: HeadersType
     base_url: str | None = None
@@ -53,6 +60,17 @@ class FromRequestDeploymentMixin(FromRequestMixin):
     api_version: StrictStr | None = None
     unreliable_dial_application_properties: dict[str, Any] | None = None
     dial_application_id: str | None = None
+
+    conversation_id: str | None = None
+    job_title: str | None = None
+
+    upstream_endpoint: str | None = None
+    upstream_key: str | None = None
+    upstream_extra_data: str | None = None
+
+    cache_breakpoint_path: str | None = None
+    cache_extra_metadata: str | None = None
+
     original_request: fastapi.Request = Field(..., exclude=True)
 
     if PYDANTIC_V2:
@@ -70,7 +88,7 @@ class FromRequestDeploymentMixin(FromRequestMixin):
 
         if not self.dial_application_id:
             raise InvalidRequestError(
-                f"The {_DIAL_APPLICATION_ID_HEADER} header isn't set"
+                f"The {DIAL_APPLICATION_ID} header isn't set"
             )
 
         if not self.base_url:
@@ -176,16 +194,14 @@ class FromRequestDeploymentMixin(FromRequestMixin):
         del headers["Authorization"]
 
         application_properties = None
-        props_header = headers.get(_DIAL_APPLICATION_PROPERTIES_HEADER)
+        props_header = headers.get(DIAL_APPLICATION_PROPERTIES)
         if props_header:
             try:
                 application_properties = json.loads(props_header)
             except json.JSONDecodeError:
                 raise InvalidRequestError(
-                    f"The value of {_DIAL_APPLICATION_PROPERTIES_HEADER} header isn't valid JSON"
+                    f"The value of {DIAL_APPLICATION_PROPERTIES} header isn't valid JSON"
                 )
-
-        application_id = headers.get(_DIAL_APPLICATION_ID_HEADER)
 
         return cls(
             **(await cls.get_request_body(request)),
@@ -202,7 +218,14 @@ class FromRequestDeploymentMixin(FromRequestMixin):
             original_request=request,
             base_url=base_url,
             unreliable_dial_application_properties=application_properties,
-            dial_application_id=application_id,
+            dial_application_id=headers.get(DIAL_APPLICATION_ID),
+            conversation_id=headers.get(DIAL_CONVERSATION_ID),
+            job_title=headers.get(DIAL_JOB_TITLE),
+            cache_breakpoint_path=headers.get(DIAL_CACHE_BREAKPOINT_PATH),
+            cache_extra_metadata=headers.get(DIAL_CACHE_EXTRA_METADATA),
+            upstream_endpoint=headers.get(DIAL_UPSTREAM_ENDPOINT),
+            upstream_key=headers.get(DIAL_UPSTREAM_KEY),
+            upstream_extra_data=headers.get(DIAL_UPSTREAM_EXTRA_DATA),
         )
 
     @staticmethod

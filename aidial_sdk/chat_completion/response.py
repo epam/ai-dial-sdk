@@ -6,6 +6,7 @@ from uuid import uuid4
 
 from typing_extensions import assert_never
 
+from aidial_sdk.chat_completion._cache import CacheBreakpointPath
 from aidial_sdk.chat_completion._types import ChunkQueue
 from aidial_sdk.chat_completion.choice import Choice
 from aidial_sdk.chat_completion.chunks import (
@@ -22,6 +23,11 @@ from aidial_sdk.chat_completion.chunks import (
     UsagePerModelChunk,
 )
 from aidial_sdk.chat_completion.request import Request
+from aidial_sdk.deployment._headers import (
+    DIAL_CACHE_BREAKPOINT_PATH,
+    DIAL_CACHE_EXPIRE_AT,
+    DIAL_CACHE_EXTRA_METADATA,
+)
 from aidial_sdk.exceptions import HTTPException as DIALException
 from aidial_sdk.exceptions import RequestValidationError, RuntimeServerError
 from aidial_sdk.utils._cancel_scope import CancelScope
@@ -259,3 +265,18 @@ class Response:
                 "Trying to set a header after start of generation",
             )
         self._headers.append((key, value))
+
+    def set_cache_breakpoint(
+        self,
+        *,
+        cache_breakpoint_path: CacheBreakpointPath,
+        cache_expire_at: str | None = None,
+        cache_metadata: str | None = None,
+    ):
+        self.append_header(
+            DIAL_CACHE_BREAKPOINT_PATH, cache_breakpoint_path.path
+        )
+        if cache_expire_at is not None:
+            self.append_header(DIAL_CACHE_EXPIRE_AT, cache_expire_at)
+        if cache_metadata is not None:
+            self.append_header(DIAL_CACHE_EXTRA_METADATA, cache_metadata)
