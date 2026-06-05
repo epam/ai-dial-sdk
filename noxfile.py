@@ -30,6 +30,13 @@ def format(session: nox.Session):
     session.run("ruff", "format", *SRC)
 
 
+_PYDANTIC_DEPS: dict[str, tuple[str, str]] = {
+    "1.10.17": ("fastapi==0.125.0", "starlette==0.49.1"),
+    "2.8.2": ("fastapi==0.135.1", "starlette==1.0.1"),
+    "2.13.1": ("fastapi==0.135.1", "starlette==1.0.1"),
+}
+
+
 class UsePydanticV2(Enum):
     YES = "1"
     NO = "0"
@@ -54,6 +61,7 @@ def test(
     """Runs tests"""
     session.run("poetry", "install", external=True)
     session.install(f"pydantic=={pydantic[0]}", f"httpx=={httpx}")
+    session.install(*_PYDANTIC_DEPS[pydantic[0]])
     session.run(
         "pytest", *session.posargs, env={"PYDANTIC_V2": str(pydantic[1].value)}
     )
