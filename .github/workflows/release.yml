@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   release:
-    uses: epam/ai-dial-ci/.github/workflows/python_package_release.yml@4.4.0
+    uses: epam/ai-dial-ci/.github/workflows/python_package_release.yml@4.4.1
     with:
       promote: true # HACK: skip RC phase, project does not require stabilization period before releasing stable versions
       python-version: "3.10"
