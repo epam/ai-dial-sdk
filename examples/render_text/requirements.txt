@@ -1,4 +1,4 @@
 aidial-sdk>=0.10
 pillow==12.2.0
-aiohttp==3.14.0
+aiohttp==3.14.1
 uvicorn==0.30.1
