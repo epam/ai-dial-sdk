@@ -43,7 +43,7 @@ pillow = "^12.2.0"
 httpx = "^0.25.0"
 respx = "^0.21.1"
 aiohttp = "^3.13.4"
-aioresponses = "^0.7.6"
+aiointercept = "^0.1.7"
 requests = "^2.33"
 responses = "^0.25.3"
 
