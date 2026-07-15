@@ -48,6 +48,9 @@ Applications and model adapters implemented using this framework will be compati
 |Variable|Default|Description|
 |---|---|---|
 |DIAL_SDK_LOG|WARNING|DIAL SDK log level|
+|DIAL_SDK_LOG_FORMAT|text|Console log format: `text` (human-readable) or `json` (single-line JSON, easy to parse).|
+|DIAL_SDK_TEXT_LOG_FORMAT|`%(levelprefix)s \| %(asctime)s \| %(name)s \| %(process)d \| %(message)s`|The `%`-style [format string](https://docs.python.org/3/library/logging.html#logrecord-attributes) used when `DIAL_SDK_LOG_FORMAT=text`.|
+|DIAL_SDK_JSON_LOG_FORMAT|`{"level": "%(levelname)s", "time": "%(asctime)s", "logger": "%(name)s", "process": "%(process)d", "message": "%(message)s"}`|Used when `DIAL_SDK_LOG_FORMAT=json`. A JSON document whose string leaves are `%`-style format strings; values are escaped automatically.|
 |DIAL_SDK_HEADERS_TO_PROXY|``|A comma-separated list of headers that should be proxied from incoming requests to outgoing requests to the DIAL API. By default, no headers are proxied.|
 |DIAL_SDK_SSE_HEARTBEAT_INTERVAL||When set, the SDK inserts ping comments into streaming chat completion responses after the response has been idle for the specified number of seconds, helping prevent read timeouts when the DIAL application isn't responsive.|
 |PYDANTIC_V2|False|When `True` and Pydantic V2 is installed, DIAL SDK classes for requests/responses will be based on Pydantic V2 `BaseModel`. Otherwise, they will be based on Pydantic V1 `BaseModel`.|
