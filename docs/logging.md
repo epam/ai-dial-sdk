@@ -10,6 +10,7 @@ single-line JSON), customize it, and include **trace/span IDs** for correlation.
   - [Log format](#log-format)
     - [JSON](#json)
     - [Plain text](#plain-text)
+  - [Reusing the SDK logger in your app](#reusing-the-sdk-logger-in-your-app)
   - [Trace and span IDs](#trace-and-span-ids)
     - [Enable tracing](#enable-tracing)
     - [Tracing in JSON logs](#tracing-in-json-logs)
@@ -88,6 +89,72 @@ Default:
 ```txt
 %(levelprefix)s | %(asctime)s | %(name)s | %(process)d | %(message)s
 ```
+
+---
+
+## Reusing the SDK logger in your app
+
+Importing `aidial_sdk` (via `DIALApp`) runs `configure_sdk_logger()` once. By
+default it configures **only the SDK's own loggers**: it attaches a single stderr
+handler using the env-selected format (`DIAL_SDK_LOG_FORMAT`) to the `aidial_sdk`
+and `uvicorn` loggers, sets `aidial_sdk` to `DIAL_SDK_LOG` (default `WARNING`),
+and stops `uvicorn` from propagating to the root logger. It does **not** touch the
+root logger or your application's loggers.
+
+So to give **your** application's loggers the same formatting — instead of
+hand-rolling a formatter and a root handler — call `configure_root_logger()` once
+at startup:
+
+```python
+import logging
+import os
+
+from aidial_sdk import DIALApp, configure_root_logger
+from aidial_sdk.telemetry.types import TelemetryConfig
+
+app = DIALApp(telemetry_config=TelemetryConfig(), ...)
+
+# Install one root handler using the SDK's env-selected format. Call AFTER
+# DIALApp()/telemetry init.
+configure_root_logger()
+
+# You only declare your own loggers' levels:
+for name in ["app", "bedrock"]:
+    logging.getLogger(name).setLevel(os.getenv("LOG_LEVEL", "INFO"))
+```
+
+Now every logger — the SDK's, uvicorn's, and yours — is emitted through a single
+handler that honors `DIAL_SDK_LOG_FORMAT`. Run with `DIAL_SDK_LOG_FORMAT=json`
+and your `app`/`bedrock` logs become JSON too, with no code change:
+
+```json
+{"level": "INFO", "time": "2026-07-16 13:10:41", "logger": "app", "process": "13935", "message": "hello from the adapter"}
+```
+
+**What it does:** points the SDK/uvicorn loggers at the root logger and installs
+**one** console handler there with the SDK's formatter. It's idempotent (a repeat
+call replaces that handler rather than stacking a duplicate) and **preserves any
+other root handler** — notably the OTLP export handler telemetry adds — so it's
+safe to call after `DIALApp()`.
+
+### The `level` argument
+
+`configure_root_logger(level="INFO")` sets the level of the **root** logger — it
+does **not** force every logger to `INFO`. Root's level is only the *fallback*
+for loggers that don't set their own:
+
+- A logger **without** an explicit level (e.g. a fresh `app` logger, or a
+  third-party library) inherits root's level → fires at `INFO`.
+- A logger **with** its own level keeps it. `aidial_sdk` stays at `DIAL_SDK_LOG`
+  (default `WARNING`); a logger you set to `DEBUG` stays `DEBUG` — regardless of
+  the root level.
+
+When `level` is omitted (`None`), the root level is left untouched (stdlib
+default `WARNING`), and each logger's own level applies. This is why the example
+above sets `app`/`bedrock` levels explicitly rather than relying on the root
+level. Note that a logger's own level gates whether a record is *created*; once
+created it always reaches the root handler, so a low root level never suppresses
+an `INFO` record coming from an `INFO`-level `app` logger.
 
 ---
 
