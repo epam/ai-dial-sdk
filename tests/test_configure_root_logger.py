@@ -1,4 +1,5 @@
 import logging
+import sys
 
 import pytest
 
@@ -35,6 +36,18 @@ def test_idempotent_and_preserves_other_handlers(clean_root):
 
     assert len(_console_handlers(clean_root)) == 1
     assert other in clean_root.handlers
+
+
+def test_defers_to_existing_stderr_console_handler(clean_root):
+    # Stand-in for OTEL's basicConfig console handler on root.
+    otel_console = logging.StreamHandler(sys.stderr)
+    clean_root.addHandler(otel_console)
+
+    configure_root_logger()
+
+    # We do not add our own console handler; OTEL's stays as the only one.
+    assert _console_handlers(clean_root) == []
+    assert otel_console in clean_root.handlers
 
 
 def test_level_none_leaves_root_level_untouched(clean_root):

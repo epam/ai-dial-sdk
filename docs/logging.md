@@ -11,6 +11,7 @@ single-line JSON), customize it, and include **trace/span IDs** for correlation.
     - [JSON](#json)
     - [Plain text](#plain-text)
   - [Reusing the SDK logger in your app](#reusing-the-sdk-logger-in-your-app)
+    - [The `level` argument](#the-level-argument)
   - [Trace and span IDs](#trace-and-span-ids)
     - [Enable tracing](#enable-tracing)
     - [Tracing in JSON logs](#tracing-in-json-logs)
@@ -132,10 +133,12 @@ and your `app`/`bedrock` logs become JSON too, with no code change:
 ```
 
 **What it does:** points the SDK/uvicorn loggers at the root logger and installs
-**one** console handler there with the SDK's formatter. It's idempotent (a repeat
-call replaces that handler rather than stacking a duplicate) and **preserves any
-other root handler** — notably the OTLP export handler telemetry adds — so it's
-safe to call after `DIALApp()`.
+**one** console handler there with the SDK's formatter. It's idempotent.
+If root already has a stderr console handler it
+didn't install (e.g. one OTEL added via `OTEL_PYTHON_LOG_CORRELATION`), it
+**defers** to it and adds nothing — avoiding duplicate lines. In that case the
+SDK format doesn't apply to the console, which is one more reason to prefer
+Option A over `OTEL_PYTHON_LOG_CORRELATION`.
 
 ### The `level` argument
 
@@ -221,7 +224,8 @@ Console:
 INFO:     | 2026-07-16 13:10:42 | trace_id=36d9c402fc8b07cd7644bbf2adbbcec8 span_id=61f3846d5d19881b | hello
 ```
 
-> ⚠️ Unlike JSON, the text formatter has **no missing-field fallback**. If the
+> [!NOTE]
+> Unlike JSON, the text formatter has **no missing-field fallback**. If the
 > `otel*` fields aren't on the record (i.e. tracing is *not* enabled) it raises a
 > `KeyError` and the log line is dropped. Only put `otel*` fields in the text
 > format when tracing is guaranteed on.
@@ -248,7 +252,8 @@ Override that format with `OTEL_PYTHON_LOG_FORMAT` (default below):
 %(asctime)s %(levelname)s [%(name)s] [%(filename)s:%(lineno)d] [trace_id=%(otelTraceID)s span_id=%(otelSpanID)s resource.service.name=%(otelServiceName)s trace_sampled=%(otelTraceSampled)s] - %(message)s
 ```
 
-> ⚠️ **Why it's not recommended:** it works by adding a handler to the **root**
+> [!WARNING]
+> **Why it's not recommended:** it works by adding a handler to the **root**
 > logger. Because the SDK already logs through its own handler — and your
 > application most likely configures logging itself too — that root handler emits
 > a **duplicate** line for every record (double logging). It also can't produce

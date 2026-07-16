@@ -27,10 +27,6 @@ _DIAL_SDK_JSON_LOG_FORMAT = env_json_dict(
 
 _DATEFMT = "%Y-%m-%d %H:%M:%S"
 
-# Marks the console handler installed by configure_root_logger so repeat calls
-# replace it instead of stacking duplicates (and leave other handlers alone).
-_CONSOLE_HANDLER_MARKER = "_aidial_sdk_console_handler"
-
 
 def build_formatter() -> logging.Formatter:
     """The console formatter selected by ``DIAL_SDK_LOG_FORMAT`` (text or json)."""
@@ -51,9 +47,9 @@ def configure_root_logger(*, level: str | None = None) -> None:
     SDK's formatting for their own loggers for free — they only need to set
     their loggers' levels.
 
-    Idempotent: replaces the console handler a previous call installed, and
-    preserves any other root handlers (e.g. the OTLP export handler added by
-    telemetry). Child SDK/uvicorn loggers are pointed at the root handler.
+    If root already has a stderr console handler that this function did not
+    install — e.g. one OTEL added via ``OTEL_PYTHON_LOG_CORRELATION`` — it defers
+    to it and does not add a second one.
 
     ``level`` sets the root logger's level; when ``None`` the root level is left
     untouched (defaults to ``WARNING``). This does not silence loggers that set
@@ -62,16 +58,23 @@ def configure_root_logger(*, level: str | None = None) -> None:
     only applies to loggers that don't set one of their own.
     """
     root = logging.getLogger()
-    root.handlers = [
-        h
-        for h in root.handlers
-        if not getattr(h, _CONSOLE_HANDLER_MARKER, False)
-    ]
 
-    handler = logging.StreamHandler(sys.stderr)
-    handler.setFormatter(build_formatter())
-    setattr(handler, _CONSOLE_HANDLER_MARKER, True)
-    root.addHandler(handler)
+    # Drop the console handler we installed on a previous call ensuring idempotency
+    _MARKER = "_aidial_sdk_console_handler"
+    root.handlers = [h for h in root.handlers if not getattr(h, _MARKER, False)]
+
+    # Defer to a stderr console handler already on root (e.g. OTEL's) rather
+    # than adding a second one that would duplicate every line.
+    has_console_handler = any(
+        isinstance(h, logging.StreamHandler)
+        and getattr(h, "stream", None) is sys.stderr
+        for h in root.handlers
+    )
+    if not has_console_handler:
+        handler = logging.StreamHandler(sys.stderr)
+        handler.setFormatter(build_formatter())
+        setattr(handler, _MARKER, True)
+        root.addHandler(handler)
 
     if level is not None:
         root.setLevel(level.upper())
