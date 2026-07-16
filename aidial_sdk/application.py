@@ -2,7 +2,6 @@ import logging
 import re
 import warnings
 from collections.abc import Callable, Coroutine
-from logging import Filter, LogRecord
 from typing import Any, Literal, TypeVar
 
 from fastapi import FastAPI, HTTPException, Request
@@ -57,14 +56,14 @@ def _interpolate_deployment_id(deployment_id: str, path_params: dict) -> str:
     return result
 
 
-class PathFilter(Filter):
+class PathFilter(logging.Filter):
     path: str
 
     def __init__(self, path: str) -> None:
         super().__init__(name="")
         self.path = path
 
-    def filter(self, record: LogRecord):
+    def filter(self, record: logging.LogRecord):
         return not re.search(f"(\\s+){self.path}(\\s+)", record.getMessage())
 
 
