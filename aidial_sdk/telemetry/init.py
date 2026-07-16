@@ -82,9 +82,9 @@ def init_telemetry(
             pass
 
         if config.tracing.logging:
-            # Setting the root logger format in order to include
-            # tracing information: span_id, trace_id
-            LoggingInstrumentor().instrument(set_logging_format=True)
+            # Inject tracing context fields onto every log record:
+            # otelTraceID, otelSpanID, otelTraceSampled
+            LoggingInstrumentor().instrument()
 
     if config.logs is not None:
         # Adding a handler to the root logger which exports the logs to OTLP

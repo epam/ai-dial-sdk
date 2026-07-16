@@ -1,36 +1,39 @@
 import os
 
 from aidial_sdk._pydantic._compat import BaseModel
+from aidial_sdk.utils.env import env_json_dict
 
 DIAL_SDK_LOG = os.environ.get("DIAL_SDK_LOG", "WARNING").upper()
 
-# DIAL_SDK_LOG_FORMAT selects the console format ("text" or "json"). The two
-# defaults carry the same fields. The per-format vars override the template.
-# In the JSON template every string leaf is a %-format string (same grammar as
-# the text one); see docs/logging.
-DIAL_SDK_LOG_FORMAT = os.environ.get("DIAL_SDK_LOG_FORMAT", "text").lower()
-DIAL_SDK_TEXT_LOG_FORMAT = os.environ.get(
+_DIAL_SDK_LOG_FORMAT = os.environ.get("DIAL_SDK_LOG_FORMAT", "text").lower()
+_DIAL_SDK_TEXT_LOG_FORMAT = os.environ.get(
     "DIAL_SDK_TEXT_LOG_FORMAT",
     "%(levelprefix)s | %(asctime)s | %(name)s | %(process)d | %(message)s",
 )
-DIAL_SDK_JSON_LOG_FORMAT = os.environ.get(
+_DIAL_SDK_JSON_LOG_FORMAT = env_json_dict(
     "DIAL_SDK_JSON_LOG_FORMAT",
-    '{"level": "%(levelname)s", "time": "%(asctime)s", "logger": "%(name)s",'
-    ' "process": "%(process)d", "message": "%(message)s"}',
+    {
+        "level": "%(levelname)s",
+        "time": "%(asctime)s",
+        "logger": "%(name)s",
+        "process": "%(process)d",
+        "message": "%(message)s",
+    },
 )
 
 
 def _default_formatter() -> dict:
-    if DIAL_SDK_LOG_FORMAT == "json":
+    datefmt = "%Y-%m-%d %H:%M:%S"
+    if _DIAL_SDK_LOG_FORMAT == "json":
         return {
             "()": "aidial_sdk.utils.json_log_formatter.JsonLogFormatter",
-            "template": DIAL_SDK_JSON_LOG_FORMAT,
-            "datefmt": "%Y-%m-%d %H:%M:%S",
+            "template": _DIAL_SDK_JSON_LOG_FORMAT,
+            "datefmt": datefmt,
         }
     return {
         "()": "uvicorn.logging.DefaultFormatter",
-        "fmt": DIAL_SDK_TEXT_LOG_FORMAT,
-        "datefmt": "%Y-%m-%d %H:%M:%S",
+        "fmt": _DIAL_SDK_TEXT_LOG_FORMAT,
+        "datefmt": datefmt,
         "use_colors": True,
     }
 
