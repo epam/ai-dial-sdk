@@ -13,6 +13,9 @@ OTEL_METRICS_EXPORTER = env_var_list("OTEL_METRICS_EXPORTER")
 OTEL_EXPORTER_PROMETHEUS_PORT = int(
     os.getenv("OTEL_EXPORTER_PROMETHEUS_PORT", 9464)
 )
+OTEL_PYTHON_LOG_CORRELATION = (
+    os.getenv("OTEL_PYTHON_LOG_CORRELATION", "false").lower() == "true"
+)
 
 
 class LogsConfig(BaseModel):
@@ -22,6 +25,9 @@ class LogsConfig(BaseModel):
 
 class TracingConfig(BaseModel):
     otlp_export: bool = "otlp" in OTEL_TRACES_EXPORTER
+
+    """Deprecated: let OTel add tracing context to console logs. See docs/logging.md."""
+    logging: bool = OTEL_PYTHON_LOG_CORRELATION
 
 
 class MetricsConfig(BaseModel):
