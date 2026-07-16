@@ -25,6 +25,7 @@ def env_json_dict(name: str, default: dict) -> dict:
             obj = json.loads(value)
             if not isinstance(obj, dict):
                 raise ValueError("the object isn't a dictionary")
+            return obj
         except Exception as e:
             raise ValueError(
                 f"The value of the {name!r} environment variable is expected to be a valid JSON dictionary: {e}."
