@@ -11,6 +11,7 @@ You pick the **format** (human-readable text or single-line JSON), customize it,
   - [Trace and span IDs](#trace-and-span-ids)
     - [JSON logs](#json-logs)
     - [Text logs](#text-logs)
+      - [Legacy alternative](#legacy-alternative)
   - [Summary](#summary)
   - [OTLP log export](#otlp-log-export)
 
@@ -143,11 +144,30 @@ DIAL_SDK_TEXT_LOG_FORMAT='%(levelprefix)s | %(asctime)s | trace_id=%(otelTraceID
 INFO:     | 2026-07-16 13:10:42 | trace_id=36d9c402... span_id=61f3846d... | hello
 ```
 
-> [!NOTE]
-> `OTEL_PYTHON_LOG_CORRELATION=true` is an alternative that makes OTel add its
-> own root-logger handler with trace context built in — but it double-logs (a
-> duplicate line per record), can't produce JSON, and breaks
-> `DIAL_SDK_LOG_FORMAT=json`. Prefer the approach above.
+#### Legacy alternative
+
+`OTEL_PYTHON_LOG_CORRELATION=true` is OTel's own way to add trace context to text
+logs, with a built-in format overridable via `OTEL_PYTHON_LOG_FORMAT`:
+
+```sh
+OTEL_PYTHON_LOG_CORRELATION=true
+OTEL_PYTHON_LOG_FORMAT='%(asctime)s %(levelname)s trace_id=%(otelTraceID)s - %(message)s'
+→
+2026-07-16 13:11:45,585 INFO trace_id=d67e996e... - hello
+```
+
+When `OTEL_PYTHON_LOG_FORMAT` isn't set, the [default](https://github.com/open-telemetry/opentelemetry-python-contrib/blob/v0.43b0/instrumentation/opentelemetry-instrumentation-logging/src/opentelemetry/instrumentation/logging/constants.py#L15) is:
+
+```txt
+%(asctime)s %(levelname)s [%(name)s] [%(filename)s:%(lineno)d] [trace_id=%(otelTraceID)s span_id=%(otelSpanID)s resource.service.name=%(otelServiceName)s trace_sampled=%(otelTraceSampled)s] - %(message)s
+→
+2026-07-16 13:11:45,585 INFO [aidial_sdk.foo] [app.py:12] [trace_id=d67e996e... span_id=02136a2b... resource.service.name=unknown_service trace_sampled=True] - hello
+```
+
+> [!WARNING]
+> Prefer `DIAL_SDK_TEXT_LOG_FORMAT`. `OTEL_PYTHON_LOG_CORRELATION` logs every SDK
+> record twice (unless `configure_root_logger()` is called) and is text-only
+> (ignores `DIAL_SDK_LOG_FORMAT=json`).
 
 ## Summary
 
