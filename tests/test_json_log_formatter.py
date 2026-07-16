@@ -36,6 +36,37 @@ def test_non_string_leaves_pass_through():
     assert out == {"schema": 1, "on": True, "n": None}
 
 
+def test_otel_fields_auto_added_when_present():
+    out = _format(
+        {"msg": "%(message)s"},
+        msg="hi",
+        otelTraceID="abc",
+        otelSpanID="def",
+        otelTraceSampled=True,
+    )
+    assert out == {
+        "msg": "hi",
+        "otelTraceID": "abc",
+        "otelSpanID": "def",
+        "otelTraceSampled": True,
+    }
+
+
+def test_otel_fields_not_added_when_absent():
+    out = _format({"msg": "%(message)s"}, msg="hi")
+    assert out == {"msg": "hi"}
+
+
+def test_otel_field_referenced_in_template_is_not_duplicated():
+    out = _format(
+        {"trace_id": "%(otelTraceID)s", "span_id": "%(otelSpanID)s"},
+        otelTraceID="abc",
+        otelSpanID="def",
+    )
+    # Renamed via the template -> no extra otelTraceID/otelSpanID keys.
+    assert out == {"trace_id": "abc", "span_id": "def"}
+
+
 def test_exception_via_exc_text():
     try:
         raise ValueError("boom")

@@ -182,22 +182,31 @@ onto **every** log record (populated while a request span is active):
 
 ### Tracing in JSON logs
 
-Add the `otel*` placeholders to your template. They are populated automatically
-under an active span; **you never need to guard against them being absent** — a
-missing field renders as `""` (so the same template is safe with tracing off).
+Nothing to add — the JSON formatter **auto-appends** every `otel*` field present
+on the record. So with the default template and tracing on:
 
 ```sh
 DIAL_SDK_LOG_FORMAT=json
-DIAL_SDK_JSON_LOG_FORMAT='{"lvl":"%(levelname)s","msg":"%(message)s","trace_id":"%(otelTraceID)s","span_id":"%(otelSpanID)s"}'
 ```
 
 Console (inside a request span):
 
 ```json
-{"lvl": "INFO", "msg": "hello", "trace_id": "4b45f013470528cf753a7e640da7ca1e", "span_id": "ffcc9d300d9ab692"}
+{"level": "INFO", "time": "2026-07-16 13:10:41", "logger": "aidial_sdk", "process": "13935", "message": "hello", "otelTraceID": "4b45f013470528cf753a7e640da7ca1e", "otelSpanID": "ffcc9d300d9ab692", "otelTraceSampled": true, "otelServiceName": "my-service"}
 ```
 
-Without tracing the same setup emits `"trace_id": "", "span_id": ""` — no error.
+Without tracing, the `otel*` keys are simply absent (no error).
+
+To rename a field, reference it in your template — the auto-added copy is then
+suppressed, so there's no duplicate:
+
+```sh
+DIAL_SDK_JSON_LOG_FORMAT='{"lvl":"%(levelname)s","msg":"%(message)s","trace_id":"%(otelTraceID)s"}'
+```
+
+Here the output has your `trace_id` key (not `otelTraceID`), plus the other
+`otel*` fields still auto-added (`otelSpanID`, `otelTraceSampled`,
+`otelServiceName`).
 
 ### Tracing in text logs
 
@@ -261,12 +270,12 @@ Override that format with `OTEL_PYTHON_LOG_FORMAT` (default below):
 | JSON console | `DIAL_SDK_LOG_FORMAT=json` |
 | Customize JSON | `DIAL_SDK_JSON_LOG_FORMAT='{…}'` |
 | Customize text | `DIAL_SDK_TEXT_LOG_FORMAT='…'` |
-| Trace/span in JSON | enable tracing + add `%(otelTraceID)s`/`%(otelSpanID)s` to the JSON template (safe when off) |
+| Trace/span in JSON | just enable tracing — `otel*` fields are auto-added to the JSON output (reference them in the template only to rename) |
 | Trace/span in text | enable tracing + add them to `DIAL_SDK_TEXT_LOG_FORMAT` (Option A, recommended). `OTEL_PYTHON_LOG_CORRELATION=true` (Option B) also works but double-logs — avoid. |
 
-**Key difference:** in JSON the `otel*` fields are auto-injected and safe to
-reference whether or not tracing is on; in text you must add them manually and
-they require tracing to be enabled.
+**Key difference:** in JSON the `otel*` fields are auto-added whenever tracing is
+on (and simply absent otherwise); in text you must add them manually and they
+require tracing to be enabled.
 
 ---
 
