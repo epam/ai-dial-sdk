@@ -4,8 +4,8 @@ import sys
 
 from uvicorn.logging import DefaultFormatter
 
+from aidial_sdk.utils._json_log_formatter import JsonLogFormatter
 from aidial_sdk.utils.env import env_json_dict
-from aidial_sdk.utils.json_log_formatter import JsonLogFormatter
 
 DIAL_SDK_LOG = os.environ.get("DIAL_SDK_LOG", "WARNING").upper()
 

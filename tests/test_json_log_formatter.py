@@ -2,7 +2,7 @@ import json
 import logging
 import sys
 
-from aidial_sdk.utils.json_log_formatter import JsonLogFormatter
+from aidial_sdk.utils._json_log_formatter import JsonLogFormatter
 
 
 def _format(template: dict, **record_fields) -> dict:
