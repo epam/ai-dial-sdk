@@ -32,8 +32,8 @@ def format(session: nox.Session):
 
 _PYDANTIC_DEPS: dict[str, tuple[str, str]] = {
     "1.10.17": ("fastapi==0.125.0", "starlette==0.49.1"),
-    "2.8.2": ("fastapi==0.135.1", "starlette==1.0.1"),
-    "2.13.1": ("fastapi==0.135.1", "starlette==1.0.1"),
+    "2.8.2": ("fastapi==0.135.1", "starlette==1.3.1"),
+    "2.13.1": ("fastapi==0.135.1", "starlette==1.3.1"),
 }
 
 

@@ -21,6 +21,6 @@ resolutions:
     - message: ".*PyPI::httpx:0\\.25\\.2.*"
       reason: "CANT_FIX_EXCEPTION"
       comment: "BSD 3-Clause New or Revised License: https://github.com/encode/httpx/blob/0.25.2/LICENSE.md"
-    - message: ".*PyPI::(fastapi|starlette|typing-extensions|typing-inspection|urllib3|idna).*"
+    - message: ".*PyPI::(fastapi|starlette|typing-extensions|typing-inspection|urllib3|idna|anyio).*"
       reason: "CANT_FIX_EXCEPTION"
       comment: "ORT cannot pick up license information"
