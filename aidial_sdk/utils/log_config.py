@@ -29,7 +29,6 @@ _DATEFMT = "%Y-%m-%d %H:%M:%S"
 
 
 def build_formatter() -> logging.Formatter:
-    """The console formatter selected by ``DIAL_SDK_LOG_FORMAT`` (text or json)."""
     if _DIAL_SDK_LOG_FORMAT == "json":
         return JsonLogFormatter(
             template=_DIAL_SDK_JSON_LOG_FORMAT, datefmt=_DATEFMT

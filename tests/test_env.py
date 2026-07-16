@@ -15,5 +15,19 @@ def test_env_json_dict_falls_back_to_default(monkeypatch):
 
 def test_env_json_dict_rejects_non_dict(monkeypatch):
     monkeypatch.setenv("X", "[1, 2]")
-    with pytest.raises(ValueError):
+    with pytest.raises(ValueError) as exc:
         env_json_dict("X", {})
+    assert str(exc.value) == (
+        "The value of the 'X' environment variable is expected to be a "
+        "valid JSON dictionary."
+    )
+
+
+def test_env_json_dict_rejects_invalid_json(monkeypatch):
+    monkeypatch.setenv("X", "{not json}")
+    with pytest.raises(ValueError) as exc:
+        env_json_dict("X", {})
+    assert str(exc.value) == (
+        "The value of the 'X' environment variable is expected to be a "
+        "valid JSON dictionary."
+    )
