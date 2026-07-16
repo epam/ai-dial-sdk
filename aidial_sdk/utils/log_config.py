@@ -41,22 +41,16 @@ def build_formatter() -> logging.Formatter:
 
 def configure_root_logger() -> None:
     """Route all logging through a single console handler on the root logger,
-    using the SDK's env-selected format (``DIAL_SDK_LOG_FORMAT=text|json``).
+    using the SDK's env-selected format (``DIAL_SDK_LOG_FORMAT=text|json``), so
+    the application's own loggers get the SDK's formatting too.
 
-    Call once at startup, after ``DIALApp()``/telemetry init. Clients get the
-    SDK's formatting for their own loggers for free — they only need to set
-    their loggers' levels.
-
-    If root already has a stderr console handler that this function did not
-    install — e.g. one OTEL added via ``OTEL_PYTHON_LOG_CORRELATION`` — it defers
-    to it and does not add a second one.
-
-    The root logger's level is left untouched (stdlib default ``WARNING``); set
-    per-logger levels yourself for the loggers you care about.
+    Idempotent; call once at startup, after ``DIALApp()``/telemetry init. Leaves
+    the root level untouched (stdlib default ``WARNING``) — set per-logger levels
+    yourself. If root already has a stderr console handler this function did not
+    install (e.g. OTEL's via ``OTEL_PYTHON_LOG_CORRELATION``), it defers to it.
     """
     root = logging.getLogger()
 
-    # Drop the console handler we installed on a previous call ensuring idempotency
     _MARKER = "_aidial_sdk_console_handler"
     root.handlers = [h for h in root.handlers if not getattr(h, _MARKER, False)]
 
@@ -80,11 +74,9 @@ def configure_root_logger() -> None:
 
 
 def configure_sdk_logger() -> None:
-    """Configure the SDK's own loggers. Called once when ``DIALApp`` is imported.
-
-    It does **not** touch the root logger or your application's loggers. To give
-    your own loggers the same formatting, call ``configure_root_logger()``.
-    """
+    """Configure only the SDK's own loggers (``aidial_sdk``, ``uvicorn``), called
+    once when ``DIALApp`` is imported. To format your own loggers the same way,
+    call ``configure_root_logger()``."""
     handler = logging.StreamHandler(sys.stderr)
     handler.setFormatter(build_formatter())
 

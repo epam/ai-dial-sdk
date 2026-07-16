@@ -5,15 +5,11 @@ from collections import defaultdict
 
 class JsonLogFormatter(logging.Formatter):
     """Render a record through a JSON template whose string leaves are
-    `%`-format strings; the whole structure is then `json.dumps`'d, so every
-    interpolated value is escaped for free.
+    `%`-format strings, then `json.dumps` the result (escaping every value).
 
-    Any ``otel*`` field present on the record (``otelTraceID``, ``otelSpanID``,
-    ... — injected by the OTel logging instrumentor when tracing is on) is added
-    to the output automatically, so you get trace correlation without editing the
-    template. A field the template already references (under any key, e.g.
-    ``{"trace_id": "%(otelTraceID)s"}``) is left to the template and not added
-    again."""
+    Any ``otel*`` field on the record (injected by the OTel logging instrumentor
+    when tracing is on) is auto-added to the output, unless the template already
+    references it under some key (e.g. ``{"trace_id": "%(otelTraceID)s"}``)."""
 
     def __init__(self, template: dict, datefmt: str | None = None) -> None:
         super().__init__(datefmt=datefmt)
@@ -29,26 +25,22 @@ class JsonLogFormatter(logging.Formatter):
             return {k: self._interpolate(v, fields) for k, v in node.items()}
         if isinstance(node, list):
             return [self._interpolate(v, fields) for v in node]
-        return node  # numbers, bools, null pass through unchanged
+        return node
 
     def format(self, record: logging.LogRecord) -> str:
         record.message = record.getMessage()
         if self._uses_time:
             record.asctime = self.formatTime(record, self.datefmt)
 
-        # Expose the traceback via %(exc_text)s; it becomes one escaped string
-        # after json.dumps — never appended raw outside the JSON.
+        # Expose the traceback via %(exc_text)s, escaped like any other value.
         if record.exc_info and not record.exc_text:
             record.exc_text = self.formatException(record.exc_info)
 
-        # defaultdict(str): a missing field renders as "" (e.g. otelTraceID
-        # when telemetry is off) instead of raising during %-interpolation.
+        # defaultdict(str): a missing field renders as "" instead of raising.
         rendered = self._interpolate(
             self._template, defaultdict(str, record.__dict__)
         )
 
-        # Auto-add otel* fields present on the record, unless the template
-        # already references one (under any key name).
         if isinstance(rendered, dict):
             for key, value in record.__dict__.items():
                 if (

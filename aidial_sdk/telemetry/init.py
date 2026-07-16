@@ -81,8 +81,7 @@ def init_telemetry(
         except ImportError:
             pass
 
-        # Inject tracing context fields onto every log record:
-        # otelTraceID, otelSpanID, otelTraceSampled
+        # Inject otel* tracing fields onto every log record.
         LoggingInstrumentor().instrument()
 
     if config.logs is not None:
