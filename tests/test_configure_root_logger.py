@@ -4,12 +4,14 @@ import sys
 import pytest
 
 from aidial_sdk import configure_root_logger
-from aidial_sdk.utils.log_config import _CONSOLE_HANDLER_MARKER
 
 
-def _console_handlers(root):
+def _stderr_console_handlers(root):
     return [
-        h for h in root.handlers if getattr(h, _CONSOLE_HANDLER_MARKER, False)
+        h
+        for h in root.handlers
+        if isinstance(h, logging.StreamHandler)
+        and getattr(h, "stream", None) is sys.stderr
     ]
 
 
@@ -24,7 +26,7 @@ def clean_root():
 
 def test_installs_single_console_handler(clean_root):
     configure_root_logger()
-    assert len(_console_handlers(clean_root)) == 1
+    assert len(_stderr_console_handlers(clean_root)) == 1
 
 
 def test_idempotent_and_preserves_other_handlers(clean_root):
@@ -34,7 +36,7 @@ def test_idempotent_and_preserves_other_handlers(clean_root):
     configure_root_logger()
     configure_root_logger()  # repeat must not stack console handlers
 
-    assert len(_console_handlers(clean_root)) == 1
+    assert len(_stderr_console_handlers(clean_root)) == 1
     assert other in clean_root.handlers
 
 
@@ -45,14 +47,5 @@ def test_defers_to_existing_stderr_console_handler(clean_root):
 
     configure_root_logger()
 
-    # We do not add our own console handler; OTEL's stays as the only one.
-    assert _console_handlers(clean_root) == []
-    assert otel_console in clean_root.handlers
-
-
-def test_level_none_leaves_root_level_untouched(clean_root):
-    clean_root.setLevel(logging.WARNING)
-    configure_root_logger()
-    assert clean_root.level == logging.WARNING
-    configure_root_logger(level="DEBUG")
-    assert clean_root.level == logging.DEBUG
+    # We do not add our own; OTEL's stays as the only console handler.
+    assert _stderr_console_handlers(clean_root) == [otel_console]

@@ -39,7 +39,7 @@ def build_formatter() -> logging.Formatter:
     )
 
 
-def configure_root_logger(*, level: str | None = None) -> None:
+def configure_root_logger() -> None:
     """Route all logging through a single console handler on the root logger,
     using the SDK's env-selected format (``DIAL_SDK_LOG_FORMAT=text|json``).
 
@@ -51,11 +51,8 @@ def configure_root_logger(*, level: str | None = None) -> None:
     install — e.g. one OTEL added via ``OTEL_PYTHON_LOG_CORRELATION`` — it defers
     to it and does not add a second one.
 
-    ``level`` sets the root logger's level; when ``None`` the root level is left
-    untouched (defaults to ``WARNING``). This does not silence loggers that set
-    their own level — a record created by e.g. an ``INFO``-level ``app`` logger
-    still reaches the root handler regardless of the root level; the root level
-    only applies to loggers that don't set one of their own.
+    The root logger's level is left untouched (stdlib default ``WARNING``); set
+    per-logger levels yourself for the loggers you care about.
     """
     root = logging.getLogger()
 
@@ -75,9 +72,6 @@ def configure_root_logger(*, level: str | None = None) -> None:
         handler.setFormatter(build_formatter())
         setattr(handler, _MARKER, True)
         root.addHandler(handler)
-
-    if level is not None:
-        root.setLevel(level.upper())
 
     for name in ("aidial_sdk", "uvicorn", "uvicorn.access", "uvicorn.error"):
         child = logging.getLogger(name)

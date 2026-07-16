@@ -11,7 +11,7 @@ single-line JSON), customize it, and include **trace/span IDs** for correlation.
     - [JSON](#json)
     - [Plain text](#plain-text)
   - [Reusing the SDK logger in your app](#reusing-the-sdk-logger-in-your-app)
-    - [The `level` argument](#the-level-argument)
+    - [Log levels](#log-levels)
   - [Trace and span IDs](#trace-and-span-ids)
     - [Enable tracing](#enable-tracing)
     - [Tracing in JSON logs](#tracing-in-json-logs)
@@ -115,8 +115,8 @@ from aidial_sdk.telemetry.types import TelemetryConfig
 
 app = DIALApp(telemetry_config=TelemetryConfig(), ...)
 
-# Install one root handler using the SDK's env-selected format. Call AFTER
-# DIALApp()/telemetry init.
+# Install one root handler using the SDK's env-selected format.
+# Call AFTER DIALApp()/telemetry init.
 configure_root_logger()
 
 # You only declare your own loggers' levels:
@@ -140,24 +140,15 @@ didn't install (e.g. one OTEL added via `OTEL_PYTHON_LOG_CORRELATION`), it
 SDK format doesn't apply to the console, which is one more reason to prefer
 Option A over `OTEL_PYTHON_LOG_CORRELATION`.
 
-### The `level` argument
+### Log levels
 
-`configure_root_logger(level="INFO")` sets the level of the **root** logger — it
-does **not** force every logger to `INFO`. Root's level is only the *fallback*
-for loggers that don't set their own:
-
-- A logger **without** an explicit level (e.g. a fresh `app` logger, or a
-  third-party library) inherits root's level → fires at `INFO`.
-- A logger **with** its own level keeps it. `aidial_sdk` stays at `DIAL_SDK_LOG`
-  (default `WARNING`); a logger you set to `DEBUG` stays `DEBUG` — regardless of
-  the root level.
-
-When `level` is omitted (`None`), the root level is left untouched (stdlib
-default `WARNING`), and each logger's own level applies. This is why the example
-above sets `app`/`bedrock` levels explicitly rather than relying on the root
-level. Note that a logger's own level gates whether a record is *created*; once
-created it always reaches the root handler, so a low root level never suppresses
-an `INFO` record coming from an `INFO`-level `app` logger.
+`configure_root_logger()` does **not** change the root logger's level (stdlib
+default `WARNING`) — it only owns the handler/format. Set levels per logger, as
+in the example above. Avoid bumping the **root** level to `DEBUG`: root's level
+is the fallback for every logger that hasn't set its own, so it would turn on the
+very chatty (and prompt/credential-leaking) `DEBUG` streams of libraries like
+`httpx`, `openai`, and `anthropic`. Raise the level only on the loggers you care
+about (`app`, `bedrock`, …).
 
 ---
 
