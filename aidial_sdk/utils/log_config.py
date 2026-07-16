@@ -1,11 +1,9 @@
 import logging
-import logging.config
 import os
 import sys
 
 from uvicorn.logging import DefaultFormatter
 
-from aidial_sdk._pydantic._compat import BaseModel
 from aidial_sdk.utils.env import env_json_dict
 from aidial_sdk.utils.json_log_formatter import JsonLogFormatter
 
@@ -43,23 +41,6 @@ def build_formatter() -> logging.Formatter:
     return DefaultFormatter(
         fmt=_DIAL_SDK_TEXT_LOG_FORMAT, datefmt=_DATEFMT, use_colors=True
     )
-
-
-def _default_formatter() -> dict:
-    # dictConfig form of build_formatter(), referenced by import path so
-    # LogConfig.model_dump() stays serializable.
-    if _DIAL_SDK_LOG_FORMAT == "json":
-        return {
-            "()": "aidial_sdk.utils.json_log_formatter.JsonLogFormatter",
-            "template": _DIAL_SDK_JSON_LOG_FORMAT,
-            "datefmt": _DATEFMT,
-        }
-    return {
-        "()": "uvicorn.logging.DefaultFormatter",
-        "fmt": _DIAL_SDK_TEXT_LOG_FORMAT,
-        "datefmt": _DATEFMT,
-        "use_colors": True,
-    }
 
 
 def configure_root_logger(*, level: str | None = None) -> None:
@@ -101,38 +82,19 @@ def configure_root_logger(*, level: str | None = None) -> None:
         child.propagate = True
 
 
-class _LogConfig(BaseModel):
-    """Logging configuration to be set for the server"""
-
-    version: int = 1
-    disable_existing_loggers: bool = False
-    formatters: dict = {"default": _default_formatter()}
-    handlers: dict = {
-        "default": {
-            "formatter": "default",
-            "class": "logging.StreamHandler",
-            "stream": "ext://sys.stderr",
-        },
-    }
-    loggers: dict = {
-        "aidial_sdk": {"handlers": ["default"], "level": DIAL_SDK_LOG},
-        "uvicorn": {
-            "handlers": ["default"],
-            "propagate": False,
-        },
-    }
-
-
 def configure_sdk_logger() -> None:
     """Configure the SDK's own loggers. Called once when ``DIALApp`` is imported.
-
-    By default it attaches a single stderr handler using the env-selected format
-    (``build_formatter()`` — text or json per ``DIAL_SDK_LOG_FORMAT``) to the
-    ``aidial_sdk`` and ``uvicorn`` loggers, sets ``aidial_sdk`` to ``DIAL_SDK_LOG``
-    (default ``WARNING``), and stops ``uvicorn`` from propagating to the root
-    logger (so uvicorn lines aren't duplicated by any root handler).
 
     It does **not** touch the root logger or your application's loggers. To give
     your own loggers the same formatting, call ``configure_root_logger()``.
     """
-    logging.config.dictConfig(_LogConfig().model_dump())
+    handler = logging.StreamHandler(sys.stderr)
+    handler.setFormatter(build_formatter())
+
+    aidial_sdk = logging.getLogger("aidial_sdk")
+    aidial_sdk.handlers = [handler]
+    aidial_sdk.setLevel(DIAL_SDK_LOG)
+
+    uvicorn = logging.getLogger("uvicorn")
+    uvicorn.handlers = [handler]
+    uvicorn.propagate = False
