@@ -86,9 +86,11 @@ Avoid raising the *root* level to `DEBUG`: it's the fallback for every logger,
 so it would enable the chatty, credential-leaking `DEBUG` streams of `httpx`,
 `openai`, etc.
 
-If root already has a stderr console handler it didn't install
-(e.g. OTEL's via `OTEL_PYTHON_LOG_CORRELATION`), it defers to that and adds
-nothing — so the SDK format won't apply to the console.
+It **takes over** the console: any existing stderr console handler on root is
+dropped — including the one `logging.basicConfig()` installs via `ANTHROPIC_LOG`
+/ `OPENAI_LOG` — so third-party logs render in the SDK format too.
+The one exception is `OTEL_PYTHON_LOG_CORRELATION`, whose handler it
+defers to instead.
 
 ## Trace and span IDs
 

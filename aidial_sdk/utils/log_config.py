@@ -5,6 +5,7 @@ from typing import Literal
 
 from uvicorn.logging import DefaultFormatter
 
+from aidial_sdk.telemetry.types import OTEL_PYTHON_LOG_CORRELATION
 from aidial_sdk.utils._json_log_formatter import JsonLogFormatter
 from aidial_sdk.utils.env import env_json_dict
 
@@ -61,30 +62,20 @@ def configure_root_logger(config: LogConfig | None = None) -> None:
     """Route all logging through a single console handler on the root logger,
     using the SDK's format, so the application's own loggers get it too. Pass a
     ``LogConfig`` to override the ``DIAL_SDK_LOG*`` env vars.
-
-    Idempotent; call once at startup, after ``DIALApp()``/telemetry init. Sets
-    the ``aidial_sdk`` logger to ``config.level`` but leaves the root and uvicorn
-    levels untouched — set your own loggers' levels yourself. If root already has
-    a stderr console handler this function did not install (e.g. OTEL's via
-    ``OTEL_PYTHON_LOG_CORRELATION``), it defers to it.
     """
+
     config = config or LogConfig()
     root = logging.getLogger()
 
-    _MARKER = "_aidial_sdk_console_handler"
-    root.handlers = [h for h in root.handlers if not getattr(h, _MARKER, False)]
-
-    # Defer to a stderr console handler already on root (e.g. OTEL's) rather
-    # than adding a second one that would duplicate every line.
-    has_console_handler = any(
-        isinstance(h, logging.StreamHandler)
-        and getattr(h, "stream", None) is sys.stderr
-        for h in root.handlers
-    )
-    if not has_console_handler:
+    # OTEL_PYTHON_LOG_CORRELATION installs OTEL's own root console format; defer
+    # to it. Otherwise take over — drop competing stderr handlers (e.g. the
+    # basicConfig one from ANTHROPIC_LOG) and install ours.
+    if not OTEL_PYTHON_LOG_CORRELATION:
+        for h in root.handlers[:]:
+            if isinstance(h, logging.StreamHandler) and h.stream is sys.stderr:
+                root.removeHandler(h)
         handler = logging.StreamHandler(sys.stderr)
         handler.setFormatter(config.formatter)
-        setattr(handler, _MARKER, True)
         root.addHandler(handler)
 
     for name in ("aidial_sdk", "uvicorn", "uvicorn.access", "uvicorn.error"):
@@ -99,6 +90,7 @@ def configure_sdk_logger() -> None:
     """Configure only the SDK's own loggers (``aidial_sdk``, ``uvicorn``), called
     once when ``DIALApp`` is imported. To format your own loggers the same way,
     call ``configure_root_logger()``."""
+
     config = LogConfig()
     handler = logging.StreamHandler(sys.stderr)
     handler.setFormatter(config.formatter)

@@ -40,12 +40,26 @@ def test_idempotent_and_preserves_other_handlers(clean_root):
     assert other in clean_root.handlers
 
 
-def test_defers_to_existing_stderr_console_handler(clean_root):
-    # Stand-in for OTEL's basicConfig console handler on root.
+def test_takes_over_foreign_stderr_console_handler(clean_root):
+    # Stand-in for the basicConfig handler ANTHROPIC_LOG/OPENAI_LOG install.
+    foreign = logging.StreamHandler(sys.stderr)
+    clean_root.addHandler(foreign)
+
+    configure_root_logger()
+
+    # Foreign handler dropped; ours is the only console handler.
+    assert len(_stderr_console_handlers(clean_root)) == 1
+    assert foreign not in clean_root.handlers
+
+
+def test_defers_to_otel_correlation_handler(clean_root, monkeypatch):
+    monkeypatch.setattr(
+        "aidial_sdk.utils.log_config.OTEL_PYTHON_LOG_CORRELATION", True
+    )
     otel_console = logging.StreamHandler(sys.stderr)
     clean_root.addHandler(otel_console)
 
     configure_root_logger()
 
-    # We do not add our own; OTEL's stays as the only console handler.
+    # OTEL owns the console format; we defer and leave its handler alone.
     assert _stderr_console_handlers(clean_root) == [otel_console]
