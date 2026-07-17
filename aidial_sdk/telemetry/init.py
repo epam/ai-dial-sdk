@@ -30,12 +30,10 @@ from opentelemetry.trace import set_tracer_provider
 from prometheus_client import start_http_server
 
 from aidial_sdk.telemetry.types import TelemetryConfig
+from aidial_sdk.utils._deprecations import warn_otel_log_correlation
 
 
-def init_telemetry(
-    app: FastAPI | None,
-    config: TelemetryConfig,
-):
+def init_telemetry(app: FastAPI | None, config: TelemetryConfig):
     resource = Resource.create(
         attributes=(
             {SERVICE_NAME: config.service_name} if config.service_name else None
@@ -81,10 +79,12 @@ def init_telemetry(
         except ImportError:
             pass
 
+        # Inject otel* tracing fields onto every log record. When
+        # OTEL_PYTHON_LOG_CORRELATION=true, instrument() also installs OTel's
+        # own root-logger format (the deprecated path).
         if config.tracing.logging:
-            # Setting the root logger format in order to include
-            # tracing information: span_id, trace_id
-            LoggingInstrumentor().instrument(set_logging_format=True)
+            warn_otel_log_correlation()
+        LoggingInstrumentor().instrument()
 
     if config.logs is not None:
         # Adding a handler to the root logger which exports the logs to OTLP

@@ -1,8 +1,7 @@
-import logging.config
+import logging
 import re
 import warnings
 from collections.abc import Callable, Coroutine
-from logging import Filter, LogRecord
 from typing import Any, Literal, TypeVar
 
 from fastapi import FastAPI, HTTPException, Request
@@ -33,7 +32,7 @@ from aidial_sdk.telemetry.types import TelemetryConfig
 from aidial_sdk.utils._disconnect_middleware import DisconnectMiddleware
 from aidial_sdk.utils._reflection import get_method_implementation
 from aidial_sdk.utils.env import env_float, env_var_list
-from aidial_sdk.utils.log_config import LogConfig
+from aidial_sdk.utils.log_config import configure_sdk_logger
 from aidial_sdk.utils.logging import log_debug, set_log_deployment
 from aidial_sdk.utils.pydantic import model_validate_extra_fields
 from aidial_sdk.utils.streaming import (
@@ -42,7 +41,7 @@ from aidial_sdk.utils.streaming import (
     to_streaming_response,
 )
 
-logging.config.dictConfig(LogConfig().model_dump())
+configure_sdk_logger()
 
 RequestType = TypeVar("RequestType", bound=FromRequestMixin)
 
@@ -57,14 +56,14 @@ def _interpolate_deployment_id(deployment_id: str, path_params: dict) -> str:
     return result
 
 
-class PathFilter(Filter):
+class PathFilter(logging.Filter):
     path: str
 
     def __init__(self, path: str) -> None:
         super().__init__(name="")
         self.path = path
 
-    def filter(self, record: LogRecord):
+    def filter(self, record: logging.LogRecord):
         return not re.search(f"(\\s+){self.path}(\\s+)", record.getMessage())
 
 

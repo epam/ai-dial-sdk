@@ -26,8 +26,7 @@ class LogsConfig(BaseModel):
 class TracingConfig(BaseModel):
     otlp_export: bool = "otlp" in OTEL_TRACES_EXPORTER
 
-    """Configure logging to include tracing context
-    into console log messages"""
+    """Deprecated: let OTel add tracing context to console logs. See docs/logging.md."""
     logging: bool = OTEL_PYTHON_LOG_CORRELATION
 
 
