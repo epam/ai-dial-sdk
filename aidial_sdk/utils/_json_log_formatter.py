@@ -19,13 +19,17 @@ class JsonLogFormatter(logging.Formatter):
         self._template_str = template_str
 
     def _interpolate(self, node: object, fields: dict) -> object:
-        if isinstance(node, str):
-            return node % fields
-        if isinstance(node, dict):
-            return {k: self._interpolate(v, fields) for k, v in node.items()}
-        if isinstance(node, list):
-            return [self._interpolate(v, fields) for v in node]
-        return node
+        match node:
+            case str():
+                return node % fields
+            case dict():
+                return {
+                    k: self._interpolate(v, fields) for k, v in node.items()
+                }
+            case list():
+                return [self._interpolate(v, fields) for v in node]
+            case _:
+                return node
 
     def format(self, record: logging.LogRecord) -> str:
         record.message = record.getMessage()
