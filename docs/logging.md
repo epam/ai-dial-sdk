@@ -76,6 +76,9 @@ for name in ["app", "bedrock"]:
 Now every logger emits through one handler honoring `DIAL_SDK_LOG_FORMAT` — run
 with `DIAL_SDK_LOG_FORMAT=json` and your `app`/`bedrock` logs become JSON too.
 
+To set any of these in code (overriding the `DIAL_SDK_LOG*` env vars), pass a
+`LogConfig` — `configure_root_logger(LogConfig(log_format="json"))`.
+
 `configure_root_logger()` is idempotent and does **not** change the root
 logger's level (stdlib default `WARNING`) — set levels per logger, as above.
 
