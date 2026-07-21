@@ -20,6 +20,7 @@ OTEL_PYTHON_LOG_CORRELATION = (
 
 class LogsConfig(BaseModel):
     otlp_export: bool = "otlp" in OTEL_LOGS_EXPORTER
+    console_export: bool = "console" in OTEL_LOGS_EXPORTER
     level: int = logging.INFO
 
 

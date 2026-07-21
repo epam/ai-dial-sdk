@@ -1,4 +1,5 @@
 import logging
+import sys
 
 from fastapi import FastAPI
 from opentelemetry._logs import set_logger_provider
@@ -18,7 +19,11 @@ from opentelemetry.instrumentation.system_metrics import (
 from opentelemetry.instrumentation.urllib import URLLibInstrumentor
 from opentelemetry.metrics import set_meter_provider
 from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
-from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
+from opentelemetry.sdk._logs.export import (
+    BatchLogRecordProcessor,
+    ConsoleLogRecordExporter,
+    SimpleLogRecordProcessor,
+)
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics._internal.export import (
     PeriodicExportingMetricReader,
@@ -31,6 +36,7 @@ from prometheus_client import start_http_server
 
 from aidial_sdk.telemetry.types import TelemetryConfig
 from aidial_sdk.utils._deprecations import warn_otel_log_correlation
+from aidial_sdk.utils._logging import remove_stream_handlers
 
 
 def init_telemetry(app: FastAPI | None, config: TelemetryConfig):
@@ -87,7 +93,7 @@ def init_telemetry(app: FastAPI | None, config: TelemetryConfig):
         LoggingInstrumentor().instrument()
 
     if config.logs is not None:
-        # Adding a handler to the root logger which exports the logs to OTLP
+        # Adding a handler to the root logger which exports the logs to OTLP or to the console as JSON.
         provider = LoggerProvider(resource=resource)
 
         if config.logs.otlp_export:
@@ -95,10 +101,25 @@ def init_telemetry(app: FastAPI | None, config: TelemetryConfig):
                 BatchLogRecordProcessor(OTLPLogExporter())
             )
 
-        set_logger_provider(provider)
+        root = logging.getLogger()
 
-        handler = LoggingHandler(level=config.logs.level)
-        logging.getLogger().addHandler(handler)
+        if config.logs.console_export:
+            # Remove any competing handlers to avoid duplicate logging
+            remove_stream_handlers(root, sys.stderr)
+            provider.add_log_record_processor(
+                SimpleLogRecordProcessor(
+                    ConsoleLogRecordExporter(
+                        out=sys.stderr,
+                        # Default formatter is multi-line (indent=4); force one
+                        # compact JSON object per line.
+                        formatter=lambda record: record.to_json(indent=None)
+                        + "\n",
+                    )
+                )
+            )
+
+        set_logger_provider(provider)
+        root.addHandler(LoggingHandler(level=config.logs.level))
 
     if config.metrics is not None:
         metric_readers = []

@@ -11,9 +11,9 @@ You pick the **format** (human-readable text or single-line JSON), customize it,
   - [Trace and span IDs](#trace-and-span-ids)
     - [JSON logs](#json-logs)
     - [Text logs](#text-logs)
-      - [Legacy alternative](#legacy-alternative)
+      - [OTel log correlation](#otel-log-correlation)
+  - [OpenTelemetry log export](#opentelemetry-log-export)
   - [Summary](#summary)
-  - [OTLP log export](#otlp-log-export)
 
 ## Environment variables
 
@@ -149,7 +149,7 @@ DIAL_SDK_TEXT_LOG_FORMAT='%(levelprefix)s | %(asctime)s | trace_id=%(otelTraceID
 INFO:     | 2026-07-16 13:10:42 | trace_id=36d9c402... span_id=61f3846d... | hello
 ```
 
-#### Legacy alternative
+#### OTel log correlation
 
 `OTEL_PYTHON_LOG_CORRELATION=true` is OTel's own way to add trace context to text
 logs, with a built-in format overridable via `OTEL_PYTHON_LOG_FORMAT`:
@@ -169,23 +169,33 @@ When `OTEL_PYTHON_LOG_FORMAT` isn't set, the [default](https://github.com/open-t
 2026-07-16 13:11:45,585 INFO [aidial_sdk.foo] [app.py:12] [trace_id=d67e996e... span_id=02136a2b... resource.service.name=unknown_service trace_sampled=True] - hello
 ```
 
-> [!WARNING]
-> Prefer `DIAL_SDK_TEXT_LOG_FORMAT`. `OTEL_PYTHON_LOG_CORRELATION` logs every SDK
-> record twice (unless `configure_root_logger()` is called) and is text-only
-> (ignores `DIAL_SDK_LOG_FORMAT=json`).
+## OpenTelemetry log export
+
+`OTEL_LOGS_EXPORTER` selects the [OTel](https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/)
+log pipeline (comma-separated list; requires the `telemetry` extra **and**
+telemetry to be enabled — `DIALApp(telemetry_config=TelemetryConfig())`):
+
+| Value | Effect |
+| --- | --- |
+| `otlp` | Ships log records to an OTLP collector as structured data (trace context attached automatically). |
+| `console` | Emits each record as a single compact JSON object per line on **stderr**, via OTel's console exporter. |
+
+When `OTEL_LOGS_EXPORTER` contains `console`, records are emitted as structured
+OTel JSON and the `DIAL_SDK_LOG_FORMAT`, `DIAL_SDK_JSON_LOG_FORMAT`, and
+`DIAL_SDK_TEXT_LOG_FORMAT` variables are **ignored**. Values combine, e.g.
+`OTEL_LOGS_EXPORTER=otlp,console`.
+
+Each record is written as one line, e.g.:
+
+```json
+{"body": "Received chat completion request", "severity_number": 9, "severity_text": "INFO", "attributes": {"deployment": "gpt-4o", "code.file.path": "/app/my_app/application.py", "code.function.name": "chat_completion", "code.line.number": 128}, "dropped_attributes": 0, "timestamp": "2026-07-21T15:21:25.644740Z", "observed_timestamp": "2026-07-21T15:21:25.644895Z", "trace_id": "0x5b8aa5a2d2c872e8321cf37308d69df2", "span_id": "0x051581bf3cb55c13", "trace_flags": 1, "resource": {"attributes": {"telemetry.sdk.language": "python", "telemetry.sdk.name": "opentelemetry", "telemetry.sdk.version": "1.39.1", "service.name": "my-dial-app"}, "schema_url": ""}, "event_name": ""}
+```
 
 ## Summary
 
 | Goal | Set |
 | --- | --- |
-| JSON console | `DIAL_SDK_LOG_FORMAT=json` |
-| Customize JSON / text | `DIAL_SDK_JSON_LOG_FORMAT` / `DIAL_SDK_TEXT_LOG_FORMAT` |
-| Trace/span in JSON | enable tracing |
-| Trace/span in text | enable tracing + add `otel*` placeholders to `DIAL_SDK_TEXT_LOG_FORMAT` |
-
-## OTLP log export
-
-`OTEL_LOGS_EXPORTER=otlp` ships log records to an OTLP collector as structured
-data (trace context attached automatically). That pipeline uses no format
-string, so the `*_LOG_FORMAT` variables don't affect it — they only control
-console output.
+| OTel JSON format | `OTEL_LOGS_EXPORTER=console` |
+| OTel text format with trace context | `OTEL_PYTHON_LOG_CORRELATION=true` |
+| Custom JSON format | `DIAL_SDK_LOG_FORMAT=json` + `DIAL_SDK_JSON_LOG_FORMAT` |
+| Custom text format | `DIAL_SDK_TEXT_LOG_FORMAT` |
