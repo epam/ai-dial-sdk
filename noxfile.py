@@ -59,7 +59,7 @@ def test(
     session: nox.Session, pydantic: tuple[str, UsePydanticV2], httpx: str
 ) -> None:
     """Runs tests"""
-    session.run("poetry", "install", external=True)
+    session.run("poetry", "install", "--all-extras", external=True)
     session.install(f"pydantic=={pydantic[0]}", f"httpx=={httpx}")
     session.install(*_PYDANTIC_DEPS[pydantic[0]])
     session.run(
