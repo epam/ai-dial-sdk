@@ -80,46 +80,6 @@ DIAL_SDK_TEXT_LOG_FORMAT='%(levelprefix)s %(name)s: %(message)s'
 DIAL_SDK_JSON_LOG_FORMAT='{"lvl":"%(levelname)s","msg":"%(message)s","where":{"logger":"%(name)s"}}'
 ```
 
-### Reusing the SDK formatter in your app
-
-Importing `aidial_sdk` (via `DIALApp`) runs `configure_sdk_logger()`, which
-formats **only** the SDK's own loggers (`aidial_sdk`, `uvicorn`) — not the root
-logger or yours.
-
-To give your loggers the same env-selected format, call `configure_root_logger()` once at startup, **after** `DIALApp()`/telemetry init:
-
-```python
-import logging
-
-from aidial_sdk import DIALApp, configure_root_logger
-from aidial_sdk.telemetry.types import TelemetryConfig
-
-app = DIALApp(telemetry_config=TelemetryConfig(), ...)
-configure_root_logger()
-
-for name in ["app", "bedrock"]:
-    logging.getLogger(name).setLevel("INFO")
-```
-
-Now every logger emits through one handler honoring `DIAL_SDK_LOG_FORMAT` — run
-with `DIAL_SDK_LOG_FORMAT=json` and your `app`/`bedrock` logs become JSON too.
-
-To set any of these in code (overriding the `DIAL_SDK_LOG*` env vars), pass a
-`LogConfig` — `configure_root_logger(LogConfig(log_format="json"))`.
-
-`configure_root_logger()` is idempotent and does **not** change the root
-logger's level (stdlib default `WARNING`) — set levels per logger, as above.
-
-Avoid raising the *root* level to `DEBUG`: it's the fallback for every logger,
-so it would enable the chatty, credential-leaking `DEBUG` streams of `httpx`,
-`openai`, etc.
-
-It **takes over** the console: any existing stderr console handler on root is
-dropped — including the one `logging.basicConfig()` installs via `ANTHROPIC_LOG`
-/ `OPENAI_LOG` — so third-party logs render in the SDK format too.
-The one exception is `OTEL_PYTHON_LOG_CORRELATION` (§2), whose handler it
-defers to instead.
-
 ### Adding trace and span IDs
 
 Trace/span IDs exist only when tracing is on. Enable it with a `TelemetryConfig`
@@ -210,3 +170,38 @@ Each record is written as one line, e.g.:
 ```json
 {"body": "Received chat completion request", "severity_number": 9, "severity_text": "INFO", "attributes": {"deployment": "gpt-4o", "code.file.path": "/app/my_app/application.py", "code.function.name": "chat_completion", "code.line.number": 128}, "dropped_attributes": 0, "timestamp": "2026-07-21T15:21:25.644740Z", "observed_timestamp": "2026-07-21T15:21:25.644895Z", "trace_id": "0x5b8aa5a2d2c872e8321cf37308d69df2", "span_id": "0x051581bf3cb55c13", "trace_flags": 1, "resource": {"attributes": {"telemetry.sdk.language": "python", "telemetry.sdk.name": "opentelemetry", "telemetry.sdk.version": "1.39.1", "service.name": "my-dial-app"}, "schema_url": ""}, "event_name": ""}
 ```
+
+## Extending the active mode to your own loggers
+
+Whichever way you picked configures **only** the SDK's own loggers
+(`aidial_sdk`, `uvicorn`).
+
+To make your application's loggers render the same way — no matter which of the
+three is active — call `configure_root_logger()` once at startup, **after**
+`DIALApp()`:
+
+```python
+import logging
+
+from aidial_sdk import DIALApp, configure_root_logger
+from aidial_sdk.telemetry.types import TelemetryConfig
+
+app = DIALApp(telemetry_config=TelemetryConfig())
+configure_root_logger()
+
+for name in ("my-app-logger", "third-party-package"):
+    logging.getLogger(name).setLevel("INFO")
+```
+
+It routes every logger through a single console handler on the **root** logger,
+adapting to the active mode:
+
+- **§1** — installs that handler with the SDK format, so all loggers honor
+  `DIAL_SDK_LOG_FORMAT` too. It **takes over** the console: any existing stderr
+  handler on root is dropped — including those installed by third-party SDKs
+  such as Anthropic's and OpenAI's — so their logs render in the SDK format too.
+- **§2 / §3** — defers to the handler OTel already installed on root, so your
+  loggers flow through the correlation/export pipeline unchanged.
+
+`configure_root_logger()` is idempotent and does **not** change the root
+logger's level (stdlib default `WARNING`) — set levels per logger, as above.
