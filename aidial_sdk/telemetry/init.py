@@ -84,7 +84,12 @@ def init_telemetry(app: FastAPI | None, config: TelemetryConfig):
         except ImportError:
             pass
 
-        LoggingInstrumentor().instrument()
+        set_logging_format = config.tracing.logging
+        if set_logging_format:
+            # Remove any competing handlers to avoid duplicate logging
+            remove_stream_handlers(logging.getLogger(), sys.stderr)
+
+        LoggingInstrumentor().instrument(set_logging_format=set_logging_format)
 
     if config.logs is not None:
         # Adding a handler to the root logger which exports the logs to OTLP or to the console as JSON.

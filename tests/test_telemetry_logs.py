@@ -1,5 +1,6 @@
 import json
 import logging
+import os
 import subprocess
 import sys
 
@@ -59,3 +60,34 @@ def test_console_export_emits_single_line_json():
     lines = [ln for ln in err.splitlines() if ln.strip()]
     assert len(lines) == 1
     assert json.loads(lines[0])["body"] == "hello"
+
+
+# Run in a subprocess so `import openai` installs its own root stderr handler at
+# import time (OPENAI_LOG=debug) — exactly as in a real app — and so the tracing
+# instrumentors don't leak into the test process's global state.
+def test_otel_correlation_takes_over_third_party_handler():
+    script = (
+        "import logging\n"
+        "import openai  # OPENAI_LOG=debug: grabs root stderr handler on import\n"
+        "from aidial_sdk.telemetry.init import init_telemetry\n"
+        "from aidial_sdk.telemetry.types import TelemetryConfig, TracingConfig\n"
+        "init_telemetry(None, TelemetryConfig("
+        "tracing=TracingConfig(logging=True), logs=None, metrics=None))\n"
+        "logging.getLogger('app').warning('hello')\n"
+    )
+    err = subprocess.run(  # noqa: S603
+        [sys.executable, "-c", script],
+        capture_output=True,
+        text=True,
+        # No OTEL_PYTHON_LOG_CORRELATION here: TracingConfig(logging=True) alone
+        # must drive set_logging_format, proving the config field is wired.
+        env={
+            **os.environ,
+            "OPENAI_LOG": "debug",
+            "OTEL_PYTHON_LOG_FORMAT": "OTELFMT %(levelname)s trace=%(otelTraceID)s %(message)s",
+        },
+    ).stderr
+
+    # OTel's correlation format wins; OpenAI's "[... - app:NN - ...]" format is gone.
+    assert "OTELFMT WARNING trace=0 hello" in err
+    assert "- app:" not in err
