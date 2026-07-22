@@ -35,7 +35,6 @@ from opentelemetry.trace import set_tracer_provider
 from prometheus_client import start_http_server
 
 from aidial_sdk.telemetry.types import TelemetryConfig
-from aidial_sdk.utils._deprecations import warn_otel_log_correlation
 from aidial_sdk.utils._logging import remove_stream_handlers
 
 
@@ -85,11 +84,6 @@ def init_telemetry(app: FastAPI | None, config: TelemetryConfig):
         except ImportError:
             pass
 
-        # Inject otel* tracing fields onto every log record. When
-        # OTEL_PYTHON_LOG_CORRELATION=true, instrument() also installs OTel's
-        # own root-logger format (the deprecated path).
-        if config.tracing.logging:
-            warn_otel_log_correlation()
         LoggingInstrumentor().instrument()
 
     if config.logs is not None:
