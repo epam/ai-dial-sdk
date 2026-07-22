@@ -47,7 +47,7 @@ aiointercept = "^0.1.7"
 requests = "^2.33"
 responses = "^0.25.3"
 httpx2 = "^2.7.0"         # required for Starlette.TestClient
-openai = "^1.0.0"         # third-party logger for log-takeover tests
+openai = "^2.46.0"        # third-party logger for log-takeover tests
 
 [tool.poetry.group.lint.dependencies]
 pyright = "1.1.385"
