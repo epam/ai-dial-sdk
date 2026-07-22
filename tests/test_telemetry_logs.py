@@ -62,6 +62,29 @@ def test_console_export_emits_single_line_json():
     assert json.loads(lines[0])["body"] == "hello"
 
 
+# A per-logger DEBUG level set by the app must reach the console exporter — the
+# OTel handler must not impose its own level floor over the app's choice.
+def test_console_export_honors_per_logger_debug_level():
+    script = (
+        "import logging\n"
+        "from aidial_sdk.telemetry.init import init_telemetry\n"
+        "from aidial_sdk.telemetry.types import LogsConfig, TelemetryConfig\n"
+        "init_telemetry(None, TelemetryConfig("
+        "logs=LogsConfig(otlp_export=False, console_export=True),"
+        "tracing=None, metrics=None))\n"
+        "log = logging.getLogger('app')\n"
+        "log.setLevel(logging.DEBUG)\n"
+        "log.debug('hello-debug')\n"
+    )
+    err = subprocess.run(  # noqa: S603
+        [sys.executable, "-c", script], capture_output=True, text=True
+    ).stderr
+
+    lines = [ln for ln in err.splitlines() if ln.strip()]
+    assert len(lines) == 1
+    assert json.loads(lines[0])["body"] == "hello-debug"
+
+
 # Run in a subprocess so `import openai` installs its own root stderr handler at
 # import time (OPENAI_LOG=debug) — exactly as in a real app — and so the tracing
 # instrumentors don't leak into the test process's global state.

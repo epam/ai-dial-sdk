@@ -118,7 +118,7 @@ def init_telemetry(app: FastAPI | None, config: TelemetryConfig):
             )
 
         set_logger_provider(provider)
-        root.addHandler(LoggingHandler(level=config.logs.level))
+        root.addHandler(LoggingHandler())
 
     if config.metrics is not None:
         metric_readers = []

@@ -21,7 +21,10 @@ OTEL_PYTHON_LOG_CORRELATION = (
 class LogsConfig(BaseModel):
     otlp_export: bool = "otlp" in OTEL_LOGS_EXPORTER
     console_export: bool = "console" in OTEL_LOGS_EXPORTER
+
     level: int = logging.INFO
+    """Deprecated and ignored: the log handler no longer imposes a level floor;
+    set per-logger levels instead. See docs/logging.md."""
 
 
 class TracingConfig(BaseModel):
