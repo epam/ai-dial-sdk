@@ -5,8 +5,12 @@ from typing import Literal
 
 from uvicorn.logging import DefaultFormatter
 
-from aidial_sdk.telemetry.types import OTEL_PYTHON_LOG_CORRELATION
+from aidial_sdk.telemetry.types import (
+    OTEL_LOGS_EXPORTER,
+    OTEL_PYTHON_LOG_CORRELATION,
+)
 from aidial_sdk.utils._json_log_formatter import JsonLogFormatter
+from aidial_sdk.utils._logging import remove_stream_handlers
 from aidial_sdk.utils.env import env_json_dict
 
 _DATEFMT = "%Y-%m-%d %H:%M:%S"
@@ -58,6 +62,10 @@ class LogConfig:
             )
 
 
+def _otel_installed_root_logger() -> bool:
+    return OTEL_PYTHON_LOG_CORRELATION or "console" in OTEL_LOGS_EXPORTER
+
+
 def configure_root_logger(config: LogConfig | None = None) -> None:
     """Route all logging through a single console handler on the root logger,
     using the SDK's format, so the application's own loggers get it too. Pass a
@@ -67,13 +75,11 @@ def configure_root_logger(config: LogConfig | None = None) -> None:
     config = config or LogConfig()
     root = logging.getLogger()
 
-    # OTEL_PYTHON_LOG_CORRELATION installs OTEL's own root console format; defer
-    # to it. Otherwise take over — drop competing stderr handlers (e.g. the
-    # basicConfig one from ANTHROPIC_LOG) and install ours.
-    if not OTEL_PYTHON_LOG_CORRELATION:
-        for h in root.handlers[:]:
-            if isinstance(h, logging.StreamHandler) and h.stream is sys.stderr:
-                root.removeHandler(h)
+    # Defer the root console handler to OTel when it owns it;
+    # otherwise, install our own and drop competing stderr handlers
+    if not _otel_installed_root_logger():
+        # Remove any competing handlers to avoid duplicate logging
+        remove_stream_handlers(root, sys.stderr)
         handler = logging.StreamHandler(sys.stderr)
         handler.setFormatter(config.formatter)
         root.addHandler(handler)
@@ -92,13 +98,21 @@ def configure_sdk_logger() -> None:
     call ``configure_root_logger()``."""
 
     config = LogConfig()
-    handler = logging.StreamHandler(sys.stderr)
-    handler.setFormatter(config.formatter)
-
     aidial_sdk = logging.getLogger("aidial_sdk")
-    aidial_sdk.handlers = [handler]
-    aidial_sdk.setLevel(config.level)
-
     uvicorn = logging.getLogger("uvicorn")
-    uvicorn.handlers = [handler]
-    uvicorn.propagate = False
+
+    if _otel_installed_root_logger():
+        # the root logger is already installed;
+        # route the SDK loggers there
+        # instead of installing a competing text handler.
+        aidial_sdk.handlers = []
+        uvicorn.handlers = []
+        uvicorn.propagate = True
+    else:
+        handler = logging.StreamHandler(sys.stderr)
+        handler.setFormatter(config.formatter)
+        aidial_sdk.handlers = [handler]
+        uvicorn.handlers = [handler]
+        uvicorn.propagate = False
+
+    aidial_sdk.setLevel(config.level)

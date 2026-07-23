@@ -1,4 +1,5 @@
 import logging
+import sys
 
 from fastapi import FastAPI
 from opentelemetry._logs import set_logger_provider
@@ -18,7 +19,11 @@ from opentelemetry.instrumentation.system_metrics import (
 from opentelemetry.instrumentation.urllib import URLLibInstrumentor
 from opentelemetry.metrics import set_meter_provider
 from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
-from opentelemetry.sdk._logs.export import BatchLogRecordProcessor
+from opentelemetry.sdk._logs.export import (
+    BatchLogRecordProcessor,
+    ConsoleLogRecordExporter,
+    SimpleLogRecordProcessor,
+)
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics._internal.export import (
     PeriodicExportingMetricReader,
@@ -30,7 +35,7 @@ from opentelemetry.trace import set_tracer_provider
 from prometheus_client import start_http_server
 
 from aidial_sdk.telemetry.types import TelemetryConfig
-from aidial_sdk.utils._deprecations import warn_otel_log_correlation
+from aidial_sdk.utils._logging import remove_stream_handlers
 
 
 def init_telemetry(app: FastAPI | None, config: TelemetryConfig):
@@ -79,15 +84,15 @@ def init_telemetry(app: FastAPI | None, config: TelemetryConfig):
         except ImportError:
             pass
 
-        # Inject otel* tracing fields onto every log record. When
-        # OTEL_PYTHON_LOG_CORRELATION=true, instrument() also installs OTel's
-        # own root-logger format (the deprecated path).
-        if config.tracing.logging:
-            warn_otel_log_correlation()
-        LoggingInstrumentor().instrument()
+        set_logging_format = config.tracing.logging
+        if set_logging_format:
+            # Remove any competing handlers to avoid duplicate logging
+            remove_stream_handlers(logging.getLogger(), sys.stderr)
+
+        LoggingInstrumentor().instrument(set_logging_format=set_logging_format)
 
     if config.logs is not None:
-        # Adding a handler to the root logger which exports the logs to OTLP
+        # Adding a handler to the root logger which exports the logs to OTLP or to the console as JSON.
         provider = LoggerProvider(resource=resource)
 
         if config.logs.otlp_export:
@@ -95,10 +100,25 @@ def init_telemetry(app: FastAPI | None, config: TelemetryConfig):
                 BatchLogRecordProcessor(OTLPLogExporter())
             )
 
-        set_logger_provider(provider)
+        root = logging.getLogger()
 
-        handler = LoggingHandler(level=config.logs.level)
-        logging.getLogger().addHandler(handler)
+        if config.logs.console_export:
+            # Remove any competing handlers to avoid duplicate logging
+            remove_stream_handlers(root, sys.stderr)
+            provider.add_log_record_processor(
+                SimpleLogRecordProcessor(
+                    ConsoleLogRecordExporter(
+                        out=sys.stderr,
+                        # Default formatter is multi-line (indent=4); force one
+                        # compact JSON object per line.
+                        formatter=lambda record: record.to_json(indent=None)
+                        + "\n",
+                    )
+                )
+            )
+
+        set_logger_provider(provider)
+        root.addHandler(LoggingHandler())
 
     if config.metrics is not None:
         metric_readers = []

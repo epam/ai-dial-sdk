@@ -2,6 +2,7 @@ import logging
 import sys
 
 import pytest
+from opentelemetry.instrumentation.logging import LoggingInstrumentor
 
 from aidial_sdk import configure_root_logger
 
@@ -63,3 +64,28 @@ def test_defers_to_otel_correlation_handler(clean_root, monkeypatch):
 
     # OTEL owns the console format; we defer and leave its handler alone.
     assert _stderr_console_handlers(clean_root) == [otel_console]
+
+
+def test_honors_otel_python_log_format(clean_root, monkeypatch, capsys):
+    monkeypatch.setattr(
+        "aidial_sdk.utils.log_config.OTEL_PYTHON_LOG_CORRELATION", True
+    )
+    monkeypatch.setenv("OTEL_PYTHON_LOG_CORRELATION", "true")
+    monkeypatch.setenv(
+        "OTEL_PYTHON_LOG_FORMAT",
+        "trace=%(otelTraceID)s | %(levelname)s | %(message)s",
+    )
+
+    # OTel installs the root console handler (basicConfig) in its format;
+    # basicConfig only does so when root has no handlers, so drop pytest's.
+    clean_root.handlers = []
+    LoggingInstrumentor().instrument()
+    try:
+        configure_root_logger()  # defers, leaving OTel's handler in place
+
+        logging.getLogger("some.app.logger").warning("hello")
+    finally:
+        LoggingInstrumentor().uninstrument()
+
+    # No active span, so otelTraceID is "0"; line matches OTEL_PYTHON_LOG_FORMAT.
+    assert capsys.readouterr().err.strip() == "trace=0 | WARNING | hello"

@@ -1,21 +1,51 @@
 
 # Logging
 
-The SDK logs to the console (stderr) through stdlib `logging`, configured from environment variables.
-You pick the **format** (human-readable text or single-line JSON), customize it, and optionally include **trace/span IDs**.
+The SDK logs to the console (stderr) through stdlib `logging`, configured from
+environment variables. There are **three disjoint ways** to render records —
+pick exactly one with the decision tree below, then jump to its section for
+defaults and examples.
 
-- [Logging](#logging)
-  - [Environment variables](#environment-variables)
-  - [Log format](#log-format)
-  - [Reusing the SDK logger in your app](#reusing-the-sdk-logger-in-your-app)
-  - [Trace and span IDs](#trace-and-span-ids)
-    - [JSON logs](#json-logs)
-    - [Text logs](#text-logs)
-      - [Legacy alternative](#legacy-alternative)
-  - [Summary](#summary)
-  - [OTLP log export](#otlp-log-export)
+## Which one do I pick?
 
-## Environment variables
+```
+Do you need OTel-native structured JSON
+(rich attributes + resource + trace context, ready for a log pipeline)?
+│
+├─ YES ─────────────────────────────► OTEL_LOGS_EXPORTER=console      → §3
+│                                      ignores every DIAL_SDK_LOG_FORMAT var
+│
+└─ NO ─► Want plain text with trace_id/span_id injected automatically?
+         │
+         ├─ YES ─────────────────────► OTEL_PYTHON_LOG_CORRELATION=true → §2
+         │
+         └─ NO ─► You control the format (the default):                 → §1
+                  DIAL_SDK_LOG_FORMAT=text   colored, human-readable
+                  DIAL_SDK_LOG_FORMAT=json   your own JSON shape
+```
+
+Required var in **bold**, optional (customization) vars in plain:
+
+| You want | Set | Section |
+| --- | --- | --- |
+| Custom **text** format (default) | **`DIAL_SDK_LOG_FORMAT=text`** · `DIAL_SDK_TEXT_LOG_FORMAT` · `DIAL_SDK_LOG` | [§1](#1-dial-sdk-formatter) |
+| Custom **JSON** format | **`DIAL_SDK_LOG_FORMAT=json`** · `DIAL_SDK_JSON_LOG_FORMAT` · `DIAL_SDK_LOG` | [§1](#1-dial-sdk-formatter) |
+| Plain text **+ trace context** injected automatically | **`OTEL_PYTHON_LOG_CORRELATION=true`** · `OTEL_PYTHON_LOG_FORMAT` | [§2](#2-otel-log-correlation) |
+| **OTel-native structured JSON** | **`OTEL_LOGS_EXPORTER=console`** | [§3](#3-otel-log-export) |
+
+**Prerequisite:** §2 and §3 require telemetry — the `telemetry` extra
+(`aidial-sdk[telemetry]`) **and** `DIALApp(telemetry_config=TelemetryConfig())`.
+§1 works with or without it. The three ways are mutually exclusive: enabling §3
+makes the SDK ignore §1's format vars; §2 replaces §1's text formatter with
+OTel's.
+
+Level is orthogonal to all three — set it with `DIAL_SDK_LOG` (default
+`WARNING`).
+
+## 1. DIAL SDK formatter
+
+The default. The SDK renders its own records; you choose text or JSON and
+customize the template. No telemetry required.
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
@@ -23,8 +53,6 @@ You pick the **format** (human-readable text or single-line JSON), customize it,
 | `DIAL_SDK_LOG_FORMAT` | `text` | `text` (colored, human-readable) or `json` (one line per record). |
 | `DIAL_SDK_TEXT_LOG_FORMAT` | see below | `%`-style format string used when format is `text`. |
 | `DIAL_SDK_JSON_LOG_FORMAT` | see below | JSON template used when format is `json`. |
-
-## Log format
 
 `text` (default) renders through uvicorn's `DefaultFormatter`, so
 `%(levelprefix)s` gives the colored, aligned level. Default:
@@ -52,50 +80,10 @@ DIAL_SDK_TEXT_LOG_FORMAT='%(levelprefix)s %(name)s: %(message)s'
 DIAL_SDK_JSON_LOG_FORMAT='{"lvl":"%(levelname)s","msg":"%(message)s","where":{"logger":"%(name)s"}}'
 ```
 
-## Reusing the SDK logger in your app
+### Adding trace and span IDs
 
-Importing `aidial_sdk` (via `DIALApp`) runs `configure_sdk_logger()`, which
-formats **only** the SDK's own loggers (`aidial_sdk`, `uvicorn`) — not the root
-logger or yours.
-
-To give your loggers the same env-selected format, call `configure_root_logger()` once at startup, **after** `DIALApp()`/telemetry init:
-
-```python
-import logging
-
-from aidial_sdk import DIALApp, configure_root_logger
-from aidial_sdk.telemetry.types import TelemetryConfig
-
-app = DIALApp(telemetry_config=TelemetryConfig(), ...)
-configure_root_logger()
-
-for name in ["app", "bedrock"]:
-    logging.getLogger(name).setLevel("INFO")
-```
-
-Now every logger emits through one handler honoring `DIAL_SDK_LOG_FORMAT` — run
-with `DIAL_SDK_LOG_FORMAT=json` and your `app`/`bedrock` logs become JSON too.
-
-To set any of these in code (overriding the `DIAL_SDK_LOG*` env vars), pass a
-`LogConfig` — `configure_root_logger(LogConfig(log_format="json"))`.
-
-`configure_root_logger()` is idempotent and does **not** change the root
-logger's level (stdlib default `WARNING`) — set levels per logger, as above.
-
-Avoid raising the *root* level to `DEBUG`: it's the fallback for every logger,
-so it would enable the chatty, credential-leaking `DEBUG` streams of `httpx`,
-`openai`, etc.
-
-It **takes over** the console: any existing stderr console handler on root is
-dropped — including the one `logging.basicConfig()` installs via `ANTHROPIC_LOG`
-/ `OPENAI_LOG` — so third-party logs render in the SDK format too.
-The one exception is `OTEL_PYTHON_LOG_CORRELATION`, whose handler it
-defers to instead.
-
-## Trace and span IDs
-
-Trace/span IDs exist only when tracing is on.
-Enable it with a `TelemetryConfig` **and** the OTLP exporter:
+Trace/span IDs exist only when tracing is on. Enable it with a `TelemetryConfig`
+**and** the OTLP trace exporter:
 
 ```python
 app = DIALApp(telemetry_config=TelemetryConfig(), ...)  # requires aidial-sdk[telemetry]
@@ -115,13 +103,7 @@ onto **every** record (populated while a request span is active):
 | `%(otelTraceSampled)s` | `True` | `False` |
 | `%(otelServiceName)s` | your `service_name` | *always set* (`unknown_service` if unconfigured) |
 
-### JSON logs
-
-The JSON formatter auto-adds every `otel*` field present on the record, so there's no need to amend the format:
-
-```sh
-DIAL_SDK_LOG_FORMAT=json
-```
+**JSON** auto-adds every `otel*` field present on the record — nothing to amend:
 
 ```json
 {"level": "INFO", "time": "2026-07-16 13:10:41", "logger": "aidial_sdk", "process": "13935", "message": "hello", "otelTraceID": "4b45f013470528cf753a7e640da7ca1e", "otelSpanID": "ffcc9d300d9ab692", "otelTraceSampled": true, "otelServiceName": "my-service"}
@@ -137,11 +119,9 @@ DIAL_SDK_JSON_LOG_FORMAT='{"level":"%(levelname)s","message":"%(message)s","trac
 {"level": "INFO", "message": "hello", "trace_id": "4b45f013470528cf753a7e640da7ca1e", "otelSpanID": "ffcc9d300d9ab692", "otelTraceSampled": true, "otelServiceName": "my-service"}
 ```
 
-### Text logs
-
-The text formatter has no auto-add and no missing-field fallback — add the
-placeholders yourself, and only when tracing is guaranteed on (otherwise it
-raises `KeyError` and drops the line):
+**Text** has no auto-add and no missing-field fallback — add the placeholders
+yourself, and only when tracing is guaranteed on (otherwise it raises
+`KeyError` and drops the line):
 
 ```sh
 DIAL_SDK_TEXT_LOG_FORMAT='%(levelprefix)s | %(asctime)s | trace_id=%(otelTraceID)s span_id=%(otelSpanID)s | %(message)s'
@@ -149,10 +129,11 @@ DIAL_SDK_TEXT_LOG_FORMAT='%(levelprefix)s | %(asctime)s | trace_id=%(otelTraceID
 INFO:     | 2026-07-16 13:10:42 | trace_id=36d9c402... span_id=61f3846d... | hello
 ```
 
-#### Legacy alternative
+## 2. OTel log correlation
 
-`OTEL_PYTHON_LOG_CORRELATION=true` is OTel's own way to add trace context to text
-logs, with a built-in format overridable via `OTEL_PYTHON_LOG_FORMAT`:
+`OTEL_PYTHON_LOG_CORRELATION=true` is OTel's own way to add trace context to
+**text** logs, with a built-in format overridable via `OTEL_PYTHON_LOG_FORMAT`.
+Requires telemetry. Its handler takes precedence over §1's text formatter.
 
 ```sh
 OTEL_PYTHON_LOG_CORRELATION=true
@@ -169,23 +150,58 @@ When `OTEL_PYTHON_LOG_FORMAT` isn't set, the [default](https://github.com/open-t
 2026-07-16 13:11:45,585 INFO [aidial_sdk.foo] [app.py:12] [trace_id=d67e996e... span_id=02136a2b... resource.service.name=unknown_service trace_sampled=True] - hello
 ```
 
-> [!WARNING]
-> Prefer `DIAL_SDK_TEXT_LOG_FORMAT`. `OTEL_PYTHON_LOG_CORRELATION` logs every SDK
-> record twice (unless `configure_root_logger()` is called) and is text-only
-> (ignores `DIAL_SDK_LOG_FORMAT=json`).
+## 3. OTel log export
 
-## Summary
+`OTEL_LOGS_EXPORTER` selects the [OTel](https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/)
+log pipeline (comma-separated list). Requires telemetry.
 
-| Goal | Set |
+| Value | Effect |
 | --- | --- |
-| JSON console | `DIAL_SDK_LOG_FORMAT=json` |
-| Customize JSON / text | `DIAL_SDK_JSON_LOG_FORMAT` / `DIAL_SDK_TEXT_LOG_FORMAT` |
-| Trace/span in JSON | enable tracing |
-| Trace/span in text | enable tracing + add `otel*` placeholders to `DIAL_SDK_TEXT_LOG_FORMAT` |
+| `otlp` | Ships log records to an OTLP collector as structured data (trace context attached automatically). |
+| `console` | Emits each record as a single compact JSON object per line on **stderr**, via OTel's console exporter. |
 
-## OTLP log export
+Values combine, e.g. `OTEL_LOGS_EXPORTER=otlp,console`. When the list contains
+`console`, records are emitted as structured OTel JSON and the
+`DIAL_SDK_LOG_FORMAT`, `DIAL_SDK_JSON_LOG_FORMAT`, and `DIAL_SDK_TEXT_LOG_FORMAT`
+variables (§1) are **ignored**.
 
-`OTEL_LOGS_EXPORTER=otlp` ships log records to an OTLP collector as structured
-data (trace context attached automatically). That pipeline uses no format
-string, so the `*_LOG_FORMAT` variables don't affect it — they only control
-console output.
+Each record is written as one line, e.g.:
+
+```json
+{"body": "Received chat completion request", "severity_number": 9, "severity_text": "INFO", "attributes": {"deployment": "gpt-4o", "code.file.path": "/app/my_app/application.py", "code.function.name": "chat_completion", "code.line.number": 128}, "dropped_attributes": 0, "timestamp": "2026-07-21T15:21:25.644740Z", "observed_timestamp": "2026-07-21T15:21:25.644895Z", "trace_id": "0x5b8aa5a2d2c872e8321cf37308d69df2", "span_id": "0x051581bf3cb55c13", "trace_flags": 1, "resource": {"attributes": {"telemetry.sdk.language": "python", "telemetry.sdk.name": "opentelemetry", "telemetry.sdk.version": "1.39.1", "service.name": "my-dial-app"}, "schema_url": ""}, "event_name": ""}
+```
+
+## Extending the active mode to your own loggers
+
+Whichever way you picked configures **only** the SDK's own loggers
+(`aidial_sdk`, `uvicorn`).
+
+To make your application's loggers render the same way — no matter which of the
+three is active — call `configure_root_logger()` once at startup, **after**
+`DIALApp()`:
+
+```python
+import logging
+
+from aidial_sdk import DIALApp, configure_root_logger
+from aidial_sdk.telemetry.types import TelemetryConfig
+
+app = DIALApp(telemetry_config=TelemetryConfig())
+configure_root_logger()
+
+for name in ("my-app-logger", "third-party-package"):
+    logging.getLogger(name).setLevel("INFO")
+```
+
+It routes every logger through a single console handler on the **root** logger,
+adapting to the active mode:
+
+- **§1** — installs that handler with the SDK format, so all loggers honor
+  `DIAL_SDK_LOG_FORMAT` too. It **takes over** the console: any existing stderr
+  handler on root is dropped — including those installed by third-party SDKs
+  such as Anthropic's and OpenAI's — so their logs render in the SDK format too.
+- **§2 / §3** — defers to the handler OTel already installed on root, so your
+  loggers flow through the correlation/export pipeline unchanged.
+
+`configure_root_logger()` is idempotent and does **not** change the root
+logger's level (stdlib default `WARNING`) — set levels per logger, as above.
