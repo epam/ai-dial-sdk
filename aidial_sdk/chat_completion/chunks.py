@@ -374,6 +374,11 @@ class Attachment(BaseModel):
 
 class PromptTokensDetails(TypedDict, total=False):
     cached_tokens: int
+    cache_write_tokens: int
+
+
+class CompletionTokensDetails(TypedDict, total=False):
+    reasoning_tokens: int
 
 
 class AttachmentChunk(Attachment, BaseChunk):
@@ -445,16 +450,19 @@ class UsageChunk(BaseChunk):
     prompt_tokens: int
     completion_tokens: int
     prompt_tokens_details: PromptTokensDetails | None
+    completion_tokens_details: CompletionTokensDetails | None
 
     def __init__(
         self,
         prompt_tokens: int,
         completion_tokens: int,
         prompt_tokens_details: PromptTokensDetails | None,
+        completion_tokens_details: CompletionTokensDetails | None,
     ):
         self.prompt_tokens = prompt_tokens
         self.completion_tokens = completion_tokens
         self.prompt_tokens_details = prompt_tokens_details
+        self.completion_tokens_details = completion_tokens_details
 
     def to_dict(self):
         return {
@@ -465,6 +473,13 @@ class UsageChunk(BaseChunk):
                 **(
                     {"prompt_tokens_details": self.prompt_tokens_details}
                     if self.prompt_tokens_details
+                    else {}
+                ),
+                **(
+                    {
+                        "completion_tokens_details": self.completion_tokens_details
+                    }
+                    if self.completion_tokens_details
                     else {}
                 ),
             }
