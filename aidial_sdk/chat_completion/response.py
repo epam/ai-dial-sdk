@@ -13,6 +13,7 @@ from aidial_sdk.chat_completion.chunks import (
     ArbitraryChunk,
     BaseChunk,
     BaseChunkWithDefaults,
+    CompletionTokensDetails,
     DefaultChunk,
     DiscardedMessagesChunk,
     EndChoiceChunk,
@@ -217,6 +218,7 @@ class Response:
         completion_tokens: int = 0,
         *,
         prompt_tokens_details: PromptTokensDetails | None = None,
+        completion_tokens_details: CompletionTokensDetails | None = None,
     ):
         self._generation_started = True
 
@@ -229,7 +231,12 @@ class Response:
 
         self._usage_generated = True
         self._queue.put_nowait(
-            UsageChunk(prompt_tokens, completion_tokens, prompt_tokens_details)
+            UsageChunk(
+                prompt_tokens,
+                completion_tokens,
+                prompt_tokens_details,
+                completion_tokens_details,
+            )
         )
 
     async def aflush(self):
