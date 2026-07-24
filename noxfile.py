@@ -1,12 +1,8 @@
-import os
-
 from enum import Enum
 
 import nox
 
 nox.options.reuse_existing_virtualenvs = True
-if os.environ.get("CI"):
-    nox.options.default_venv_backend = "none"
 
 SRC = ["aidial_sdk", "tests", "noxfile.py", "examples"]
 
