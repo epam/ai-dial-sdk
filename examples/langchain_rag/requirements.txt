@@ -9,4 +9,4 @@ httpx==0.28.1
 beautifulsoup4==4.14.3
 chromadb==1.5.8
 uvicorn==0.44.0
-pypdf==6.14.1
+pypdf==6.14.2
