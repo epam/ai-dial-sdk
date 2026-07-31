@@ -30,10 +30,7 @@ format: install
 	$(POETRY) run nox -s format
 
 test: install
-	$(POETRY) run -- nox -s test test_telemetry $(if $(PYTHON),--python=$(PYTHON),) -- $(ARGS)
-
-test_telemetry: install
-	$(POETRY) run -- nox -s test_telemetry $(if $(PYTHON),--python=$(PYTHON),) -- $(ARGS)
+	$(POETRY) run -- nox -s test $(if $(PYTHON),--python=$(PYTHON),) -- $(ARGS)
 
 test_fast: install
 	$(POETRY) run -- nox -s test $(if $(PYTHON),--python=$(PYTHON),) -- -m 'not slow' $(ARGS)
@@ -54,8 +51,7 @@ help:
 	@echo 'format                       - run code formatters'
 	@echo 'lint                         - run linters'
 	@echo '-- TESTS --'
-	@echo 'test                         - run unit tests (incl. the telemetry matrix)'
-	@echo 'test_telemetry               - run telemetry/logging tests over the OTEL version matrix'
+	@echo 'test                         - run unit tests'
 	@echo 'test_fast                    - run unit tests without slow tests'
 	@echo 'test PYTHON=<python_version> - run unit tests with the specific python version'
 	@echo 'benchmark                    - run benchmarks'

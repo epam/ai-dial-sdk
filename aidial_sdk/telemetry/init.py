@@ -18,7 +18,7 @@ from opentelemetry.instrumentation.system_metrics import (
 )
 from opentelemetry.instrumentation.urllib import URLLibInstrumentor
 from opentelemetry.metrics import set_meter_provider
-from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+from opentelemetry.sdk._logs import LoggerProvider
 from opentelemetry.sdk._logs.export import (
     BatchLogRecordProcessor,
     ConsoleLogRecordExporter,
@@ -89,7 +89,16 @@ def init_telemetry(app: FastAPI | None, config: TelemetryConfig):
             # Remove any competing handlers to avoid duplicate logging
             remove_stream_handlers(logging.getLogger(), sys.stderr)
 
-        LoggingInstrumentor().instrument(set_logging_format=set_logging_format)
+        LoggingInstrumentor().instrument(
+            set_logging_format=set_logging_format,
+            # Add the otel* fields to every log record even when the logging
+            # format isn't taken over, so that the SDK's own formatters
+            # could report the trace context.
+            inject_trace_context=True,
+            # The instrumentor installs the log handler exporting the logs
+            # as per the `config.logs` settings.
+            enable_log_auto_instrumentation=config.logs is not None,
+        )
 
     if config.logs is not None:
         # Adding a handler to the root logger which exports the logs to OTLP or to the console as JSON.
@@ -118,7 +127,13 @@ def init_telemetry(app: FastAPI | None, config: TelemetryConfig):
             )
 
         set_logger_provider(provider)
-        root.addHandler(LoggingHandler())
+
+        if config.tracing is None:
+            # The tracing branch above has already installed the log handler.
+            LoggingInstrumentor().instrument(
+                set_logging_format=False,
+                enable_log_auto_instrumentation=True,
+            )
 
     if config.metrics is not None:
         metric_readers = []
