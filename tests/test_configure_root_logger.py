@@ -11,8 +11,7 @@ def _stderr_console_handlers(root):
     return [
         h
         for h in root.handlers
-        if isinstance(h, logging.StreamHandler)
-        and getattr(h, "stream", None) is sys.stderr
+        if isinstance(h, logging.StreamHandler) and h.stream is sys.stderr
     ]
 
 
