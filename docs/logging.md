@@ -8,31 +8,42 @@ defaults and examples.
 
 ## Which one do I pick?
 
+The axis that separates them is **who owns the record's shape** — not trace
+context, which all three can carry (§1 needs tracing on, see
+[Adding trace and span IDs](#adding-trace-and-span-ids)).
+
 ```
-Do you need OTel-native structured JSON
-(rich attributes + resource + trace context, ready for a log pipeline)?
+Do you want JSON in a shape you define
+(your own keys, nesting, subset of fields)?
 │
-├─ YES ─────────────────────────────► OTEL_LOGS_EXPORTER=console      → §3
-│                                      ignores every DIAL_SDK_LOG_FORMAT var
+├─ YES ─────────────────────────────► DIAL_SDK_LOG_FORMAT=json         → §1
+│                                      DIAL_SDK_JSON_LOG_FORMAT=<template>
+│                                      the only way to get custom-shaped JSON
 │
-└─ NO ─► Want plain text with trace_id/span_id injected automatically?
+└─ NO ─► Do you need OTel-native structured logs (rich attributes + resource
+         + trace context, ready for a log pipeline), shape fixed by OTel?
          │
-         ├─ YES ─────────────────────► OTEL_TRACES_EXPORTER=otlp        → §2
-         │                              + OTEL_PYTHON_LOG_CORRELATION=true
+         ├─ YES ─────────────────────► OTEL_LOGS_EXPORTER=console|otlp  → §3
+         │                              ignores every DIAL_SDK_LOG_FORMAT var
          │
-         └─ NO ─► You control the format (the default):                 → §1
-                  DIAL_SDK_LOG_FORMAT=text   colored, human-readable
-                  DIAL_SDK_LOG_FORMAT=json   your own JSON shape
+         └─ NO ─► Text, then. Whose template?
+                  │
+                  ├─ OTel's, trace fields already in it ──────────────► §2
+                  │   OTEL_TRACES_EXPORTER=otlp
+                  │   + OTEL_PYTHON_LOG_CORRELATION=true
+                  │
+                  └─ Yours (the default, no telemetry required) ──────► §1
+                      DIAL_SDK_LOG_FORMAT=text  colored, human-readable
 ```
 
 Required var in **bold**, optional (customization) vars in plain:
 
 | You want | Set | Section |
 | --- | --- | --- |
-| Custom **text** format (default) | **`DIAL_SDK_LOG_FORMAT=text`** · `DIAL_SDK_TEXT_LOG_FORMAT` · `DIAL_SDK_LOG` | [§1](#1-dial-sdk-formatter) |
-| Custom **JSON** format | **`DIAL_SDK_LOG_FORMAT=json`** · `DIAL_SDK_JSON_LOG_FORMAT` · `DIAL_SDK_LOG` | [§1](#1-dial-sdk-formatter) |
-| Plain text **+ trace context** injected automatically | **`OTEL_TRACES_EXPORTER=otlp`** **and** **`OTEL_PYTHON_LOG_CORRELATION=true`** · `OTEL_PYTHON_LOG_FORMAT` | [§2](#2-otel-log-correlation) |
-| **OTel-native structured JSON** | **`OTEL_LOGS_EXPORTER=console`** | [§3](#3-otel-log-export) |
+| **JSON in your own shape** | **`DIAL_SDK_LOG_FORMAT=json`** · `DIAL_SDK_JSON_LOG_FORMAT` · `DIAL_SDK_LOG` | [§1](#1-dial-sdk-formatter) |
+| **Text in your own format** (default) | **`DIAL_SDK_LOG_FORMAT=text`** · `DIAL_SDK_TEXT_LOG_FORMAT` · `DIAL_SDK_LOG` | [§1](#1-dial-sdk-formatter) |
+| **Text in OTel's correlated format**, no template to write | **`OTEL_TRACES_EXPORTER=otlp`** **and** **`OTEL_PYTHON_LOG_CORRELATION=true`** · `OTEL_PYTHON_LOG_FORMAT` | [§2](#2-otel-log-correlation) |
+| **OTel-native structured logs** (shape fixed by OTel) | **`OTEL_LOGS_EXPORTER=console`** or `otlp` | [§3](#3-otel-log-export) |
 
 **Prerequisite:** §2 and §3 require telemetry — the `telemetry` extra
 (`aidial-sdk[telemetry]`) **and** `DIALApp(telemetry_config=TelemetryConfig())`.
@@ -140,6 +151,10 @@ Requires telemetry **and** tracing — it only takes effect together with
 `OTEL_TRACES_EXPORTER=otlp`; without it the SDK builds no `TracingConfig` and
 the flag is silently ignored. Its handler takes precedence over §1's text
 formatter.
+
+Versus §1 text with `%(otelTraceID)s` placeholders: same information, but the
+template is OTel's ready-made one and it renders `0` rather than raising
+`KeyError` when tracing is off.
 
 ```sh
 OTEL_TRACES_EXPORTER=otlp
