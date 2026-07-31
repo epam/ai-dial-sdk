@@ -8,32 +8,28 @@ defaults and examples.
 
 ## Which one do I pick?
 
-The axis that separates them is **who owns the record's shape** — not trace
-context, which all three can carry (§1 needs tracing on, see
-[Adding trace and span IDs](#adding-trace-and-span-ids)).
-
-```
+```txt
 Do you want JSON in a shape you define
 (your own keys, nesting, subset of fields)?
 │
-├─ YES ─────────────────────────────► DIAL_SDK_LOG_FORMAT=json         → §1
-│                                      DIAL_SDK_JSON_LOG_FORMAT=<template>
-│                                      the only way to get custom-shaped JSON
+├─ YES ──────────► DIAL_SDK_LOG_FORMAT=json ───────────────────────────► §1
+│                   DIAL_SDK_JSON_LOG_FORMAT=<template>
+│                   the only way to get custom-shaped JSON
 │
 └─ NO ─► Do you need OTel-native structured logs (rich attributes + resource
          + trace context, ready for a log pipeline), shape fixed by OTel?
          │
-         ├─ YES ─────────────────────► OTEL_LOGS_EXPORTER=console|otlp  → §3
-         │                              ignores every DIAL_SDK_LOG_FORMAT var
+         ├─ YES ─► OTEL_LOGS_EXPORTER=console  ────────────────────────► §3
          │
-         └─ NO ─► Text, then. Whose template?
-                  │
-                  ├─ OTel's, trace fields already in it ──────────────► §2
-                  │   OTEL_TRACES_EXPORTER=otlp
-                  │   + OTEL_PYTHON_LOG_CORRELATION=true
-                  │
-                  └─ Yours (the default, no telemetry required) ──────► §1
-                      DIAL_SDK_LOG_FORMAT=text  colored, human-readable
+         └─ NO ──► Text, then. Whose template?
+                   │
+                   ├─ OTel's, trace fields already in it ──────────────► §2
+                   │   OTEL_TRACES_EXPORTER=otlp
+                   │   OTEL_PYTHON_LOG_CORRELATION=true
+                   │
+                   └─ Yours (the default, no telemetry required) ──────► §1
+                       DIAL_SDK_LOG_FORMAT=text (colored, human-readable)
+                       DIAL_SDK_TEXT_LOG_FORMAT=<template>
 ```
 
 Required var in **bold**, optional (customization) vars in plain:
