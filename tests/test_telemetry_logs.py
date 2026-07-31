@@ -195,6 +195,32 @@ def test_correlation_format_is_overridable():
     assert lines == ["OTELFMT WARNING trace=0 hello"]
 
 
+def test_correlation_env_var_requires_traces_exporter():
+    # OTEL_PYTHON_LOG_CORRELATION alone is a no-op: without OTEL_TRACES_EXPORTER
+    # TelemetryConfig builds no TracingConfig, so §1's formatter stays in charge.
+    lines = run(
+        emit("hello", logger="aidial_sdk"),
+        env={"OTEL_PYTHON_LOG_CORRELATION": "true"},
+        telemetry="TelemetryConfig()",
+    )
+    assert len(lines) == 1
+    assert "| aidial_sdk |" in lines[0] and lines[0].endswith("| hello")
+    assert "trace_id=" not in lines[0]
+
+
+def test_correlation_env_var_with_traces_exporter_enables_correlation():
+    lines = run(
+        emit("hello"),
+        env={
+            "OTEL_PYTHON_LOG_CORRELATION": "true",
+            "OTEL_TRACES_EXPORTER": "otlp",
+            "OTEL_PYTHON_LOG_FORMAT": "OTELFMT %(levelname)s trace=%(otelTraceID)s %(message)s",
+        },
+        telemetry="TelemetryConfig()",
+    )
+    assert lines == ["OTELFMT WARNING trace=0 hello"]
+
+
 def test_correlation_takes_over_third_party_handler():
     # openai grabs a root stderr handler at import (OPENAI_LOG=debug); correlation
     # must remove it so records render in OTel's format, not openai's "- app:NN -".
