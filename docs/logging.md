@@ -17,7 +17,8 @@ Do you need OTel-native structured JSON
 │
 └─ NO ─► Want plain text with trace_id/span_id injected automatically?
          │
-         ├─ YES ─────────────────────► OTEL_PYTHON_LOG_CORRELATION=true → §2
+         ├─ YES ─────────────────────► OTEL_TRACES_EXPORTER=otlp        → §2
+         │                              + OTEL_PYTHON_LOG_CORRELATION=true
          │
          └─ NO ─► You control the format (the default):                 → §1
                   DIAL_SDK_LOG_FORMAT=text   colored, human-readable
@@ -30,12 +31,14 @@ Required var in **bold**, optional (customization) vars in plain:
 | --- | --- | --- |
 | Custom **text** format (default) | **`DIAL_SDK_LOG_FORMAT=text`** · `DIAL_SDK_TEXT_LOG_FORMAT` · `DIAL_SDK_LOG` | [§1](#1-dial-sdk-formatter) |
 | Custom **JSON** format | **`DIAL_SDK_LOG_FORMAT=json`** · `DIAL_SDK_JSON_LOG_FORMAT` · `DIAL_SDK_LOG` | [§1](#1-dial-sdk-formatter) |
-| Plain text **+ trace context** injected automatically | **`OTEL_PYTHON_LOG_CORRELATION=true`** · `OTEL_PYTHON_LOG_FORMAT` | [§2](#2-otel-log-correlation) |
+| Plain text **+ trace context** injected automatically | **`OTEL_TRACES_EXPORTER=otlp`** **and** **`OTEL_PYTHON_LOG_CORRELATION=true`** · `OTEL_PYTHON_LOG_FORMAT` | [§2](#2-otel-log-correlation) |
 | **OTel-native structured JSON** | **`OTEL_LOGS_EXPORTER=console`** | [§3](#3-otel-log-export) |
 
 **Prerequisite:** §2 and §3 require telemetry — the `telemetry` extra
 (`aidial-sdk[telemetry]`) **and** `DIALApp(telemetry_config=TelemetryConfig())`.
-§1 works with or without it. The three ways are mutually exclusive: enabling §3
+§2 additionally requires tracing to be enabled (`OTEL_TRACES_EXPORTER=otlp`):
+`OTEL_PYTHON_LOG_CORRELATION=true` on its own is a no-op, since there is no
+trace context to inject. §1 works with or without telemetry. The three ways are mutually exclusive: enabling §3
 makes the SDK ignore §1's format vars; §2 replaces §1's text formatter with
 OTel's.
 
@@ -133,9 +136,13 @@ INFO:     | 2026-07-16 13:10:42 | trace_id=36d9c402... span_id=61f3846d... | hel
 
 `OTEL_PYTHON_LOG_CORRELATION=true` is OTel's own way to add trace context to
 **text** logs, with a built-in format overridable via `OTEL_PYTHON_LOG_FORMAT`.
-Requires telemetry. Its handler takes precedence over §1's text formatter.
+Requires telemetry **and** tracing — it only takes effect together with
+`OTEL_TRACES_EXPORTER=otlp`; without it the SDK builds no `TracingConfig` and
+the flag is silently ignored. Its handler takes precedence over §1's text
+formatter.
 
 ```sh
+OTEL_TRACES_EXPORTER=otlp
 OTEL_PYTHON_LOG_CORRELATION=true
 OTEL_PYTHON_LOG_FORMAT='%(asctime)s %(levelname)s trace_id=%(otelTraceID)s - %(message)s'
 →

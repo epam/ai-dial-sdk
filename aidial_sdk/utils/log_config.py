@@ -8,6 +8,7 @@ from uvicorn.logging import DefaultFormatter
 from aidial_sdk.telemetry.types import (
     OTEL_LOGS_EXPORTER,
     OTEL_PYTHON_LOG_CORRELATION,
+    OTEL_TRACES_EXPORTER,
 )
 from aidial_sdk.utils._json_log_formatter import JsonLogFormatter
 from aidial_sdk.utils._logging import remove_stream_handlers
@@ -63,7 +64,12 @@ class LogConfig:
 
 
 def _otel_installed_root_logger() -> bool:
-    return OTEL_PYTHON_LOG_CORRELATION or "console" in OTEL_LOGS_EXPORTER
+    # Log correlation only takes effect when tracing is on: without
+    # OTEL_TRACES_EXPORTER no TracingConfig is built, so OTel never installs a
+    # root handler and the SDK must keep its own.
+    return (
+        OTEL_PYTHON_LOG_CORRELATION and bool(OTEL_TRACES_EXPORTER)
+    ) or "console" in OTEL_LOGS_EXPORTER
 
 
 def configure_root_logger(config: LogConfig | None = None) -> None:
