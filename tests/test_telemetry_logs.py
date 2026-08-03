@@ -321,6 +321,18 @@ def test_console_export_with_tracing_emits_no_duplicates():
     assert obj["body"] == "hello"
 
 
+def test_console_export_wins_over_correlation_format():
+    # §3 takes over stderr, so §2's text format must not be installed on top.
+    obj = parse_json(  # asserts a single line
+        run(
+            emit("hello", logger="app", level="info"),
+            env=_CONSOLE_ENV,
+            telemetry="TelemetryConfig(tracing=TracingConfig(logging=True), logs=LogsConfig(), metrics=None)",
+        )
+    )
+    assert obj["body"] == "hello"
+
+
 # ---------------------------------------------------------------------------
 # Extending the active mode to app loggers via configure_root_logger()
 # ---------------------------------------------------------------------------
