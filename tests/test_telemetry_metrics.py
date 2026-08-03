@@ -21,7 +21,7 @@ _SCRIPT = textwrap.dedent(
             metrics=MetricsConfig(
                 prometheus_export=True,
                 port=0,  # ephemeral: metrics are read from the registry below
-                views=[
+                meter_provider_views=[
                     View(
                         instrument_name="http.server.duration",
                         aggregation=ExplicitBucketHistogramAggregation(
