@@ -1,8 +1,16 @@
 import logging
 import os
+from typing import TYPE_CHECKING, Any
 
 from aidial_sdk._pydantic._compat import BaseModel
 from aidial_sdk.utils.env import env_var_list
+
+if TYPE_CHECKING:
+    from opentelemetry.sdk.metrics.view import View
+else:
+    # The OTel SDK is an optional dependency, while this module is imported
+    # even without the `telemetry` extras. Pydantic sees `Any` at runtime.
+    View = Any
 
 # OpenTelemetry SDK configuration env vars:
 # https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/
@@ -36,6 +44,8 @@ class MetricsConfig(BaseModel):
     otlp_export: bool = "otlp" in OTEL_METRICS_EXPORTER
     prometheus_export: bool = "prometheus" in OTEL_METRICS_EXPORTER
     port: int = OTEL_EXPORTER_PROMETHEUS_PORT
+
+    meter_provider_views: list["View"] | None = None
 
 
 class TelemetryConfig(BaseModel):

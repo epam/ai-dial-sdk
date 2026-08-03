@@ -132,7 +132,11 @@ def init_telemetry(app: FastAPI | None, config: TelemetryConfig):
             )
 
         set_meter_provider(
-            MeterProvider(resource=resource, metric_readers=metric_readers)
+            MeterProvider(
+                resource=resource,
+                metric_readers=metric_readers,
+                views=config.metrics.meter_provider_views or [],
+            )
         )
 
         SystemMetricsInstrumentor().instrument()
