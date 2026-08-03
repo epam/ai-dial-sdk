@@ -42,20 +42,18 @@ class UsePydanticV2(Enum):
     NO = "0"
 
 
+@nox.session(python=["3.10", "3.11", "3.12", "3.13"])
 # Testing against earliest and latest supported versions of the dependencies
-_PYTHONS = ["3.10", "3.11", "3.12", "3.13"]
-
-_PYDANTICS = [
-    ("1.10.17", UsePydanticV2.NO),
-    ("2.8.2", UsePydanticV2.NO),
-    ("2.8.2", UsePydanticV2.YES),
-    ("2.13.1", UsePydanticV2.NO),
-    ("2.13.1", UsePydanticV2.YES),
-]
-
-
-@nox.session(python=_PYTHONS)
-@nox.parametrize("pydantic", _PYDANTICS)
+@nox.parametrize(
+    "pydantic",
+    [
+        ("1.10.17", UsePydanticV2.NO),
+        ("2.8.2", UsePydanticV2.NO),
+        ("2.8.2", UsePydanticV2.YES),
+        ("2.13.1", UsePydanticV2.NO),
+        ("2.13.1", UsePydanticV2.YES),
+    ],
+)
 @nox.parametrize("httpx", ["0.25.0", "0.27.0"])
 def test(
     session: nox.Session, pydantic: tuple[str, UsePydanticV2], httpx: str
