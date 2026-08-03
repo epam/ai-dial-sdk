@@ -11,8 +11,7 @@ def _stderr_console_handlers(root):
     return [
         h
         for h in root.handlers
-        if isinstance(h, logging.StreamHandler)
-        and getattr(h, "stream", None) is sys.stderr
+        if isinstance(h, logging.StreamHandler) and h.stream is sys.stderr
     ]
 
 
@@ -57,6 +56,10 @@ def test_defers_to_otel_correlation_handler(clean_root, monkeypatch):
     monkeypatch.setattr(
         "aidial_sdk.utils.log_config.OTEL_PYTHON_LOG_CORRELATION", True
     )
+    # correlation only takes effect when tracing is on
+    monkeypatch.setattr(
+        "aidial_sdk.utils.log_config.OTEL_TRACES_EXPORTER", ["otlp"]
+    )
     otel_console = logging.StreamHandler(sys.stderr)
     clean_root.addHandler(otel_console)
 
@@ -66,9 +69,29 @@ def test_defers_to_otel_correlation_handler(clean_root, monkeypatch):
     assert _stderr_console_handlers(clean_root) == [otel_console]
 
 
+def test_correlation_without_traces_exporter_keeps_sdk_handler(
+    clean_root, monkeypatch
+):
+    # OTEL_PYTHON_LOG_CORRELATION alone installs no OTel root handler (no
+    # TracingConfig without OTEL_TRACES_EXPORTER), so we must not defer to it —
+    # otherwise records fall through to logging's unformatted lastResort.
+    monkeypatch.setattr(
+        "aidial_sdk.utils.log_config.OTEL_PYTHON_LOG_CORRELATION", True
+    )
+    monkeypatch.setattr("aidial_sdk.utils.log_config.OTEL_TRACES_EXPORTER", [])
+
+    configure_root_logger()
+
+    assert len(_stderr_console_handlers(clean_root)) == 1
+
+
 def test_honors_otel_python_log_format(clean_root, monkeypatch, capsys):
     monkeypatch.setattr(
         "aidial_sdk.utils.log_config.OTEL_PYTHON_LOG_CORRELATION", True
+    )
+    # correlation only takes effect when tracing is on
+    monkeypatch.setattr(
+        "aidial_sdk.utils.log_config.OTEL_TRACES_EXPORTER", ["otlp"]
     )
     monkeypatch.setenv("OTEL_PYTHON_LOG_CORRELATION", "true")
     monkeypatch.setenv(
