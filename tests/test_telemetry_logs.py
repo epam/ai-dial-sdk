@@ -307,6 +307,32 @@ def test_console_export_ignores_dial_sdk_format_vars():
     assert "message" not in obj  # not the SDK JSON formatter
 
 
+def test_console_export_with_tracing_emits_no_duplicates():
+    # The OTel logging instrumentor installs a log handler of its own
+    # (as of opentelemetry-instrumentation 0.61b0), which would export
+    # every record a second time on top of the SDK's own handler.
+    obj = parse_json(  # asserts a single line
+        run(
+            emit("hello", logger="app", level="info"),
+            env=_CONSOLE_ENV,
+            telemetry="TelemetryConfig(tracing=TracingConfig(logging=False), logs=LogsConfig(), metrics=None)",
+        )
+    )
+    assert obj["body"] == "hello"
+
+
+def test_console_export_wins_over_correlation_format():
+    # §3 takes over stderr, so §2's text format must not be installed on top.
+    obj = parse_json(  # asserts a single line
+        run(
+            emit("hello", logger="app", level="info"),
+            env=_CONSOLE_ENV,
+            telemetry="TelemetryConfig(tracing=TracingConfig(logging=True), logs=LogsConfig(), metrics=None)",
+        )
+    )
+    assert obj["body"] == "hello"
+
+
 # ---------------------------------------------------------------------------
 # Extending the active mode to app loggers via configure_root_logger()
 # ---------------------------------------------------------------------------
