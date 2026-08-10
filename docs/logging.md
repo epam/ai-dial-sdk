@@ -52,6 +52,9 @@ OTel's.
 Level is orthogonal to all three — set it with `DIAL_SDK_LOG` (default
 `WARNING`).
 
+§2 and §3 can also be configured from a file instead of env vars — see
+[`OTEL_CONFIG_FILE`](#configuring-otel-from-a-file-otel_config_file).
+
 ## 1. DIAL SDK formatter
 
 The default. The SDK renders its own records; you choose text or JSON and
@@ -223,3 +226,51 @@ adapting to the active mode:
 
 `configure_root_logger()` is idempotent and does **not** change the root
 logger's level (stdlib default `WARNING`) — set levels per logger, as above.
+
+## Configuring OTel from a file (`OTEL_CONFIG_FILE`)
+
+[Declarative configuration](https://opentelemetry.io/docs/specs/otel/configuration/)
+replaces §2/§3 entirely: when `OTEL_CONFIG_FILE` points at a YAML or JSON file,
+that file is the **sole** source of the OpenTelemetry setup. `TelemetryConfig`
+fields and the `OTEL_*` variables are ignored (the SDK warns when they are set),
+and §1's `DIAL_SDK_*` formatting still applies to whatever the file does not
+export.
+
+Telemetry stays opt-in — an empty config is enough to hand control to the file:
+
+```python
+app = DIALApp(telemetry_config=TelemetryConfig())
+```
+
+```yaml
+# otel.yaml — OTEL_CONFIG_FILE=otel.yaml
+file_format: "1.0-rc.1"
+resource:
+  attributes:
+    - name: service.name
+      value: my-dial-app
+tracer_provider:
+  processors:
+    - batch:
+        exporter:
+          otlp_grpc: {}
+logger_provider:
+  processors:
+    - batch:
+        exporter:
+          otlp_grpc: {}
+instrumentation/development:
+  python:
+    httpx: {}
+    system_metrics: {}
+```
+
+Note that instrumentation is opt-in per library under
+`instrumentation/development.python`, unlike the env-var path which instruments
+every HTTP client it finds. The FastAPI app itself is always instrumented (it
+exists before the file is read, so the file cannot reach it), and stdlib
+`logging` is bridged into `logger_provider` when the file configures one.
+
+A `console` log exporter renders as in §3 — one compact JSON object per line on
+stderr, with the same console takeover — rather than the indented JSON on
+stdout of the stock exporter, which the schema gives no way to configure.

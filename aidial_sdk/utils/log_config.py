@@ -98,6 +98,16 @@ def configure_root_logger(config: LogConfig | None = None) -> None:
     logging.getLogger("aidial_sdk").setLevel(config.level)
 
 
+def route_sdk_loggers_to_root() -> None:
+    """Drop the console handlers of the SDK loggers so their records reach the
+    handler OTel installed on the root logger instead."""
+
+    logging.getLogger("aidial_sdk").handlers = []
+    uvicorn = logging.getLogger("uvicorn")
+    uvicorn.handlers = []
+    uvicorn.propagate = True
+
+
 def configure_sdk_logger() -> None:
     """Configure only the SDK's own loggers (``aidial_sdk``, ``uvicorn``), called
     once when ``DIALApp`` is imported. To format your own loggers the same way,
@@ -111,9 +121,7 @@ def configure_sdk_logger() -> None:
         # the root logger is already installed;
         # route the SDK loggers there
         # instead of installing a competing text handler.
-        aidial_sdk.handlers = []
-        uvicorn.handlers = []
-        uvicorn.propagate = True
+        route_sdk_loggers_to_root()
     else:
         handler = logging.StreamHandler(sys.stderr)
         handler.setFormatter(config.formatter)

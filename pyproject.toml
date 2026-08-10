@@ -20,20 +20,24 @@ Repository = "https://github.com/epam/ai-dial-sdk"
 
 [project.optional-dependencies]
 telemetry = [
-    "opentelemetry-sdk (>=1.22.0,<2.0)",
-    "opentelemetry-api (>=1.22.0,<2.0)",
-    "opentelemetry-exporter-otlp-proto-grpc (>=1.22.0,<2.0)",
-    "opentelemetry-instrumentation-aiohttp-client (>=0.43b0)",
-    "opentelemetry-instrumentation-fastapi (>=0.43b0)",
-    "opentelemetry-instrumentation-httpx (>=0.43b0)",
-    "opentelemetry-instrumentation-logging (>=0.43b0)",
-    "opentelemetry-instrumentation-requests (>=0.43b0)",
-    "opentelemetry-instrumentation-system-metrics (>=0.43b0)",
-    "opentelemetry-instrumentation-urllib (>=0.43b0)",
-    "opentelemetry-exporter-prometheus (>=0.43b0)",
+    "opentelemetry-sdk (>=1.43.0,<2.0)",
+    "opentelemetry-api (>=1.43.0,<2.0)",
+    "opentelemetry-exporter-otlp-proto-grpc (>=1.43.0,<2.0)",
+    "opentelemetry-instrumentation-aiohttp-client (>=0.65b0)",
+    "opentelemetry-instrumentation-fastapi (>=0.65b0)",
+    "opentelemetry-instrumentation-httpx (>=0.65b0)",
+    "opentelemetry-instrumentation-logging (>=0.65b0)",
+    "opentelemetry-instrumentation-requests (>=0.65b0)",
+    "opentelemetry-instrumentation-system-metrics (>=0.65b0)",
+    "opentelemetry-instrumentation-urllib (>=0.65b0)",
+    "opentelemetry-exporter-prometheus (>=0.65b0)",
     "prometheus-client (>=0.17.1,<1.0)",
+    "opentelemetry-configuration (>=0.65b0)",
 ]
 httpx = ["httpx (>=0.25.0,<1.0)"]
+
+[project.entry-points."opentelemetry_logs_exporter"]
+one_line_logs_exporter = "aidial_sdk.telemetry._one_line_log_exporter:OneLineJsonConsoleLogRecordExporter"
 
 [tool.poetry.group.test.dependencies]
 pytest = "^9.0.3"

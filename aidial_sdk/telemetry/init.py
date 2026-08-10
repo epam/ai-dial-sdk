@@ -1,145 +1,113 @@
 import logging
+import os
 import sys
+from importlib.util import find_spec
 
 from fastapi import FastAPI
-from opentelemetry._logs import set_logger_provider
-from opentelemetry.exporter.otlp.proto.grpc._log_exporter import OTLPLogExporter
-from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import (
-    OTLPMetricExporter,
+from opentelemetry.configuration import (
+    OpenTelemetryConfiguration,
+    configure_sdk,
+    load_config_file,
 )
-from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import (
-    OTLPSpanExporter,
-)
-from opentelemetry.exporter.prometheus import PrometheusMetricReader
+from opentelemetry.configuration import models as otel
+from opentelemetry.environment_variables import OTEL_PROPAGATORS
 from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-from opentelemetry.instrumentation.logging import LoggingInstrumentor
-from opentelemetry.instrumentation.system_metrics import (
-    SystemMetricsInstrumentor,
-)
-from opentelemetry.instrumentation.urllib import URLLibInstrumentor
-from opentelemetry.metrics import set_meter_provider
-from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
-from opentelemetry.sdk._logs.export import (
-    BatchLogRecordProcessor,
-    ConsoleLogRecordExporter,
-    SimpleLogRecordProcessor,
-)
-from opentelemetry.sdk.metrics import MeterProvider
-from opentelemetry.sdk.metrics._internal.export import (
-    PeriodicExportingMetricReader,
-)
-from opentelemetry.sdk.resources import SERVICE_NAME, Resource
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.trace import set_tracer_provider
-from prometheus_client import start_http_server
+from opentelemetry.sdk._logs import LoggingHandler
 
-from aidial_sdk.telemetry.types import TelemetryConfig
+from aidial_sdk.telemetry._otel_config import to_otel_config
+from aidial_sdk.telemetry.types import TelemetryConfig, get_otel_config_file
 from aidial_sdk.utils._logging import remove_stream_handlers
+from aidial_sdk.utils.log_config import route_sdk_loggers_to_root
+
+_HTTP_CLIENT_INSTRUMENTORS = {
+    "requests": "opentelemetry.instrumentation.requests",
+    "aiohttp-client": "opentelemetry.instrumentation.aiohttp_client",
+    "urllib": "opentelemetry.instrumentation.urllib",
+    "httpx": "opentelemetry.instrumentation.httpx",
+}
 
 
-def init_telemetry(app: FastAPI | None, config: TelemetryConfig):
-    resource = Resource.create(
-        attributes=(
-            {SERVICE_NAME: config.service_name} if config.service_name else None
-        )
+def init_telemetry(app: FastAPI | None, config: TelemetryConfig) -> None:
+    config_file = get_otel_config_file()
+
+    conf = (
+        load_config_file(config_file) if config_file else to_otel_config(config)
+    )
+    _apply_otel_config(app, conf)
+
+
+def _apply_otel_config(
+    app: FastAPI | None, conf: OpenTelemetryConfiguration
+) -> None:
+    if conf.disabled:
+        configure_sdk(conf)  # logs why nothing was configured
+        return
+
+    _apply_dial_specifics(conf)
+    configure_sdk(conf)
+
+    if _takes_over_console(conf):
+        # Remove any competing handlers to avoid duplicate logging. The SDK
+        # loggers are rerouted as well: a configuration file is unknown to
+        # configure_sdk_logger() at import time, and log correlation enabled
+        # through TelemetryConfig alone is invisible to it too.
+        remove_stream_handlers(logging.getLogger(), sys.stderr)
+        route_sdk_loggers_to_root()
+
+    if conf.logger_provider is not None:
+        logging.getLogger().addHandler(LoggingHandler())
+
+    if app and (conf.tracer_provider or conf.meter_provider):
+        FastAPIInstrumentor.instrument_app(app)
+
+
+def _apply_dial_specifics(conf: OpenTelemetryConfiguration) -> None:
+    """Extra configuration specific for DIAL SDK"""
+
+    # Default propagation
+    conf.propagator = conf.propagator or otel.Propagator(
+        composite_list=os.getenv(OTEL_PROPAGATORS, "tracecontext,baggage")
     )
 
-    if config.tracing is not None:
-        tracer_provider = TracerProvider(resource=resource)
+    # Replacing the default console exporter with the one that prints JSON in a single line
+    def _patch_exporter(exporter: otel.LogRecordExporter):
+        if exporter.console == {}:
+            exporter.console = None
+            exporter.additional_properties["one_line_logs_exporter"] = {}
 
-        if config.tracing.otlp_export:
-            tracer_provider.add_span_processor(
-                BatchSpanProcessor(OTLPSpanExporter())
-            )
+    if provider := conf.logger_provider:
+        for processor in provider.processors:
+            if proc := processor.batch:
+                _patch_exporter(proc.exporter)
+            if proc := processor.simple:
+                _patch_exporter(proc.exporter)
 
-        set_tracer_provider(tracer_provider)
+    # Adding the default HTTP client instrumentors
+    instr = {}
+    if conf.instrumentation_development:
+        instr = conf.instrumentation_development.python or {}
 
-        try:
-            from opentelemetry.instrumentation.requests import (
-                RequestsInstrumentor,
-            )
+    for name, module in _HTTP_CLIENT_INSTRUMENTORS.items():
+        if find_spec(module):
+            instr[name] = instr.get(name) or {}
 
-            RequestsInstrumentor().instrument()
-        except ImportError:
-            pass
+    if conf.meter_provider:
+        instr["system_metrics"] = instr.get("system_metrics") or {}
 
-        try:
-            from opentelemetry.instrumentation.aiohttp_client import (
-                AioHttpClientInstrumentor,
-            )
+    conf.instrumentation_development = otel.ExperimentalInstrumentation(
+        python=instr
+    )
 
-            AioHttpClientInstrumentor().instrument()
-        except ImportError:
-            pass
 
-        URLLibInstrumentor().instrument()
+def _takes_over_console(conf: OpenTelemetryConfiguration) -> bool:
+    logger_provider = conf.logger_provider
+    for processor in (logger_provider and logger_provider.processors) or []:
+        exporting = processor.batch or processor.simple
+        if exporting and exporting.exporter.console is not None:
+            return True
 
-        try:
-            from opentelemetry.instrumentation.httpx import (
-                HTTPXClientInstrumentor,
-            )
-
-            HTTPXClientInstrumentor().instrument()
-        except ImportError:
-            pass
-
-        set_logging_format = config.tracing.logging
-        if set_logging_format:
-            # Remove any competing handlers to avoid duplicate logging
-            remove_stream_handlers(logging.getLogger(), sys.stderr)
-
-        LoggingInstrumentor().instrument(set_logging_format=set_logging_format)
-
-    if config.logs is not None:
-        # Adding a handler to the root logger which exports the logs to OTLP or to the console as JSON.
-        provider = LoggerProvider(resource=resource)
-
-        if config.logs.otlp_export:
-            provider.add_log_record_processor(
-                BatchLogRecordProcessor(OTLPLogExporter())
-            )
-
-        root = logging.getLogger()
-
-        if config.logs.console_export:
-            # Remove any competing handlers to avoid duplicate logging
-            remove_stream_handlers(root, sys.stderr)
-            provider.add_log_record_processor(
-                SimpleLogRecordProcessor(
-                    ConsoleLogRecordExporter(
-                        out=sys.stderr,
-                        # Default formatter is multi-line (indent=4); force one
-                        # compact JSON object per line.
-                        formatter=lambda record: record.to_json(indent=None)
-                        + "\n",
-                    )
-                )
-            )
-
-        set_logger_provider(provider)
-        root.addHandler(LoggingHandler())
-
-    if config.metrics is not None:
-        metric_readers = []
-
-        if config.metrics.prometheus_export:
-            metric_readers.append(PrometheusMetricReader())
-
-        if config.metrics.otlp_export:
-            metric_readers.append(
-                PeriodicExportingMetricReader(OTLPMetricExporter())
-            )
-
-        set_meter_provider(
-            MeterProvider(resource=resource, metric_readers=metric_readers)
-        )
-
-        SystemMetricsInstrumentor().instrument()
-
-        if config.metrics.prometheus_export:
-            start_http_server(port=config.metrics.port)
-
-    if app and (config.tracing is not None or config.metrics is not None):
-        # FastAPI instrumentor reports both metrics and traces
-        FastAPIInstrumentor.instrument_app(app)
+    instrumentation = conf.instrumentation_development
+    python = (instrumentation and instrumentation.python) or {}
+    # The logging instrumentor reformats the root handler via basicConfig(),
+    # which is a no-op unless the console is free by the time it runs.
+    return bool((python.get("logging") or {}).get("set_logging_format"))

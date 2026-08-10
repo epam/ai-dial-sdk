@@ -28,7 +28,10 @@ from aidial_sdk.embeddings.base import Embeddings
 from aidial_sdk.embeddings.request import Request as EmbeddingsRequest
 from aidial_sdk.exceptions import HTTPException as DIALException
 from aidial_sdk.header_propagator import HeaderPropagator
-from aidial_sdk.telemetry.types import TelemetryConfig
+from aidial_sdk.telemetry.types import (
+    TelemetryConfig,
+    get_otel_config_file,
+)
 from aidial_sdk.utils._disconnect_middleware import DisconnectMiddleware
 from aidial_sdk.utils._reflection import get_method_implementation
 from aidial_sdk.utils.env import env_float, env_var_list
@@ -130,7 +133,12 @@ class DIALApp(FastAPI):
         self.add_exception_handler(DIALException, dial_exception_handler)
 
     def configure_telemetry(self, config: TelemetryConfig | None):
-        if config is None or config.is_noop():
+        if config is None:
+            return
+
+        # A declarative config file configures the SDK on its own, so an
+        # otherwise empty config is not a no-op.
+        if config.is_noop() and not get_otel_config_file():
             return
 
         try:

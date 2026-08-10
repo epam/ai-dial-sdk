@@ -14,6 +14,7 @@ def run(
     telemetry: str | None = None,
     root_logger: bool = False,
     preamble: str = "",
+    capture: str = "stderr",
 ) -> list[str]:
     script = [
         "import logging",
@@ -30,13 +31,14 @@ def run(
         script.append("aidial_sdk.configure_root_logger()")
     script.append(logs)
 
-    err = subprocess.run(  # noqa: S603
+    proc = subprocess.run(  # noqa: S603
         [sys.executable, "-c", "\n".join(script)],
         capture_output=True,
         text=True,
         env={**os.environ, **(env or {})},
-    ).stderr
-    return [_ANSI.sub("", ln) for ln in err.splitlines() if ln.strip()]
+    )
+    out = proc.stdout if capture == "stdout" else proc.stderr
+    return [_ANSI.sub("", ln) for ln in out.splitlines() if ln.strip()]
 
 
 def emit(msg, *, logger="app", level="warning", set_level=True):
