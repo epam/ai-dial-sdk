@@ -8,7 +8,7 @@ from opentelemetry.sdk._logs.export import ConsoleLogRecordExporter
 
 
 class OneLineJsonConsoleLogRecordExporter(ConsoleLogRecordExporter):
-    def __init__(self, out: IO = sys.stdout):
+    def __init__(self, out: IO = sys.stderr):
         super().__init__(
             out=out,
             formatter=self._format,

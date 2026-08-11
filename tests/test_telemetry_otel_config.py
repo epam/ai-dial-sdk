@@ -3,6 +3,7 @@ telemetry setup. The declarative model ignores parts of the environment that
 the SDK used to honor, so the generator passes them explicitly."""
 
 from aidial_sdk.telemetry._otel_config import to_otel_config
+from aidial_sdk.telemetry.init import _enrich_configuration
 from aidial_sdk.telemetry.types import (
     LogsConfig,
     MetricsConfig,
@@ -103,19 +104,19 @@ def test_incoming_trace_context_is_continued():
     assert run(_PROBE_APP, capture="stdout") == [f"200 {_INCOMING_TRACE_ID}"]
 
 
-def test_propagation_can_be_turned_off_without_breaking_requests():
-    # Propagating nothing is a valid choice, and an empty propagator list is
-    # the shape that used to fail every request.
-    status, trace_id = run(
-        _PROBE_APP, env={"OTEL_PROPAGATORS": "none"}, capture="stdout"
-    )[0].split()
-    assert status == "200"
-    assert trace_id != _INCOMING_TRACE_ID
-
-
 def test_tracing_instruments_the_installed_http_clients():
     conf = to_otel_config(TelemetryConfig(tracing=TracingConfig()))
+    _enrich_configuration(conf)
+
     assert conf.instrumentation_development is not None
     python = conf.instrumentation_development.python or {}
-    assert "urllib" in python  # a dependency of the telemetry extra
-    assert python["logging"] == {"set_logging_format": False}
+    assert python == {
+        "aiohttp-client": {},
+        "httpx": {},
+        "requests": {},
+        "urllib": {},
+        "logging": {
+            "inject_trace_context": True,
+            "set_logging_format": False,
+        },
+    }

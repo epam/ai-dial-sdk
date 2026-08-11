@@ -37,7 +37,8 @@ def to_otel_config(config: TelemetryConfig) -> OpenTelemetryConfiguration:
         tracer_provider = otel.TracerProvider(processors=processors)
 
         instrumentors["logging"] = {
-            "set_logging_format": config.tracing.logging
+            "set_logging_format": config.tracing.logging,
+            "inject_trace_context": True,
         }
 
     logger_provider = None
@@ -110,6 +111,8 @@ def to_otel_config(config: TelemetryConfig) -> OpenTelemetryConfiguration:
         meter_provider=meter_provider,
         instrumentation_development=(
             otel.ExperimentalInstrumentation(python=instrumentors)
+            if instrumentors
+            else None
         ),
     )
 

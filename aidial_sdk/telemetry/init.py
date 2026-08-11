@@ -42,16 +42,23 @@ def _apply_otel_config(
         configure_sdk(config)  # logs why nothing was configured
         return
 
-    _enrich_configuration(config)
-    configure_sdk(config)
+    # Asked before _enrich_configuration(), which rewrites the console exporter
+    # the answer is read from.
+    takes_over_console = _takes_over_console(config)
 
-    if _takes_over_console(config):
-        # Remove any competing handlers to avoid duplicate logging. The SDK
-        # loggers are rerouted as well: a configuration file is unknown to
-        # configure_sdk_logger() at import time, and log correlation enabled
+    _enrich_configuration(config)
+
+    if takes_over_console:
+        # Free the console *before* configure_sdk(), since the logging
+        # instrumentor only reformats the root handler when it may install it
+        # itself. Removing any competing handlers also avoids duplicate logging.
+        # The SDK loggers are rerouted as well: a configuration file is unknown
+        # to configure_sdk_logger() at import time, and log correlation enabled
         # through TelemetryConfig alone is invisible to it too.
         remove_stream_handlers(logging.getLogger(), sys.stderr)
         route_sdk_loggers_to_root()
+
+    configure_sdk(config)
 
     if config.logger_provider is not None:
         logging.getLogger().addHandler(LoggingHandler())
@@ -82,21 +89,23 @@ def _enrich_configuration(config: otel.OpenTelemetryConfiguration) -> None:
             if proc := processor.simple:
                 _patch_exporter(proc.exporter)
 
-    # 3. Add the default instrumentors for HTTP clients and system metrics
-    instr = {}
-    if config.instrumentation_development:
-        instr = config.instrumentation_development.python or {}
+    # 3. Add the default instrumentors for HTTP clients and system metrics.
+    # The instrumentation of other languages, if any, is left untouched.
+    instrumentation = (
+        config.instrumentation_development or otel.ExperimentalInstrumentation()
+    )
+    instr = instrumentation.python or {}
 
-    for name, module in _HTTP_CLIENT_INSTRUMENTORS.items():
-        if find_spec(module):
-            instr[name] = instr.get(name) or {}
+    if config.tracer_provider:
+        for name, module in _HTTP_CLIENT_INSTRUMENTORS.items():
+            if find_spec(module):
+                instr[name] = instr.get(name) or {}
 
     if config.meter_provider:
         instr["system_metrics"] = instr.get("system_metrics") or {}
 
-    config.instrumentation_development = otel.ExperimentalInstrumentation(
-        python=instr
-    )
+    instrumentation.python = instr
+    config.instrumentation_development = instrumentation
 
 
 def _takes_over_console(conf: otel.OpenTelemetryConfiguration) -> bool:
