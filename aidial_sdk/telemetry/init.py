@@ -18,6 +18,8 @@ from aidial_sdk.telemetry.types import TelemetryConfig, get_otel_config_file
 from aidial_sdk.utils._logging import remove_stream_handlers
 from aidial_sdk.utils.log_config import route_sdk_loggers_to_root
 
+_ONE_LINE_LOGS_EXPORTER = "one_line_logs_exporter"
+
 _HTTP_CLIENT_INSTRUMENTORS = {
     "requests": "opentelemetry.instrumentation.requests",
     "aiohttp-client": "opentelemetry.instrumentation.aiohttp_client",
@@ -42,13 +44,9 @@ def _apply_otel_config(
         configure_sdk(config)  # logs why nothing was configured
         return
 
-    # Asked before _enrich_configuration(), which rewrites the console exporter
-    # the answer is read from.
-    takes_over_console = _takes_over_console(config)
-
     _enrich_configuration(config)
 
-    if takes_over_console:
+    if _takes_over_console(config):
         # Free the console *before* configure_sdk(), since the logging
         # instrumentor only reformats the root handler when it may install it
         # itself. Removing any competing handlers also avoids duplicate logging.
@@ -58,13 +56,13 @@ def _apply_otel_config(
         remove_stream_handlers(logging.getLogger(), sys.stderr)
         route_sdk_loggers_to_root()
 
-    configure_sdk(config)
-
     if config.logger_provider is not None:
         logging.getLogger().addHandler(LoggingHandler())
 
     if app and (config.tracer_provider or config.meter_provider):
         FastAPIInstrumentor.instrument_app(app)
+
+    configure_sdk(config)
 
 
 def _enrich_configuration(config: otel.OpenTelemetryConfiguration) -> None:
@@ -80,7 +78,7 @@ def _enrich_configuration(config: otel.OpenTelemetryConfiguration) -> None:
     def _patch_exporter(exporter: otel.LogRecordExporter):
         if exporter.console == {}:
             exporter.console = None
-            exporter.additional_properties["one_line_logs_exporter"] = {}
+            exporter.additional_properties[_ONE_LINE_LOGS_EXPORTER] = {}
 
     if provider := config.logger_provider:
         for processor in provider.processors:
@@ -111,9 +109,15 @@ def _enrich_configuration(config: otel.OpenTelemetryConfiguration) -> None:
 def _takes_over_console(conf: otel.OpenTelemetryConfiguration) -> bool:
     logger_provider = conf.logger_provider
     for processor in (logger_provider and logger_provider.processors) or []:
-        exporting = processor.batch or processor.simple
-        if exporting and exporting.exporter.console is not None:
-            return True
+        for proc in (processor.batch, processor.simple):
+            # An empty dict is the configured shape of both exporters,
+            # so their presence is what to check, not their truthiness.
+            if proc and (
+                proc.exporter.console is not None
+                or _ONE_LINE_LOGS_EXPORTER
+                in proc.exporter.additional_properties
+            ):
+                return True
 
     instrumentation = conf.instrumentation_development
     python = (instrumentation and instrumentation.python) or {}

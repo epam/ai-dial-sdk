@@ -22,10 +22,6 @@ OTEL_PYTHON_LOG_CORRELATION = (
 
 
 def get_otel_config_file() -> str | None:
-    """Path to the OTel declarative configuration file, if any.
-
-    Read lazily, unlike the constants above: it decides whether telemetry is
-    configured at all, so tests and embedders may set it after import."""
     return os.getenv("OTEL_CONFIG_FILE") or None
 
 

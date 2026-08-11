@@ -20,9 +20,9 @@ Repository = "https://github.com/epam/ai-dial-sdk"
 
 [project.optional-dependencies]
 telemetry = [
-    "opentelemetry-sdk (>=1.43.0,<2.0)",
-    "opentelemetry-api (>=1.43.0,<2.0)",
-    "opentelemetry-exporter-otlp-proto-grpc (>=1.43.0,<2.0)",
+    "opentelemetry-sdk (>=1.44.0,<2.0)",
+    "opentelemetry-api (>=1.44.0,<2.0)",
+    "opentelemetry-exporter-otlp-proto-grpc (>=1.44.0,<2.0)",
     "opentelemetry-instrumentation-aiohttp-client (>=0.65b0)",
     "opentelemetry-instrumentation-fastapi (>=0.65b0)",
     "opentelemetry-instrumentation-httpx (>=0.65b0)",
@@ -31,8 +31,8 @@ telemetry = [
     "opentelemetry-instrumentation-system-metrics (>=0.65b0)",
     "opentelemetry-instrumentation-urllib (>=0.65b0)",
     "opentelemetry-exporter-prometheus (>=0.65b0)",
-    "prometheus-client (>=0.17.1,<1.0)",
     "opentelemetry-configuration (>=0.65b0)",
+    "prometheus-client (>=0.17.1,<1.0)",
 ]
 httpx = ["httpx (>=0.25.0,<1.0)"]
 

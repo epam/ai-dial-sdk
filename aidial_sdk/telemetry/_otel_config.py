@@ -1,6 +1,5 @@
 import os
 
-from opentelemetry.configuration import OpenTelemetryConfiguration
 from opentelemetry.configuration import models as otel
 from opentelemetry.sdk.environment_variables import (
     OTEL_BLRP_EXPORT_TIMEOUT,
@@ -18,7 +17,7 @@ from aidial_sdk.telemetry.types import TelemetryConfig
 from aidial_sdk.utils.env import env_int
 
 
-def to_otel_config(config: TelemetryConfig) -> OpenTelemetryConfiguration:
+def to_otel_config(config: TelemetryConfig) -> otel.OpenTelemetryConfiguration:
     instrumentors: dict[str, dict] = {}
 
     tracer_provider = None
@@ -101,7 +100,7 @@ def to_otel_config(config: TelemetryConfig) -> OpenTelemetryConfiguration:
             )
         meter_provider = otel.MeterProvider(readers=readers)
 
-    return OpenTelemetryConfiguration(
+    return otel.OpenTelemetryConfiguration(
         # Only load_config_file() validates the version,
         # but the model still needs one, as the field is required.
         file_format="dummy-version",
