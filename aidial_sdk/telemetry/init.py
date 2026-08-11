@@ -5,7 +5,6 @@ from importlib.util import find_spec
 
 from fastapi import FastAPI
 from opentelemetry.configuration import (
-    OpenTelemetryConfiguration,
     configure_sdk,
     load_config_file,
 )
@@ -28,25 +27,25 @@ _HTTP_CLIENT_INSTRUMENTORS = {
 
 
 def init_telemetry(app: FastAPI | None, config: TelemetryConfig) -> None:
-    config_file = get_otel_config_file()
+    if file := get_otel_config_file():
+        otel_config = load_config_file(file)
+    else:
+        otel_config = to_otel_config(config)
 
-    conf = (
-        load_config_file(config_file) if config_file else to_otel_config(config)
-    )
-    _apply_otel_config(app, conf)
+    _apply_otel_config(app, otel_config)
 
 
 def _apply_otel_config(
-    app: FastAPI | None, conf: OpenTelemetryConfiguration
+    app: FastAPI | None, config: otel.OpenTelemetryConfiguration
 ) -> None:
-    if conf.disabled:
-        configure_sdk(conf)  # logs why nothing was configured
+    if config.disabled:
+        configure_sdk(config)  # logs why nothing was configured
         return
 
-    _apply_dial_specifics(conf)
-    configure_sdk(conf)
+    _enrich_configuration(config)
+    configure_sdk(config)
 
-    if _takes_over_console(conf):
+    if _takes_over_console(config):
         # Remove any competing handlers to avoid duplicate logging. The SDK
         # loggers are rerouted as well: a configuration file is unknown to
         # configure_sdk_logger() at import time, and log correlation enabled
@@ -54,52 +53,53 @@ def _apply_otel_config(
         remove_stream_handlers(logging.getLogger(), sys.stderr)
         route_sdk_loggers_to_root()
 
-    if conf.logger_provider is not None:
+    if config.logger_provider is not None:
         logging.getLogger().addHandler(LoggingHandler())
 
-    if app and (conf.tracer_provider or conf.meter_provider):
+    if app and (config.tracer_provider or config.meter_provider):
         FastAPIInstrumentor.instrument_app(app)
 
 
-def _apply_dial_specifics(conf: OpenTelemetryConfiguration) -> None:
-    """Extra configuration specific for DIAL SDK"""
+def _enrich_configuration(config: otel.OpenTelemetryConfiguration) -> None:
+    """Extra configuration specific for the DIAL SDK"""
 
-    # Default propagation
-    conf.propagator = conf.propagator or otel.Propagator(
+    # 1. Set the default propagators
+    config.propagator = config.propagator or otel.Propagator(
         composite_list=os.getenv(OTEL_PROPAGATORS, "tracecontext,baggage")
     )
 
-    # Replacing the default console exporter with the one that prints JSON in a single line
+    # 2. Replace the default console exporter with the one
+    # that prints JSON in a single line
     def _patch_exporter(exporter: otel.LogRecordExporter):
         if exporter.console == {}:
             exporter.console = None
             exporter.additional_properties["one_line_logs_exporter"] = {}
 
-    if provider := conf.logger_provider:
+    if provider := config.logger_provider:
         for processor in provider.processors:
             if proc := processor.batch:
                 _patch_exporter(proc.exporter)
             if proc := processor.simple:
                 _patch_exporter(proc.exporter)
 
-    # Adding the default HTTP client instrumentors
+    # 3. Add the default instrumentors for HTTP clients and system metrics
     instr = {}
-    if conf.instrumentation_development:
-        instr = conf.instrumentation_development.python or {}
+    if config.instrumentation_development:
+        instr = config.instrumentation_development.python or {}
 
     for name, module in _HTTP_CLIENT_INSTRUMENTORS.items():
         if find_spec(module):
             instr[name] = instr.get(name) or {}
 
-    if conf.meter_provider:
+    if config.meter_provider:
         instr["system_metrics"] = instr.get("system_metrics") or {}
 
-    conf.instrumentation_development = otel.ExperimentalInstrumentation(
+    config.instrumentation_development = otel.ExperimentalInstrumentation(
         python=instr
     )
 
 
-def _takes_over_console(conf: OpenTelemetryConfiguration) -> bool:
+def _takes_over_console(conf: otel.OpenTelemetryConfiguration) -> bool:
     logger_provider = conf.logger_provider
     for processor in (logger_provider and logger_provider.processors) or []:
         exporting = processor.batch or processor.simple
