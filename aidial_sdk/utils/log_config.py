@@ -60,24 +60,15 @@ class LogConfig:
 
 _SDK_LOGGERS = ("aidial_sdk", "uvicorn", "uvicorn.access", "uvicorn.error")
 
-_TELEMETRY_MODULE = "aidial_sdk.telemetry.init"
+_otel_owns_console = False
 
 
-def _otel_owns_console() -> bool:
-    """Whether init_telemetry() has handed the root console handler to OTel.
-
-    Looked up through sys.modules instead of imported: the telemetry module
-    requires the optional extra, and one that was never imported took nothing
-    over."""
-
-    telemetry = sys.modules.get(_TELEMETRY_MODULE)
-    return bool(telemetry and telemetry.otel_owns_console)
+def set_otel_owns_console() -> None:
+    global _otel_owns_console
+    _otel_owns_console = True
 
 
 def route_sdk_loggers_to_root() -> None:
-    """Drop the console handlers of the SDK loggers so their records reach the
-    handler on the root logger instead."""
-
     for name in _SDK_LOGGERS:
         logger = logging.getLogger(name)
         logger.handlers = []
@@ -95,7 +86,7 @@ def configure_root_logger(config: LogConfig | None = None) -> None:
 
     # Defer the root console handler to OTel when it owns it;
     # otherwise, install our own and drop competing stderr handlers
-    if not _otel_owns_console():
+    if not _otel_owns_console:
         # Remove any competing handlers to avoid duplicate logging
         remove_stream_handlers(root, sys.stderr)
         handler = logging.StreamHandler(sys.stderr)

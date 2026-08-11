@@ -5,7 +5,6 @@ import sys
 import pytest
 from uvicorn.logging import DefaultFormatter
 
-from aidial_sdk.telemetry import init as telemetry_init
 from aidial_sdk.utils import log_config
 from aidial_sdk.utils._json_log_formatter import JsonLogFormatter
 from aidial_sdk.utils.log_config import (
@@ -89,7 +88,7 @@ def test_configure_root_logger_uses_passed_config(clean_root):
 def test_console_export_defers_root_handler_to_otel(clean_root, monkeypatch):
     # The JSON console handler is installed by init_telemetry, so
     # configure_root_logger must not add its own stderr one.
-    monkeypatch.setattr(telemetry_init, "otel_owns_console", True)
+    monkeypatch.setattr(log_config, "_otel_owns_console", True)
 
     configure_root_logger(LogConfig(level="info"))
 

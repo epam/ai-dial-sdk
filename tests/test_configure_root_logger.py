@@ -5,7 +5,7 @@ import pytest
 from opentelemetry.instrumentation.logging import LoggingInstrumentor
 
 from aidial_sdk import configure_root_logger
-from aidial_sdk.telemetry import init as telemetry_init
+from aidial_sdk.utils import log_config
 
 
 def _stderr_console_handlers(root):
@@ -54,7 +54,7 @@ def test_takes_over_foreign_stderr_console_handler(clean_root):
 
 
 def test_defers_to_otel_correlation_handler(clean_root, monkeypatch):
-    monkeypatch.setattr(telemetry_init, "otel_owns_console", True)
+    monkeypatch.setattr(log_config, "_otel_owns_console", True)
     otel_console = logging.StreamHandler(sys.stderr)
     clean_root.addHandler(otel_console)
 
@@ -68,7 +68,7 @@ def test_keeps_sdk_handler_until_otel_claims_the_console(clean_root):
     # init_telemetry() reports the takeover, and it may never run — telemetry is
     # opt-in. Deferring to a handler nobody installed would drop every record
     # into logging's unformatted lastResort.
-    assert telemetry_init.otel_owns_console is False
+    assert log_config._otel_owns_console is False
 
     configure_root_logger()
 
@@ -76,7 +76,7 @@ def test_keeps_sdk_handler_until_otel_claims_the_console(clean_root):
 
 
 def test_honors_otel_python_log_format(clean_root, monkeypatch, capsys):
-    monkeypatch.setattr(telemetry_init, "otel_owns_console", True)
+    monkeypatch.setattr(log_config, "_otel_owns_console", True)
     monkeypatch.setenv("OTEL_PYTHON_LOG_CORRELATION", "true")
     monkeypatch.setenv(
         "OTEL_PYTHON_LOG_FORMAT",
