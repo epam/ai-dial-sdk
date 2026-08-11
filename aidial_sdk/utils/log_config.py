@@ -5,11 +5,6 @@ from typing import Literal
 
 from uvicorn.logging import DefaultFormatter
 
-from aidial_sdk.telemetry.types import (
-    OTEL_LOGS_EXPORTER,
-    OTEL_PYTHON_LOG_CORRELATION,
-    OTEL_TRACES_EXPORTER,
-)
 from aidial_sdk.utils._json_log_formatter import JsonLogFormatter
 from aidial_sdk.utils._logging import remove_stream_handlers
 from aidial_sdk.utils.env import env_json_dict
@@ -63,13 +58,30 @@ class LogConfig:
             )
 
 
-def _otel_installed_root_logger() -> bool:
-    # Log correlation only takes effect when tracing is on: without
-    # OTEL_TRACES_EXPORTER no TracingConfig is built, so OTel never installs a
-    # root handler and the SDK must keep its own.
-    return (
-        OTEL_PYTHON_LOG_CORRELATION and bool(OTEL_TRACES_EXPORTER)
-    ) or "console" in OTEL_LOGS_EXPORTER
+_SDK_LOGGERS = ("aidial_sdk", "uvicorn", "uvicorn.access", "uvicorn.error")
+
+_TELEMETRY_MODULE = "aidial_sdk.telemetry.init"
+
+
+def _otel_owns_console() -> bool:
+    """Whether init_telemetry() has handed the root console handler to OTel.
+
+    Looked up through sys.modules instead of imported: the telemetry module
+    requires the optional extra, and one that was never imported took nothing
+    over."""
+
+    telemetry = sys.modules.get(_TELEMETRY_MODULE)
+    return bool(telemetry and telemetry.otel_owns_console)
+
+
+def route_sdk_loggers_to_root() -> None:
+    """Drop the console handlers of the SDK loggers so their records reach the
+    handler on the root logger instead."""
+
+    for name in _SDK_LOGGERS:
+        logger = logging.getLogger(name)
+        logger.handlers = []
+        logger.propagate = True
 
 
 def configure_root_logger(config: LogConfig | None = None) -> None:
@@ -83,29 +95,16 @@ def configure_root_logger(config: LogConfig | None = None) -> None:
 
     # Defer the root console handler to OTel when it owns it;
     # otherwise, install our own and drop competing stderr handlers
-    if not _otel_installed_root_logger():
+    if not _otel_owns_console():
         # Remove any competing handlers to avoid duplicate logging
         remove_stream_handlers(root, sys.stderr)
         handler = logging.StreamHandler(sys.stderr)
         handler.setFormatter(config.formatter)
         root.addHandler(handler)
 
-    for name in ("aidial_sdk", "uvicorn", "uvicorn.access", "uvicorn.error"):
-        child = logging.getLogger(name)
-        child.handlers = []
-        child.propagate = True
+    route_sdk_loggers_to_root()
 
     logging.getLogger("aidial_sdk").setLevel(config.level)
-
-
-def route_sdk_loggers_to_root() -> None:
-    """Drop the console handlers of the SDK loggers so their records reach the
-    handler OTel installed on the root logger instead."""
-
-    logging.getLogger("aidial_sdk").handlers = []
-    uvicorn = logging.getLogger("uvicorn")
-    uvicorn.handlers = []
-    uvicorn.propagate = True
 
 
 def configure_sdk_logger() -> None:
@@ -117,16 +116,10 @@ def configure_sdk_logger() -> None:
     aidial_sdk = logging.getLogger("aidial_sdk")
     uvicorn = logging.getLogger("uvicorn")
 
-    if _otel_installed_root_logger():
-        # the root logger is already installed;
-        # route the SDK loggers there
-        # instead of installing a competing text handler.
-        route_sdk_loggers_to_root()
-    else:
-        handler = logging.StreamHandler(sys.stderr)
-        handler.setFormatter(config.formatter)
-        aidial_sdk.handlers = [handler]
-        uvicorn.handlers = [handler]
-        uvicorn.propagate = False
+    handler = logging.StreamHandler(sys.stderr)
+    handler.setFormatter(config.formatter)
+    aidial_sdk.handlers = [handler]
+    uvicorn.handlers = [handler]
+    uvicorn.propagate = False
 
     aidial_sdk.setLevel(config.level)

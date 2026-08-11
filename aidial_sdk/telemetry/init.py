@@ -18,6 +18,13 @@ from aidial_sdk.telemetry.types import TelemetryConfig, get_otel_config_file
 from aidial_sdk.utils._logging import remove_stream_handlers
 from aidial_sdk.utils.log_config import route_sdk_loggers_to_root
 
+otel_owns_console = False
+"""Whether OTel has been handed the console handler of the root logger, set
+below once the configuration is known to claim it. Consulted by
+configure_root_logger(), which cannot tell from the environment alone: telemetry
+stays opt-in through DIALApp(telemetry_config=...) and a configuration file may
+say otherwise."""
+
 _ONE_LINE_LOGS_EXPORTER = "one_line_logs_exporter"
 
 _HTTP_CLIENT_INSTRUMENTORS = {
@@ -53,6 +60,8 @@ def _apply_otel_config(
         # The SDK loggers are rerouted as well: a configuration file is unknown
         # to configure_sdk_logger() at import time, and log correlation enabled
         # through TelemetryConfig alone is invisible to it too.
+        global otel_owns_console
+        otel_owns_console = True
         remove_stream_handlers(logging.getLogger(), sys.stderr)
         route_sdk_loggers_to_root()
 
