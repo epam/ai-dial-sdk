@@ -53,6 +53,8 @@ Applications and model adapters implemented using this framework will be compati
 
 Logging-related environment variables (log level, console format, and trace/span correlation) are documented in [docs/logging.md](docs/logging.md).
 
+OpenTelemetry — traces, metrics and log export, configured through `TelemetryConfig`, the `OTEL_*` variables or an `OTEL_CONFIG_FILE` — is documented in [docs/open_telemetry.md](docs/open_telemetry.md).
+
 ---
 
 ## Usage

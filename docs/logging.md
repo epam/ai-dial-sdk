@@ -1,6 +1,15 @@
 
 # Logging
 
+- [Logging](#logging)
+  - [Which one do I pick?](#which-one-do-i-pick)
+  - [1. DIAL SDK formatter](#1-dial-sdk-formatter)
+    - [Adding trace and span IDs](#adding-trace-and-span-ids)
+  - [2. OTel log correlation](#2-otel-log-correlation)
+  - [3. OTel log export](#3-otel-log-export)
+  - [Extending the active mode to your own loggers](#extending-the-active-mode-to-your-own-loggers)
+  - [Configuring OTel from a file (`OTEL_CONFIG_FILE`)](#configuring-otel-from-a-file-otel_config_file)
+
 The SDK logs to the console (stderr) through stdlib `logging`, configured from
 environment variables. There are **three disjoint ways** to render records —
 pick exactly one with the decision tree below, then jump to its section for
@@ -232,9 +241,8 @@ logger's level (stdlib default `WARNING`) — set levels per logger, as above.
 [Declarative configuration](https://opentelemetry.io/docs/specs/otel/configuration/)
 replaces §2/§3 entirely: when `OTEL_CONFIG_FILE` points at a YAML or JSON file,
 that file is the **sole** source of the OpenTelemetry setup. `TelemetryConfig`
-fields and the `OTEL_*` variables are ignored (the SDK warns when they are set),
-and §1's `DIAL_SDK_*` formatting still applies to whatever the file does not
-export.
+fields and the `OTEL_*` variables are ignored, silently, and §1's `DIAL_SDK_*`
+formatting still applies to whatever the file does not export.
 
 Telemetry stays opt-in — an empty config is enough to hand control to the file:
 
@@ -265,12 +273,21 @@ instrumentation/development:
     system_metrics: {}
 ```
 
-Note that instrumentation is opt-in per library under
-`instrumentation/development.python`, unlike the env-var path which instruments
-every HTTP client it finds. The FastAPI app itself is always instrumented (it
-exists before the file is read, so the file cannot reach it), and stdlib
-`logging` is bridged into `logger_provider` when the file configures one.
-
 A `console` log exporter renders as in §3 — one compact JSON object per line on
 stderr, with the same console takeover — rather than the indented JSON on
-stdout of the stock exporter, which the schema gives no way to configure.
+stdout of the stock exporter, which the schema gives no way to configure. Stdlib
+`logging` is bridged into `logger_provider` when the file configures one.
+
+Log **correlation** (§2) is the one thing the file has to ask for explicitly:
+the SDK enables the `logging` instrumentor together with tracing on the env-var
+path, but not for a file. Add it yourself:
+
+```yaml
+instrumentation/development:
+  python:
+    logging:
+      set_logging_format: true   # or inject_trace_context: true for §1's fields
+```
+
+See [docs/open_telemetry.md](open_telemetry.md) for the rest of the file format —
+traces, metrics and the instrumentation the SDK adds on top.
