@@ -291,6 +291,19 @@ def test_console_export_replaces_competing_stderr_handler():
     )  # single OTel line; "PLAIN hello" never emitted
 
 
+def test_console_export_with_tracing_emits_no_duplicates():
+    # Tracing brings in the logging instrumentor, which installs a log handler
+    # of its own next to the SDK's — one record, one line, not two.
+    obj = parse_json(
+        run(
+            emit("hello", logger="app", level="info"),
+            env={**_CONSOLE_ENV, "OTEL_TRACES_EXPORTER": "otlp"},
+            telemetry="TelemetryConfig()",
+        )
+    )
+    assert obj["body"] == "hello"
+
+
 def test_console_export_ignores_dial_sdk_format_vars():
     # With console export on, DIAL_SDK_* formatting is ignored — even the SDK's own
     # logger emits OTel JSON, not the SDK's {"level":..,"message":..} shape.

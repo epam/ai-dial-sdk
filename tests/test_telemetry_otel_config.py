@@ -118,5 +118,6 @@ def test_tracing_instruments_the_installed_http_clients():
         "logging": {
             "inject_trace_context": True,
             "set_logging_format": False,
+            "enable_log_auto_instrumentation": False,
         },
     }

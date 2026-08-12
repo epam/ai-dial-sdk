@@ -106,6 +106,11 @@ def _enrich_configuration(config: otel.OpenTelemetryConfiguration) -> None:
     if config.meter_provider:
         instr["system_metrics"] = instr.get("system_metrics") or {}
 
+    # Since 0.64b0 the logging instrumentor installs a log handler of its own,
+    # which would export every record twice next to the one added below.
+    if (logging_instr := instr.get("logging")) is not None:
+        logging_instr["enable_log_auto_instrumentation"] = False
+
     instrumentation.python = instr
     config.instrumentation_development = instrumentation
 
