@@ -6,9 +6,6 @@ from aidial_sdk.utils.env import env_var_list
 
 # OpenTelemetry SDK configuration env vars:
 # https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/
-#
-# Spelled out rather than imported from opentelemetry.*: this module is loaded
-# by DIALApp even when the telemetry extra is not installed.
 
 OTEL_LOGS_EXPORTER = env_var_list("OTEL_LOGS_EXPORTER")
 OTEL_TRACES_EXPORTER = env_var_list("OTEL_TRACES_EXPORTER")
