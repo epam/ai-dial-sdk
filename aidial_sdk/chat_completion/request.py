@@ -81,14 +81,20 @@ class ImageURL(ExtraAllowModel):
     detail: Literal["auto", "low", "high"] | None = None
 
 
+class PromptCacheBreakpoint(ExtraAllowModel):
+    mode: Literal["explicit"]
+
+
 class MessageContentImagePart(ExtraAllowModel):
     type: Literal["image_url"]
     image_url: ImageURL
+    prompt_cache_breakpoint: PromptCacheBreakpoint | None = None
 
 
 class MessageContentTextPart(ExtraAllowModel):
     type: Literal["text"]
     text: StrictStr
+    prompt_cache_breakpoint: PromptCacheBreakpoint | None = None
 
 
 class InputFile(ExtraAllowModel):
@@ -100,6 +106,7 @@ class InputFile(ExtraAllowModel):
 class MessageContentFilePart(ExtraAllowModel):
     type: Literal["file"]
     file: InputFile
+    prompt_cache_breakpoint: PromptCacheBreakpoint | None = None
 
 
 class InputAudio(ExtraAllowModel):
@@ -110,6 +117,7 @@ class InputAudio(ExtraAllowModel):
 class MessageContentAudioPart(ExtraAllowModel):
     type: Literal["input_audio"]
     input_audio: InputAudio
+    prompt_cache_breakpoint: PromptCacheBreakpoint | None = None
 
 
 class MessageContentRefusalPart(ExtraAllowModel):
@@ -258,6 +266,11 @@ ResponseFormat = (
 )
 
 
+class PromptCacheOptions(ExtraAllowModel):
+    mode: Literal["implicit", "explicit"] | None = None
+    ttl: Literal["30m"] | StrictStr | None = None
+
+
 class ReasoningEffort(str, Enum):
     NONE = "none"
     MINIMAL = "minimal"
@@ -291,6 +304,8 @@ class AzureChatCompletionRequest(ExtraAllowModel):
     reasoning_effort: ReasoningEffort | None = None
     response_format: ResponseFormat | None = None
     parallel_tool_calls: StrictBool | None = None
+    prompt_cache_key: StrictStr | None = None
+    prompt_cache_options: PromptCacheOptions | None = None
 
 
 class ChatCompletionRequestCustomFields(ExtraAllowModel):
