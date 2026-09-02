@@ -10,7 +10,7 @@ concurrency:
 
 jobs:
   run_tests:
-    uses: epam/ai-dial-ci/.github/workflows/python_package_pr.yml@4.9.0
+    uses: epam/ai-dial-ci/.github/workflows/python_package_pr.yml@4.10.0
     secrets: inherit
     with:
       python-version: "3.10"
