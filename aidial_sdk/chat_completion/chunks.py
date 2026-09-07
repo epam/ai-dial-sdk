@@ -96,6 +96,27 @@ class ContentChunk(BaseChunk):
         }
 
 
+class ReasoningContentChunk(BaseChunk):
+    content: str
+    choice_index: int
+
+    def __init__(self, content: str, choice_index: int):
+        self.content = content
+        self.choice_index = choice_index
+
+    def to_dict(self):
+        return {
+            "choices": [
+                {
+                    "index": self.choice_index,
+                    "finish_reason": None,
+                    "delta": {"reasoning_content": self.content},
+                }
+            ],
+            "usage": None,
+        }
+
+
 class FunctionToolCallChunk(BaseChunk):
     choice_index: int
     call_index: int
