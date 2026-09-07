@@ -190,13 +190,28 @@ class StartStageChunk(BaseChunk):
     choice_index: int
     stage_index: int
     name: str | None
+    parent_stage_index: int | None
 
-    def __init__(self, choice_index: int, stage_index: int, name: str | None):
+    def __init__(
+        self,
+        choice_index: int,
+        stage_index: int,
+        name: str | None,
+        parent_stage_index: int | None = None,
+    ):
         self.choice_index = choice_index
         self.stage_index = stage_index
         self.name = name
+        self.parent_stage_index = parent_stage_index
 
     def to_dict(self):
+        stage: dict[str, Any] = {
+            "index": self.stage_index,
+            "name": self.name,
+            "status": None,
+        }
+        if self.parent_stage_index is not None:
+            stage["parent_stage_index"] = self.parent_stage_index
         return {
             "choices": [
                 {
@@ -204,13 +219,7 @@ class StartStageChunk(BaseChunk):
                     "finish_reason": None,
                     "delta": {
                         "custom_content": {
-                            "stages": [
-                                {
-                                    "index": self.stage_index,
-                                    "name": self.name,
-                                    "status": None,
-                                }
-                            ]
+                            "stages": [stage]
                         }
                     },
                 }
