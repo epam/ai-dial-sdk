@@ -10,7 +10,7 @@ dependencies = [
     "fastapi (>=0.51,<1.0)",
     "uvicorn (>=0.19,<1.0)",
     "pydantic (>=1.10.17,<3)",
-    "wrapt (>=1.10,<2)",
+    "wrapt (>=1.10,<3)",
 ]
 
 [project.urls]

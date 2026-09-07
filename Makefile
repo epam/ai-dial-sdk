@@ -30,10 +30,10 @@ format: install
 	$(POETRY) run nox -s format
 
 test: install
-	$(POETRY) run -- nox -s test $(if $(PYTHON),--python=$(PYTHON),) -- $(ARGS)
+	$(POETRY) run -- nox $(if $(PYTHON),--python=$(PYTHON),) -- $(ARGS)
 
 test_fast: install
-	$(POETRY) run -- nox -s test $(if $(PYTHON),--python=$(PYTHON),) -- -m 'not slow' $(ARGS)
+	$(POETRY) run -- nox $(if $(PYTHON),--python=$(PYTHON),) -- -m 'not slow' $(ARGS)
 
 benchmark: install
 	python -m benchmark.benchmark_merge_chunks
