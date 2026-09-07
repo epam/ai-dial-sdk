@@ -18,6 +18,13 @@ OTEL_PYTHON_LOG_CORRELATION = (
 )
 
 
+def get_otel_config_file() -> str | None:
+    # Read on every call, unlike the constants above: the variable is only
+    # needed at DIALApp() time, late enough for a load_dotenv() that runs
+    # after the imports to have set it.
+    return os.getenv("OTEL_CONFIG_FILE") or None
+
+
 class LogsConfig(BaseModel):
     otlp_export: bool = "otlp" in OTEL_LOGS_EXPORTER
     console_export: bool = "console" in OTEL_LOGS_EXPORTER

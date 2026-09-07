@@ -7,7 +7,11 @@ from uvicorn.logging import DefaultFormatter
 
 from aidial_sdk.utils import log_config
 from aidial_sdk.utils._json_log_formatter import JsonLogFormatter
-from aidial_sdk.utils.log_config import LogConfig, configure_root_logger
+from aidial_sdk.utils.log_config import (
+    _SDK_LOGGERS,
+    LogConfig,
+    configure_root_logger,
+)
 
 
 def test_arguments_override_env(monkeypatch):
@@ -56,7 +60,7 @@ def clean_root():
 def clean_sdk_loggers():
     saved = {
         name: (logger.handlers[:], logger.propagate, logger.level)
-        for name in ("aidial_sdk", "uvicorn")
+        for name in _SDK_LOGGERS
         if (logger := logging.getLogger(name))
     }
     yield
@@ -82,9 +86,9 @@ def test_configure_root_logger_uses_passed_config(clean_root):
 
 
 def test_console_export_defers_root_handler_to_otel(clean_root, monkeypatch):
-    # With OTEL_LOGS_EXPORTER=console the JSON console handler is installed by
-    # init_telemetry, so configure_root_logger must not add its own stderr one.
-    monkeypatch.setattr(log_config, "OTEL_LOGS_EXPORTER", ["console"])
+    # The JSON console handler is installed by init_telemetry, so
+    # configure_root_logger must not add its own stderr one.
+    monkeypatch.setattr(log_config, "_otel_owns_console", True)
 
     configure_root_logger(LogConfig(level="info"))
 
@@ -94,16 +98,14 @@ def test_console_export_defers_root_handler_to_otel(clean_root, monkeypatch):
     assert logging.getLogger("aidial_sdk").propagate is True
 
 
-def test_console_export_sdk_logger_routes_to_root(
-    clean_sdk_loggers, monkeypatch
-):
-    # configure_sdk_logger must not attach a competing text handler and must
-    # let the SDK loggers propagate to root (where OTel's handler lives).
-    monkeypatch.setattr(log_config, "OTEL_LOGS_EXPORTER", ["console"])
-
+def test_routing_to_root_drops_the_competing_sdk_handlers(clean_sdk_loggers):
+    # Whoever installed the root handler -- OTel or configure_root_logger() --
+    # the SDK loggers must reach it instead of rendering on their own.
     log_config.configure_sdk_logger()
 
-    for name in ("aidial_sdk", "uvicorn"):
+    log_config.route_sdk_loggers_to_root()
+
+    for name in _SDK_LOGGERS:
         logger = logging.getLogger(name)
         assert logger.handlers == []
         assert logger.propagate is True

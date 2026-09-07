@@ -14,6 +14,7 @@ def run(
     telemetry: str | None = None,
     root_logger: bool = False,
     preamble: str = "",
+    capture: str = "stderr",
 ) -> list[str]:
     script = [
         "import logging",
@@ -30,13 +31,14 @@ def run(
         script.append("aidial_sdk.configure_root_logger()")
     script.append(logs)
 
-    err = subprocess.run(  # noqa: S603
+    proc = subprocess.run(  # noqa: S603
         [sys.executable, "-c", "\n".join(script)],
         capture_output=True,
         text=True,
         env={**os.environ, **(env or {})},
-    ).stderr
-    return [_ANSI.sub("", ln) for ln in err.splitlines() if ln.strip()]
+    )
+    out = proc.stdout if capture == "stdout" else proc.stderr
+    return [_ANSI.sub("", ln) for ln in out.splitlines() if ln.strip()]
 
 
 def emit(msg, *, logger="app", level="warning", set_level=True):
@@ -287,6 +289,19 @@ def test_console_export_replaces_competing_stderr_handler():
     assert (
         obj["body"] == "hello"
     )  # single OTel line; "PLAIN hello" never emitted
+
+
+def test_console_export_with_tracing_emits_no_duplicates():
+    # Tracing brings in the logging instrumentor, which installs a log handler
+    # of its own next to the SDK's — one record, one line, not two.
+    obj = parse_json(
+        run(
+            emit("hello", logger="app", level="info"),
+            env={**_CONSOLE_ENV, "OTEL_TRACES_EXPORTER": "otlp"},
+            telemetry="TelemetryConfig()",
+        )
+    )
+    assert obj["body"] == "hello"
 
 
 def test_console_export_ignores_dial_sdk_format_vars():

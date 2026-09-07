@@ -1,6 +1,15 @@
 
 # Logging
 
+- [Logging](#logging)
+  - [Which one do I pick?](#which-one-do-i-pick)
+  - [1. DIAL SDK formatter](#1-dial-sdk-formatter)
+    - [Adding trace and span IDs](#adding-trace-and-span-ids)
+  - [2. OTel log correlation](#2-otel-log-correlation)
+  - [3. OTel log export](#3-otel-log-export)
+  - [Extending the active mode to your own loggers](#extending-the-active-mode-to-your-own-loggers)
+  - [Configuring OTel from a file (`OTEL_CONFIG_FILE`)](#configuring-otel-from-a-file-otel_config_file)
+
 The SDK logs to the console (stderr) through stdlib `logging`, configured from
 environment variables. There are **three disjoint ways** to render records —
 pick exactly one with the decision tree below, then jump to its section for
@@ -51,6 +60,9 @@ OTel's.
 
 Level is orthogonal to all three — set it with `DIAL_SDK_LOG` (default
 `WARNING`).
+
+§2 and §3 can also be configured from a file instead of env vars — see
+[`OTEL_CONFIG_FILE`](#configuring-otel-from-a-file-otel_config_file).
 
 ## 1. DIAL SDK formatter
 
@@ -223,3 +235,59 @@ adapting to the active mode:
 
 `configure_root_logger()` is idempotent and does **not** change the root
 logger's level (stdlib default `WARNING`) — set levels per logger, as above.
+
+## Configuring OTel from a file (`OTEL_CONFIG_FILE`)
+
+[Declarative configuration](https://opentelemetry.io/docs/specs/otel/configuration/)
+replaces §2/§3 entirely: when `OTEL_CONFIG_FILE` points at a YAML or JSON file,
+that file is the **sole** source of the OpenTelemetry setup. `TelemetryConfig`
+fields and the `OTEL_*` variables are ignored, silently, and §1's `DIAL_SDK_*`
+formatting still applies to whatever the file does not export.
+
+Telemetry stays opt-in — an empty config is enough to hand control to the file:
+
+```python
+app = DIALApp(telemetry_config=TelemetryConfig())
+```
+
+```yaml
+# otel.yaml — OTEL_CONFIG_FILE=otel.yaml
+file_format: "1.0-rc.1"
+resource:
+  attributes:
+    - name: service.name
+      value: my-dial-app
+tracer_provider:
+  processors:
+    - batch:
+        exporter:
+          otlp_grpc: {}
+logger_provider:
+  processors:
+    - batch:
+        exporter:
+          otlp_grpc: {}
+instrumentation/development:
+  python:
+    httpx: {}
+    system_metrics: {}
+```
+
+A `console` log exporter renders as in §3 — one compact JSON object per line on
+stderr, with the same console takeover — rather than the indented JSON on
+stdout of the stock exporter, which the schema gives no way to configure. Stdlib
+`logging` is bridged into `logger_provider` when the file configures one.
+
+Log **correlation** (§2) is the one thing the file has to ask for explicitly:
+the SDK enables the `logging` instrumentor together with tracing on the env-var
+path, but not for a file. Add it yourself:
+
+```yaml
+instrumentation/development:
+  python:
+    logging:
+      set_logging_format: true   # or inject_trace_context: true for §1's fields
+```
+
+See [docs/open_telemetry.md](open_telemetry.md) for the rest of the file format —
+traces, metrics and the instrumentation the SDK adds on top.

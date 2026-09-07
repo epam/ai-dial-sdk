@@ -12,6 +12,12 @@ def env_float(name: str) -> float | None:
     return None
 
 
+def env_int(name: str) -> int | None:
+    if (value := os.getenv(name)) is not None:
+        return int(value)
+    return None
+
+
 def env_var_list(name: str) -> list[str]:
     value = os.getenv(name)
     if value is None:
