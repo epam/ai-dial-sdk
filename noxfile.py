@@ -3,6 +3,7 @@ from enum import Enum
 import nox
 
 nox.options.reuse_existing_virtualenvs = True
+nox.options.sessions = ["test_all", "test_header_propagation"]
 
 SRC = ["aidial_sdk", "tests", "noxfile.py", "examples"]
 
@@ -42,7 +43,10 @@ class UsePydanticV2(Enum):
     NO = "0"
 
 
-@nox.session(python=["3.10", "3.11", "3.12", "3.13"])
+_python_matrix = nox.session(python=["3.10", "3.11", "3.12", "3.13"])
+
+
+@_python_matrix
 # Testing against earliest and latest supported versions of the dependencies
 @nox.parametrize(
     "pydantic",
@@ -55,13 +59,20 @@ class UsePydanticV2(Enum):
     ],
 )
 @nox.parametrize("httpx", ["0.25.0", "0.27.0"])
-def test(
+def test_all(
     session: nox.Session, pydantic: tuple[str, UsePydanticV2], httpx: str
 ) -> None:
-    """Runs tests"""
     session.run("poetry", "install", "--all-extras", external=True)
     session.install(f"pydantic=={pydantic[0]}", f"httpx=={httpx}")
     session.install(*_PYDANTIC_DEPS[pydantic[0]])
     session.run(
         "pytest", *session.posargs, env={"PYDANTIC_V2": str(pydantic[1].value)}
     )
+
+
+@_python_matrix
+@nox.parametrize("wrapt", ["1.17.3", "2.4.0"])
+def test_header_propagation(session: nox.Session, wrapt: str) -> None:
+    session.run("poetry", "install", "--all-extras", external=True)
+    session.install(f"wrapt=={wrapt}")
+    session.run("pytest", "tests/test_header_propagation.py", *session.posargs)
