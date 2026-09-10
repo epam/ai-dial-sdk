@@ -161,8 +161,28 @@ class DIALApp(FastAPI):
         *,
         heartbeat_interval: float | None = None,
     ) -> "DIALApp":
+        return self._add_chat_completion(
+            deployment_name,
+            impl,
+            base_path=f"/openai/deployments/{deployment_name}",
+            heartbeat_interval=heartbeat_interval,
+        )._add_chat_completion(
+            None,
+            impl,
+            base_path="/openai/v1",
+            heartbeat_interval=heartbeat_interval,
+        )
+
+    def _add_chat_completion(
+        self,
+        deployment_name: str | None,
+        impl: ChatCompletion,
+        *,
+        base_path: str,
+        heartbeat_interval: float | None = None,
+    ) -> "DIALApp":
         self.add_api_route(
-            f"/openai/deployments/{deployment_name}/chat/completions",
+            f"{base_path}/chat/completions",
             self._chat_completion(
                 deployment_name,
                 impl,
@@ -172,14 +192,14 @@ class DIALApp(FastAPI):
         )
 
         self.add_api_route(
-            f"/openai/deployments/{deployment_name}/rate",
+            f"{base_path}/rate",
             self._rate_response(deployment_name, impl),
             methods=["POST"],
         )
 
         if endpoint_impl := get_method_implementation(impl, "tokenize"):
             self.add_api_route(
-                f"/openai/deployments/{deployment_name}/tokenize",
+                f"{base_path}/tokenize",
                 self._endpoint_factory(
                     deployment_name, endpoint_impl, "tokenize", TokenizeRequest
                 ),
@@ -188,7 +208,7 @@ class DIALApp(FastAPI):
 
         if endpoint_impl := get_method_implementation(impl, "truncate_prompt"):
             self.add_api_route(
-                f"/openai/deployments/{deployment_name}/truncate_prompt",
+                f"{base_path}/truncate_prompt",
                 self._endpoint_factory(
                     deployment_name,
                     endpoint_impl,
@@ -200,7 +220,7 @@ class DIALApp(FastAPI):
 
         if endpoint_impl := get_method_implementation(impl, "configuration"):
             self.add_api_route(
-                f"/openai/deployments/{deployment_name}/configuration",
+                f"{base_path}/configuration",
                 self._endpoint_factory(
                     deployment_name,
                     endpoint_impl,
@@ -214,7 +234,7 @@ class DIALApp(FastAPI):
 
     def _endpoint_factory(
         self,
-        deployment_id: str,
+        deployment_id: str | None,
         endpoint_impl: Callable[[RequestType], Coroutine[Any, Any, Any]],
         endpoint: Literal["tokenize", "truncate_prompt", "configuration"],
         request_type: type["RequestType"],
@@ -242,7 +262,7 @@ class DIALApp(FastAPI):
 
         return _handler
 
-    def _rate_response(self, deployment_id: str, impl: ChatCompletion):
+    def _rate_response(self, deployment_id: str | None, impl: ChatCompletion):
         async def _handler(original_request: Request):
             request = await self._parse_request(
                 RateRequest, original_request, deployment_id
@@ -257,15 +277,16 @@ class DIALApp(FastAPI):
         self,
         request: type[RequestType],
         original_request: Request,
-        deployment_id: str,
+        deployment_id: str | None,
     ) -> RequestType:
-        interpolated_deployment_id = _interpolate_deployment_id(
-            deployment_id, original_request.path_params
-        )
-        set_log_deployment(interpolated_deployment_id)
+        if deployment_id is not None:
+            deployment_id = _interpolate_deployment_id(
+                deployment_id, original_request.path_params
+            )
+            set_log_deployment(deployment_id)
 
         ret = await request.from_request(
-            original_request, interpolated_deployment_id, self._dial_url
+            original_request, deployment_id, self._dial_url
         )
         if not self._allow_extra_request_fields:
             model_validate_extra_fields(ret)
@@ -273,7 +294,7 @@ class DIALApp(FastAPI):
 
     def _chat_completion(
         self,
-        deployment_id: str,
+        deployment_id: str | None,
         impl: ChatCompletion,
         *,
         heartbeat_interval: float | None,

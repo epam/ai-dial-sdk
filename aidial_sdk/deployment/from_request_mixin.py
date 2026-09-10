@@ -21,7 +21,9 @@ from aidial_sdk.deployment._headers import (
     DIAL_CACHE_BREAKPOINT_PATH,
     DIAL_CACHE_EXTRA_METADATA,
     DIAL_CONVERSATION_ID,
+    DIAL_DEPLOYMENT_ID,
     DIAL_JOB_TITLE,
+    DIAL_OVERRIDE_NAME,
     DIAL_UPSTREAM_ENDPOINT,
     DIAL_UPSTREAM_EXTRA_DATA,
     DIAL_UPSTREAM_KEY,
@@ -39,7 +41,7 @@ class FromRequestMixin(ABC, ExtraAllowModel):
     async def from_request(
         cls: type[T],
         request: fastapi.Request,
-        deployment_id: str,
+        deployment_id: str | None,
         base_url: str | None,
     ) -> T:
         pass
@@ -176,7 +178,7 @@ class FromRequestDeploymentMixin(FromRequestMixin):
     async def from_request(
         cls,
         request: fastapi.Request,
-        deployment_id: StrictStr,
+        deployment_id: StrictStr | None,
         base_url: str | None,
     ):
         headers = request.headers.mutablecopy()
@@ -203,6 +205,17 @@ class FromRequestDeploymentMixin(FromRequestMixin):
                     f"The value of {DIAL_APPLICATION_PROPERTIES} header isn't valid JSON"
                 )
 
+        dial_deployment_id = headers.get(DIAL_DEPLOYMENT_ID)
+        dial_override_name = headers.get(DIAL_OVERRIDE_NAME)
+        effective_deployment_id = (
+            dial_override_name or deployment_id or dial_deployment_id
+        )
+
+        if effective_deployment_id is None:
+            raise InternalServerError(
+                f"The request headers are missing {DIAL_DEPLOYMENT_ID} header."
+            )
+
         return cls(
             **(await cls.get_request_body(request)),
             api_key_secret=SecretStr(api_key),
@@ -212,7 +225,7 @@ class FromRequestDeploymentMixin(FromRequestMixin):
             bearer_token_secret=(
                 SecretStr(bearer_token) if bearer_token else None
             ),
-            deployment_id=deployment_id,
+            deployment_id=effective_deployment_id,
             api_version=request.query_params.get("api-version"),
             headers=headers,
             original_request=request,
