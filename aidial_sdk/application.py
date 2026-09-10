@@ -152,6 +152,12 @@ class DIALApp(FastAPI):
             methods=["POST"],
         )
 
+        self.add_api_route(
+            "/openai/v1/embeddings",
+            self._embeddings(None, impl),
+            methods=["POST"],
+        )
+
         return self
 
     def add_chat_completion(
@@ -337,7 +343,7 @@ class DIALApp(FastAPI):
 
         return _handler
 
-    def _embeddings(self, deployment_id: str, impl: Embeddings):
+    def _embeddings(self, deployment_id: str | None, impl: Embeddings):
         async def _handler(original_request: Request):
             request = await self._parse_request(
                 EmbeddingsRequest, original_request, deployment_id
