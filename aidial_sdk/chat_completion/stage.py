@@ -22,6 +22,7 @@ class Stage:
     _choice_index: int
     _stage_index: int
     _name: str | None
+    _parent_stage_index: int | None
     _last_attachment_index: int
     _closed: bool
     _opened: bool
@@ -32,6 +33,7 @@ class Stage:
         choice_index: int,
         stage_index: int,
         name: str | None = None,
+        parent_stage_index: int | None = None,
     ):
         self._queue = queue
         self._choice_index = choice_index
@@ -40,6 +42,11 @@ class Stage:
         self._opened = False
         self._closed = False
         self._name = name
+        self._parent_stage_index = parent_stage_index
+
+    @property
+    def stage_index(self) -> int:
+        return self._stage_index
 
     def __enter__(self):
         self.open()
@@ -121,7 +128,12 @@ class Stage:
 
         self._opened = True
         self._queue.put_nowait(
-            StartStageChunk(self._choice_index, self._stage_index, self._name)
+            StartStageChunk(
+                self._choice_index,
+                self._stage_index,
+                self._name,
+                self._parent_stage_index,
+            )
         )
 
     def close(self, status: Status = Status.COMPLETED):
