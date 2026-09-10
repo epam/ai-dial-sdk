@@ -195,3 +195,42 @@ def test_deployment_id_missing(endpoint: str, method: str, body: Any):
         f"The request headers are missing {DIAL_DEPLOYMENT_ID} header."
     )
     assert deployment_ids == []
+
+
+class _DeploymentNameEcho(ChatCompletion):
+    """Replies with the deployment id of the request it received."""
+
+    def __init__(self, name: str) -> None:
+        self.name = name
+
+    async def chat_completion(
+        self, request: Request, response: Response
+    ) -> None:
+        with response.create_single_choice() as choice:
+            choice.append_content(f"{self.name}:{request.deployment_id}")
+
+
+@pytest.mark.parametrize("header", [DIAL_OVERRIDE_NAME, DIAL_DEPLOYMENT_ID])
+@pytest.mark.parametrize("deployment", ["app-one", "app-two"])
+def test_v1_routing_between_deployments(deployment: str, header: str):
+    """The v1 endpoints are shared by all the deployments of a single
+    DIALApp, so they must be routed by the resolved deployment id."""
+
+    app = (
+        DIALApp()
+        .add_chat_completion("app-one", _DeploymentNameEcho("app-one"))
+        .add_chat_completion("app-two", _DeploymentNameEcho("app-two"))
+    )
+    client = TestClient(app, headers={"Api-Key": _API_KEY})
+
+    response = client.post(
+        "/openai/v1/chat/completions",
+        json={"messages": [{"role": "user", "content": "hi"}]},
+        headers={header: deployment},
+    )
+
+    assert response.status_code == 200
+    assert (
+        response.json()["choices"][0]["message"]["content"]
+        == f"{deployment}:{deployment}"
+    )
