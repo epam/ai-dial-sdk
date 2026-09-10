@@ -152,6 +152,7 @@ class Message(ExtraAllowModel):
     tool_call_id: StrictStr | None = None
     function_call: FunctionCall | None = None
     refusal: StrictStr | None = None
+    reasoning_content: StrictStr | None = None
 
     def text(self) -> str:
         """
