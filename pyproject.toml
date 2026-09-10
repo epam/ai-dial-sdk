@@ -10,12 +10,12 @@ dependencies = [
     "fastapi (>=0.51,<1.0)",
     "uvicorn (>=0.19,<1.0)",
     "pydantic (>=1.10.17,<3)",
-    "wrapt (>=1.10,<2)",
+    "wrapt (>=1.10,<3)",
 ]
 
 [project.urls]
-Homepage = "https://epam-rail.com"
-Documentation = "https://epam-rail.com/dial_api"
+Homepage = "https://dialx.ai"
+Documentation = "https://dialx.ai/dial_api"
 Repository = "https://github.com/epam/ai-dial-sdk"
 
 [project.optional-dependencies]
@@ -46,7 +46,7 @@ aiohttp = "^3.14.3"
 aiointercept = "^0.1.7"
 requests = "^2.33"
 responses = "^0.25.3"
-httpx2 = "^2.7.0"         # required for Starlette.TestClient
+httpx2 = "^2.12.0"         # required for Starlette.TestClient
 openai = "^2.46.0"        # third-party logger for log-takeover tests
 
 [tool.poetry.group.lint.dependencies]

@@ -37,9 +37,9 @@
 
 ## Overview
 
-Framework to create applications and model adapters for [AI DIAL](https://epam-rail.com).
+Framework to create applications and model adapters for [AI DIAL](https://dialx.ai).
 
-Applications and model adapters implemented using this framework will be compatible with [AI DIAL API](https://epam-rail.com/dial_api) that was designed based on [Azure OpenAI API](https://learn.microsoft.com/en-us/azure/ai-services/openai/reference).
+Applications and model adapters implemented using this framework will be compatible with [AI DIAL API](https://dialx.ai/dial_api) that was designed based on [Azure OpenAI API](https://learn.microsoft.com/en-us/azure/ai-services/openai/reference).
 
 ---
 
