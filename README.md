@@ -150,14 +150,12 @@ Every deployment is exposed under two base paths:
 
 The following endpoints are served under each of them:
 
-|Endpoint|Method|Registered when|
-|---|---|---|
-|`chat/completions`|POST|`add_chat_completion` is called|
-|`rate`|POST|`add_chat_completion` is called|
-|`tokenize`|POST|`ChatCompletion.tokenize` is implemented|
-|`truncate_prompt`|POST|`ChatCompletion.truncate_prompt` is implemented|
-|`configuration`|GET|`ChatCompletion.configuration` is implemented|
-|`embeddings`|POST|`add_embeddings` is called|
+- `POST <base path>/chat/completions`
+- `POST <base path>/rate`
+- `POST <base path>/tokenize`
+- `POST <base path>/truncate_prompt`
+- `GET <base path>/configuration`
+- `POST <base path>/embeddings`
 
 `request.deployment_id` is resolved from the first of the following sources that is set:
 
@@ -166,10 +164,6 @@ The following endpoints are served under each of them:
 3. the `X-DIAL-DEPLOYMENT-ID` header, which DIAL Core sets when it calls the `/openai/v1` endpoints.
 
 An `/openai/v1` request with none of the headers set fails with `500 Internal Server Error`.
-
-> [!NOTE]
-> The `/openai/v1` endpoints are shared by all the deployments added to a single `DIALApp`.
-> When more than one deployment is added, the `/openai/v1` requests are routed to the one added first.
 
 ---
 

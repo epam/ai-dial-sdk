@@ -156,12 +156,14 @@ def _call(
     headers: dict[str, str],
 ):
     impl = _DeploymentIdRecorder()
-    client = TestClient(
-        DIALApp()
-        .add_chat_completion(_DEPLOYMENT_NAME, impl)
-        .add_embeddings(_DEPLOYMENT_NAME, impl),
-        headers={"Api-Key": _API_KEY},
-    )
+
+    # the v1 endpoints dispatch by the resolved deployment id,
+    # so every id the tests may resolve to has to be registered
+    app = DIALApp()
+    for name in (_DEPLOYMENT_NAME, _OVERRIDE_NAME, _HEADER_DEPLOYMENT_ID):
+        app.add_chat_completion(name, impl).add_embeddings(name, impl)
+
+    client = TestClient(app, headers={"Api-Key": _API_KEY})
     response = client.request(
         method, f"{base_path}/{endpoint}", json=body, headers=headers
     )
@@ -234,3 +236,38 @@ def test_v1_routing_between_deployments(deployment: str, header: str):
         response.json()["choices"][0]["message"]["content"]
         == f"{deployment}:{deployment}"
     )
+
+
+@pytest.mark.parametrize(
+    "endpoint, deployment",
+    [
+        ("chat/completions", "app-unknown"),
+        # app-two doesn't implement tokenize, so its v1 route is
+        # registered by app-one only
+        ("tokenize", "app-two"),
+    ],
+)
+def test_v1_unknown_deployment(endpoint: str, deployment: str):
+    class _Tokenizer(_DeploymentNameEcho):
+        async def tokenize(self, request: TokenizeRequest) -> TokenizeResponse:
+            return TokenizeResponse(outputs=[])
+
+    app = (
+        DIALApp()
+        .add_chat_completion("app-one", _Tokenizer("app-one"))
+        .add_chat_completion("app-two", _DeploymentNameEcho("app-two"))
+    )
+    client = TestClient(app, headers={"Api-Key": _API_KEY})
+
+    response = client.post(
+        f"/openai/v1/{endpoint}",
+        json={"messages": [], "inputs": []},
+        headers={DIAL_DEPLOYMENT_ID: deployment},
+    )
+
+    assert response.status_code == 404
+    assert response.json()["error"] == {
+        "code": "DeploymentNotFound",
+        "message": f"The deployment '{deployment}' doesn't provide the '{endpoint}' endpoint",
+        "type": "runtime_error",
+    }
