@@ -22,6 +22,7 @@
   - [Echo application example](#echo-application-example)
     - [Run](#run)
     - [Check](#check)
+  - [Endpoints](#endpoints)
 - [Development](#development)
   - [Development Environment](#development-environment)
   - [Setup](#setup)
@@ -135,6 +136,40 @@ You will see the JSON response as:
     "object": "chat.completion"
 }
 ```
+
+---
+
+### Endpoints
+
+Every deployment is exposed under two base paths:
+
+|Base path|Description|
+|---|---|
+|`/openai/deployments/{deployment_name}`|The DIAL API path. The deployment name is a part of the path.|
+|`/openai/v1`|The Azure OpenAI v1 API path. The deployment name comes from the request headers.|
+
+The following endpoints are served under each of them:
+
+|Endpoint|Method|Registered when|
+|---|---|---|
+|`chat/completions`|POST|`add_chat_completion` is called|
+|`rate`|POST|`add_chat_completion` is called|
+|`tokenize`|POST|`ChatCompletion.tokenize` is implemented|
+|`truncate_prompt`|POST|`ChatCompletion.truncate_prompt` is implemented|
+|`configuration`|GET|`ChatCompletion.configuration` is implemented|
+|`embeddings`|POST|`add_embeddings` is called|
+
+`request.deployment_id` is resolved from the first of the following sources that is set:
+
+1. the `X-DIAL-OVERRIDE-NAME` header,
+2. the deployment name from the path, for the `/openai/deployments/{deployment_name}` requests,
+3. the `X-DIAL-DEPLOYMENT-ID` header, which DIAL Core sets when it calls the `/openai/v1` endpoints.
+
+An `/openai/v1` request with none of the headers set fails with `500 Internal Server Error`.
+
+> [!NOTE]
+> The `/openai/v1` endpoints are shared by all the deployments added to a single `DIALApp`.
+> When more than one deployment is added, the `/openai/v1` requests are routed to the one added first.
 
 ---
 
