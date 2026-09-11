@@ -1,6 +1,7 @@
 import json
 import warnings
 from abc import ABC, abstractmethod
+from collections.abc import Mapping
 from typing import Any, TypeVar
 from urllib.parse import urljoin
 
@@ -21,7 +22,9 @@ from aidial_sdk.deployment._headers import (
     DIAL_CACHE_BREAKPOINT_PATH,
     DIAL_CACHE_EXTRA_METADATA,
     DIAL_CONVERSATION_ID,
+    DIAL_DEPLOYMENT_ID,
     DIAL_JOB_TITLE,
+    DIAL_OVERRIDE_NAME,
     DIAL_UPSTREAM_ENDPOINT,
     DIAL_UPSTREAM_EXTRA_DATA,
     DIAL_UPSTREAM_KEY,
@@ -33,13 +36,33 @@ from aidial_sdk.utils.pydantic import ExtraAllowModel
 T = TypeVar("T", bound="FromRequestMixin")
 
 
+def resolve_deployment_id(
+    headers: Mapping[str, str], deployment_id: str | None
+) -> str:
+    """The deployment id of a request comes either from the path it was
+    sent to or, for the deployment-agnostic paths, from its headers."""
+
+    effective_deployment_id = (
+        headers.get(DIAL_OVERRIDE_NAME)
+        or deployment_id
+        or headers.get(DIAL_DEPLOYMENT_ID)
+    )
+
+    if effective_deployment_id is None:
+        raise InternalServerError(
+            f"The request headers are missing {DIAL_DEPLOYMENT_ID} header."
+        )
+
+    return effective_deployment_id
+
+
 class FromRequestMixin(ABC, ExtraAllowModel):
     @classmethod
     @abstractmethod
     async def from_request(
         cls: type[T],
         request: fastapi.Request,
-        deployment_id: str,
+        deployment_id: str | None,
         base_url: str | None,
     ) -> T:
         pass
@@ -176,7 +199,7 @@ class FromRequestDeploymentMixin(FromRequestMixin):
     async def from_request(
         cls,
         request: fastapi.Request,
-        deployment_id: StrictStr,
+        deployment_id: StrictStr | None,
         base_url: str | None,
     ):
         headers = request.headers.mutablecopy()
@@ -212,7 +235,7 @@ class FromRequestDeploymentMixin(FromRequestMixin):
             bearer_token_secret=(
                 SecretStr(bearer_token) if bearer_token else None
             ),
-            deployment_id=deployment_id,
+            deployment_id=resolve_deployment_id(headers, deployment_id),
             api_version=request.query_params.get("api-version"),
             headers=headers,
             original_request=request,
