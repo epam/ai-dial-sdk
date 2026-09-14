@@ -3,13 +3,16 @@ VENV_DIR ?= .venv
 POETRY ?= poetry
 POETRY_PYTHON ?= python
 
+# Any non-empty CI value (even 'false' or '0') means that CI is enabled
+CI ?=
+
 -include .env.dev
 export
 
 all: build
 
 init_env:
-	$(POETRY) env use $(POETRY_PYTHON)
+	$(if $(CI),,$(POETRY) env use $(POETRY_PYTHON))
 
 install: init_env
 	$(POETRY) install --all-extras
@@ -27,10 +30,10 @@ format: install
 	$(POETRY) run nox -s format
 
 test: install
-	$(POETRY) run -- nox -s test $(if $(PYTHON),--python=$(PYTHON),) -- $(ARGS)
+	$(POETRY) run -- nox $(if $(PYTHON),--python=$(PYTHON),) -- $(ARGS)
 
 test_fast: install
-	$(POETRY) run -- nox -s test $(if $(PYTHON),--python=$(PYTHON),) -- -m 'not slow' $(ARGS)
+	$(POETRY) run -- nox $(if $(PYTHON),--python=$(PYTHON),) -- -m 'not slow' $(ARGS)
 
 benchmark: install
 	python -m benchmark.benchmark_merge_chunks

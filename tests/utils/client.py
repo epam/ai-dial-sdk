@@ -1,4 +1,4 @@
-import httpx
+import httpx2
 from fastapi import FastAPI
 from starlette.testclient import TestClient
 
@@ -11,7 +11,7 @@ def create_app_client(
     *,
     name: str = "test-deployment-name",
     headers: dict[str, str] = {"api-key": "TEST_API_KEY"},
-) -> httpx.Client:
+) -> httpx2.Client:
     app = DIALApp().add_chat_completion(name, chat_completion)
     return create_test_client(app, name=name, headers=headers)
 
@@ -21,7 +21,7 @@ def create_test_client(
     *,
     name: str = "test-deployment-name",
     headers: dict[str, str] = {"api-key": "TEST_API_KEY"},
-) -> httpx.Client:
+) -> httpx2.Client:
     return TestClient(
         app=app,
         headers=headers,

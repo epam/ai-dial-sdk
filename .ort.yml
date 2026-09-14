@@ -1,26 +1,17 @@
 ---
+analyzer:
+  skip_excluded: true
 excludes:
   paths:
     - pattern: "examples/**"
       reason: "EXAMPLE_OF"
   scopes:
+    - pattern: "dev"
+      reason: "DEV_DEPENDENCY_OF"
+      comment: "Packages for development only."
     - pattern: "lint"
       reason: "DEV_DEPENDENCY_OF"
       comment: "Packages for static code analysis only."
     - pattern: "test"
       reason: "TEST_DEPENDENCY_OF"
       comment: "Packages for testing only."
-resolutions:
-  rule_violations:
-    - message: ".*PyPI::setuptools:78\\.1\\.1.*"
-      reason: "CANT_FIX_EXCEPTION"
-      comment: "BSD 3-Clause New or Revised License: https://github.com/pypa/setuptools/blob/v78.1.1/LICENSE"
-    - message: ".*PyPI::httpcore:1\\.0\\.9.*"
-      reason: "CANT_FIX_EXCEPTION"
-      comment: "BSD 3-Clause New or Revised License: https://github.com/encode/httpcore/blob/1.0.9/LICENSE.md"
-    - message: ".*PyPI::httpx:0\\.25\\.2.*"
-      reason: "CANT_FIX_EXCEPTION"
-      comment: "BSD 3-Clause New or Revised License: https://github.com/encode/httpx/blob/0.25.2/LICENSE.md"
-    - message: ".*PyPI::(fastapi|starlette|typing-extensions|typing-inspection|urllib3|idna).*"
-      reason: "CANT_FIX_EXCEPTION"
-      comment: "ORT cannot pick up license information"

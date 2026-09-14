@@ -22,6 +22,7 @@
   - [Echo application example](#echo-application-example)
     - [Run](#run)
     - [Check](#check)
+  - [Endpoints](#endpoints)
 - [Development](#development)
   - [Development Environment](#development-environment)
   - [Setup](#setup)
@@ -37,9 +38,9 @@
 
 ## Overview
 
-Framework to create applications and model adapters for [AI DIAL](https://epam-rail.com).
+Framework to create applications and model adapters for [AI DIAL](https://dialx.ai).
 
-Applications and model adapters implemented using this framework will be compatible with [AI DIAL API](https://epam-rail.com/dial_api) that was designed based on [Azure OpenAI API](https://learn.microsoft.com/en-us/azure/ai-services/openai/reference).
+Applications and model adapters implemented using this framework will be compatible with [AI DIAL API](https://dialx.ai/dial_api) that was designed based on [Azure OpenAI API](https://learn.microsoft.com/en-us/azure/ai-services/openai/reference).
 
 ---
 
@@ -47,10 +48,11 @@ Applications and model adapters implemented using this framework will be compati
 
 |Variable|Default|Description|
 |---|---|---|
-|DIAL_SDK_LOG|WARNING|DIAL SDK log level|
 |DIAL_SDK_HEADERS_TO_PROXY|``|A comma-separated list of headers that should be proxied from incoming requests to outgoing requests to the DIAL API. By default, no headers are proxied.|
 |DIAL_SDK_SSE_HEARTBEAT_INTERVAL||When set, the SDK inserts ping comments into streaming chat completion responses after the response has been idle for the specified number of seconds, helping prevent read timeouts when the DIAL application isn't responsive.|
 |PYDANTIC_V2|False|When `True` and Pydantic V2 is installed, DIAL SDK classes for requests/responses will be based on Pydantic V2 `BaseModel`. Otherwise, they will be based on Pydantic V1 `BaseModel`.|
+
+Logging-related environment variables (log level, console format, and trace/span correlation) are documented in [docs/logging.md](docs/logging.md).
 
 ---
 
@@ -134,6 +136,34 @@ You will see the JSON response as:
     "object": "chat.completion"
 }
 ```
+
+---
+
+### Endpoints
+
+Every deployment is exposed under two base paths:
+
+|Base path|Description|
+|---|---|
+|`/openai/deployments/{deployment_name}`|The DIAL API path. The deployment name is a part of the path.|
+|`/openai/v1`|The Azure OpenAI v1 API path. The deployment name comes from the request headers.|
+
+The following endpoints are served under each of them:
+
+- `POST <base path>/chat/completions`
+- `POST <base path>/rate`
+- `POST <base path>/tokenize`
+- `POST <base path>/truncate_prompt`
+- `GET <base path>/configuration`
+- `POST <base path>/embeddings`
+
+`request.deployment_id` is resolved from the first of the following sources that is set:
+
+1. the `X-DIAL-OVERRIDE-NAME` header,
+2. the deployment name from the path, for the `/openai/deployments/{deployment_name}` requests,
+3. the `X-DIAL-DEPLOYMENT-ID` header, which DIAL Core sets when it calls the `/openai/v1` endpoints.
+
+An `/openai/v1` request with none of the headers set fails with `500 Internal Server Error`.
 
 ---
 

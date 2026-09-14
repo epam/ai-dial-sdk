@@ -1,6 +1,6 @@
 [project]
 name = "aidial-sdk"
-version = "0.0.0"
+version = "0.37.0"
 description = "Framework to create applications and model adapters for AI DIAL"
 authors = [{ name = "EPAM RAIL", email = "SpecialEPM-DIALDevTeam@epam.com" }]
 license = "Apache-2.0"
@@ -10,12 +10,12 @@ dependencies = [
     "fastapi (>=0.51,<1.0)",
     "uvicorn (>=0.19,<1.0)",
     "pydantic (>=1.10.17,<3)",
-    "wrapt (>=1.10,<2)",
+    "wrapt (>=1.10,<3)",
 ]
 
 [project.urls]
-Homepage = "https://epam-rail.com"
-Documentation = "https://epam-rail.com/dial_api"
+Homepage = "https://dialx.ai"
+Documentation = "https://dialx.ai/dial_api"
 Repository = "https://github.com/epam/ai-dial-sdk"
 
 [project.optional-dependencies]
@@ -39,13 +39,15 @@ httpx = ["httpx (>=0.25.0,<1.0)"]
 pytest = "^9.0.3"
 pytest-asyncio = "^1.3.0"
 nox = "^2023.4.22"
-pillow = "^12.2.0"
+pillow = "^12.3.0"
 httpx = "^0.25.0"
 respx = "^0.21.1"
-aiohttp = "^3.13.4"
-aioresponses = "^0.7.6"
+aiohttp = "^3.14.3"
+aiointercept = "^0.1.7"
 requests = "^2.33"
 responses = "^0.25.3"
+httpx2 = "^2.12.0"         # required for Starlette.TestClient
+openai = "^2.46.0"        # third-party logger for log-takeover tests
 
 [tool.poetry.group.lint.dependencies]
 pyright = "1.1.385"
