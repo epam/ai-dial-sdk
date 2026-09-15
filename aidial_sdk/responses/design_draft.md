@@ -1,9 +1,9 @@
 # DIAL Responses API SDK — API design draft
 
 > Status: **design proposal, not implemented**.
-> The protocol-level decisions this design depends on are collected in
-> [Protocol decisions we need](#protocol-decisions-we-need) — everything else in
-> this document is settled by the SDK surface alone.
+> The wire-format choices this design assumes are collected in
+> [Protocol decisions made](#protocol-decisions-made); what is still undecided is
+> in [Open questions](#open-questions).
 
 - [Goals](#goals)
 - [Mental model](#mental-model)
@@ -25,8 +25,8 @@
 - [Forms](#forms)
 - [Worked examples](#worked-examples)
 - [Migration cheat sheet](#migration-cheat-sheet)
-- [Protocol decisions we need](#protocol-decisions-we-need)
-- [Implementation plan](#implementation-plan)
+- [Protocol decisions made](#protocol-decisions-made)
+- [Open questions](#open-questions)
 
 ---
 
@@ -51,9 +51,14 @@
    application, and an application must be able to emit an item type the SDK does
    not model yet.
 
-Non-goals for v1: `background`, `previous_response_id`, `conversation`,
-server-side `store`, and the `/tokenize` / `/truncate_prompt` deployment
-endpoints (their request bodies are chat-completion shaped).
+**Out of scope by design, not deferred.** DIAL applications and model adapters
+are stateless, so the server-side conversation features of the Responses API —
+`previous_response_id`, `background`, `conversation` and `store` — are not
+supported and are not expected to be. The SDK rejects them rather than accepting
+them and behaving differently than the client asked.
+
+Deferred, not rejected: the `/tokenize` and `/truncate_prompt` deployment
+endpoints, whose request bodies are chat-completion shaped.
 
 ---
 
@@ -125,6 +130,7 @@ class EchoApplication(Responses):
 app = DIALApp()
 app.add_responses("echo", EchoApplication())
 
+# Run built app
 if __name__ == "__main__":
     uvicorn.run(app, port=5000)
 ```
@@ -299,7 +305,7 @@ class ResponsesRequest(ExtraAllowModel):
     prompt_cache_key: StrictStr | None = None
     safety_identifier: StrictStr | None = None
 
-    # --- stateful features DIAL does not support (see below) ---
+    # --- stateful features: declared only so they can be rejected ---
     store: StrictBool | None = None
     background: StrictBool | None = None
     previous_response_id: StrictStr | None = None
@@ -310,16 +316,17 @@ class ResponsesRequest(ExtraAllowModel):
     custom_fields: RequestCustomFields | None = None   # configuration, cache_breakpoint
 ```
 
-**Unsupported stateful fields.** `previous_response_id`, `background` and
-`conversation` are rejected by the SDK at parse time with a
-`RequestValidationError` (HTTP 422) before the handler runs; `store` is accepted
-and ignored (a stateless deployment simply never stores). DIAL Core should reject
-these earlier, but the SDK must not silently produce a wrong answer. An adapter
-that genuinely implements them opts out per deployment:
+**Stateful fields are rejected.** `previous_response_id`, `background`,
+`conversation` and `store: true` fail at parse time with a
+`RequestValidationError` (HTTP 422) before the handler runs. `store: false` and an
+absent `store` are accepted, since that is what a stateless deployment does.
 
-```python
-app.add_responses("stateful-app", impl, allow_stateful_fields=True)
-```
+There is no opt-out flag. A DIAL application cannot serve these fields — there is
+no response store to read `previous_response_id` from and no place to park a
+`background` response — so a per-deployment escape hatch would only let a
+deployment claim support it does not have. DIAL Core should reject these earlier
+too; the SDK check is the backstop that keeps an application from silently
+answering a question it was not asked.
 
 ### Input items
 
@@ -408,10 +415,10 @@ request.configuration        # dict | None  — custom_fields.configuration
 ```
 
 `request.form_value` and `request.state` deliberately hide *where* those values
-live on the wire (see [Protocol decisions](#protocol-decisions-we-need)): whether
-a filled form arrives as `custom_content.form_value` on the last user message or
-as a `custom_tool_call_output` item is an adapter concern, not an application
-concern.
+live on the wire (see [decision 3](#3-forms-in-custom_content-not-a-custom-tool-call)):
+whether a filled form arrives as `custom_content.form_value` on the last user
+message or as a `custom_tool_call_output` item is an adapter concern, not an
+application concern.
 
 ### Files
 
@@ -458,7 +465,8 @@ Item builders follow the `chat_completion` conventions exactly:
   `response.output_item.added`; `close()` emits the item's `.done` events.
 - The builders are context managers: `with response.create_message() as m:` opens
   on entry and closes on a clean exit. `Stage` additionally closes with
-  `Status.FAILED` when the block exits with an exception, like today.
+  `Status.FAILED` when the block exits with an exception, which is what
+  `chat_completion.Stage.__exit__` does today.
 - Calling `append_*` / `add_*` on an unopened or closed builder raises a
   `runtime_error`, with the same message style as chat completion
   (`"Trying to append text to a closed message"`).
@@ -505,8 +513,11 @@ class Message:
         start_index: int | None = None, end_index: int | None = None,
     ) -> None: ...
 
-    # DIAL extensions
+    # DIAL extensions — an overload set, like choice.add_attachment today:
+    # pass a File, or pass its fields as keywords
+    @overload
     def add_file(self, file: File) -> None: ...
+    @overload
     def add_file(
         self, *, filename: str | None = None, file_data: str | None = None,
         file_url: str | None = None, file_type: str | None = None,
@@ -546,12 +557,13 @@ from `Choice` to `Response`:
 ```python
 stage = response.create_stage(name=None)
 
+
 class Stage:
     def append_name(self, name: str) -> None: ...
     def append_content(self, content: str) -> None: ...
     @property
     def content_stream(self) -> ContentStream: ...
-    def add_file(self, ...) -> None: ...          # same overloads as Message.add_file
+    def add_file(self, ...) -> None: ...          # same overload set as Message.add_file
     def open(self) -> None: ...
     def close(self, status: Status = Status.COMPLETED) -> None: ...
 ```
@@ -562,9 +574,10 @@ with response.create_stage("Downloading the document") as stage:
     stage.append_content(f"Loaded {len(documents)} pages")
 ```
 
-Its wire representation is the one genuinely contested protocol point; see
-[Stages on the wire](#1-stages-on-the-wire). The SDK surface above holds under
-either answer.
+On the wire a stage is *not* a new output item — it lives in
+`custom_content.stages` of the assistant message, see
+[decision 1](#1-stages-live-inside-the-message-item). When a stage is created
+before any text, the SDK opens the carrier message item for it.
 
 ### Reasoning item
 
@@ -617,8 +630,9 @@ that `chat_completion.Choice` carries.
 
 ### Custom tool call item
 
-The Responses-only free-form tool call. One candidate encoding for DIAL forms
-uses it (see [decision 3](#3-forms-custom_contentform_schema-vs-custom_tool_call)):
+The Responses-only free-form tool call. DIAL forms deliberately do not use it
+(see [decision 3](#3-forms-in-custom_content-not-a-custom-tool-call)), but an
+adapter proxying a model that emits custom tool calls needs it:
 
 ```python
 with response.create_custom_tool_call(name="dial:forms") as call:
@@ -781,10 +795,10 @@ Non-DIAL exceptions become a `RuntimeServerError` with the generic message and a
 logged, exactly as in `Response._run_producer` today. `display_message` and the
 DIAL-specific extra fields ride along inside `response.error`.
 
-> The alternative is OpenAI's standalone `event: error`. `response.failed` is
-> proposed instead because it is the terminal event of the response state machine —
-> clients that track status get a consistent final state, and the partial `output`
-> is preserved. See [Protocol decisions](#4-streaming-error-event).
+> The alternative was OpenAI's standalone `event: error`. `response.failed` wins
+> because it is the terminal event of the response state machine — clients that
+> track status get a consistent final state, and the partial `output` is
+> preserved. See [decision 4](#4-a-failed-stream-ends-with-responsefailed).
 
 ---
 
@@ -804,19 +818,17 @@ if form_value := request.form_value:
     move = MoveForm.model_validate(form_value)
 ```
 
-Whether that travels as `custom_content.form_schema` on the assistant message or
-as a `custom_tool_call` named `dial:forms` is invisible to the application. If
-the `custom_tool_call` encoding wins, `set_form_schema` becomes sugar over
-`create_custom_tool_call("dial:forms")` and `request.form_value` reads the
-matching `custom_tool_call_output`; applications do not change.
+On the wire this is `custom_content.form_schema` on the assistant message and
+`custom_content.form_value` on the user message, exactly as in chat completion
+([decision 3](#3-forms-in-custom_content-not-a-custom-tool-call)). Those two
+calls are the whole application-visible API, so if the encoding is ever revisited,
+applications do not change.
 
 ---
 
 ## Worked examples
 
 ### 1. RAG with stages, citations and files
-
-Ported from `examples/langchain_rag`, extended with the Responses-native pieces.
 
 ```python
 from aidial_sdk import DIALApp
@@ -880,8 +892,6 @@ class SimpleRAGApplication(Responses):
 
 ### 2. Text-to-image, returning a file
 
-Ported from `examples/render_text`.
-
 ```python
 class RenderTextApplication(Responses):
     async def responses(self, request: Request, response: Response) -> None:
@@ -900,8 +910,7 @@ class RenderTextApplication(Responses):
 
 ### 3. A configurable application with forms
 
-Ported from `examples/tic_tac_toe` — note how much request-side boilerplate the
-navigation helpers remove.
+Note how much request-side boilerplate the navigation helpers remove.
 
 ```python
 class TicTacToeApplication(Responses):
@@ -1023,80 +1032,98 @@ class UpstreamAdapter(Responses):
 
 ---
 
-## Protocol decisions we need
+## Protocol decisions made
 
-Everything above is settled by the SDK surface. These four are wire-format choices
-the SDK cannot make on its own; each one is invisible to applications, so the
-review can land the SDK surface first and these later.
+These are the wire-format choices this SDK design assumes. All of them are
+invisible to applications — they change what the SDK emits, not what an
+application calls — so the SDK surface can be reviewed independently.
 
-### 1. Stages on the wire
+One rule settles most of them: **DIAL-specific extensions live inside the objects
+the vanilla protocol already defines, and never introduce new output item types.**
+A client that knows nothing about DIAL must see an ordinary Responses payload;
+extra fields on known objects are ignored by such a client, whereas an unknown
+item type in `output` is something it has to cope with. It also keeps the mental
+model small for application authors: `output` holds the same item types OpenAI
+documents, and DIAL's additions hang off them.
 
-- **Option A — a dedicated output item type** (`{"type": "dial.stage", "name":
-  …, "status": …, "content": …, "files": […]}`) with matching
-  `response.dial.stage.*` streaming events. Ordering relative to text is exact,
-  nothing needs merge semantics, and the item carries its own status. Risk: a
-  strict OpenAI-typed client may reject an unknown `output` item type or an
-  unknown SSE event name. **This needs verifying against `openai-python` and
-  `openai-node` before it can be recommended.**
-- **Option B — `custom_content.stages` on the assistant message's `output_text`
-  part**, streamed as `response.output_text.delta` events with an empty `delta`
-  and a `custom_content` payload. Extra
-  fields on known objects are preserved by the OpenAI clients, so this is the safe
-  choice, and it maps 1:1 to `choice.custom_content.stages` for chat completion
-  conversion. Costs: stage ordering is implicit, indices must be merged, and the
-  SDK has to lazily open a carrier message item when a stage precedes any text.
+### 1. Stages live inside the message item
 
-**Recommendation: B for v1**, A once client leniency is confirmed. Under B,
-`response.create_stage()` before any message opens a hidden carrier message item
-that stays open until the response ends.
+A stage is `custom_content.stages` on the assistant message's `output_text`
+content part, streamed as `response.output_text.delta` events carrying an empty
+`delta` and a `custom_content` payload:
 
-### 2. Where DIAL response-level extensions live
+```
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","sequence_number":6,"item_id":"msg_1","output_index":0,"content_index":0,"delta":"","custom_content":{"stages":[{"index":0,"name":"Downloading"}]}}
 
-`state`, `form_schema` and `files` are per-message in chat completion
-(`choice.custom_content`). In Responses they are per-response concepts, and the
-SDK exposes them that way (`response.set_state`). The wire choice is
-`custom_content` on the assistant message's `output_text` part
-(conversion-friendly) versus a top-level `custom_content` on the response object
-(simpler, but a new top-level field). Same question for `statistics`
-(`usage_per_model`, `discarded_input_items`), which chat completion puts at the
-top level.
+```
 
-**Recommendation:** `statistics` top-level (matching chat completion), `state` /
-`form_schema` / `files` inside the message's `output_text.custom_content`
-(required for chat-completion conversion).
+Consequences the SDK absorbs: stage entries are identified by `index` and merged
+by the client, and `response.create_stage()` called before any text opens the
+carrier message item that the stages hang off, keeping it open until the response
+ends.
 
-### 3. Forms: `custom_content.form_schema` vs `custom_tool_call`
+The rejected alternative was a dedicated `{"type": "dial.stage", …}` output item
+with its own `response.dial.stage.*` events. It is cleaner in isolation — exact
+ordering relative to text, per-item status, no merge semantics — but it violates
+the rule above: it expands the protocol's item vocabulary, and it asks everyone
+writing or reading DIAL responses to learn a shape that is not in the Responses
+API. It also maps less directly onto `choice.custom_content.stages` for
+chat-completion conversion. Worth revisiting only if stage ordering relative to
+text turns out to matter to DIAL Chat.
 
-Modelling forms as a `custom_tool_call` named `dial:forms` is elegant — it makes
-the form round-trip a first-class part of the item list and gives the filled
-value a natural home
-(`custom_tool_call_output`). It also requires the client to send
-`tools: [{"type": "custom", "name": "dial:forms"}]` to opt in, which is a
-behaviour change for DIAL Chat. `custom_content.form_schema` is the
-zero-migration option.
+### 2. Other DIAL extensions follow the same rule
 
-**Recommendation:** `custom_content.form_schema` for v1 parity;
-revisit `dial:forms` when DIAL Chat is ready. Either way `set_form_schema` /
-`request.form_value` are the only application-visible API.
+`state`, `form_schema` and `files` live in `custom_content` of the assistant
+message's `output_text` part, which is also what chat-completion conversion needs.
+The SDK still exposes them per response (`response.set_state`), because in
+Responses there is nothing per-choice to hang them on.
 
-### 4. Streaming error event
+`statistics` (`usage_per_model`, `discarded_input_items`) is the one exception:
+it stays a top-level field of the response object, as it is in DIAL chat
+completion. It is a response-level concern with no sensible per-item home, DIAL
+Core already reads it from the top level, and it is additive — a vanilla client
+ignores it.
 
-`response.failed` (proposed above) versus OpenAI's standalone `event: error`
-versus chat completion's bare `data: {"error": …}`. DIAL Core, DIAL Chat and the
-analytics pipeline must all agree. **Recommendation: `response.failed` with the
-DIAL error object in `response.error`**, because it keeps the response state
-machine consistent and preserves the partial `output`.
+### 3. Forms in `custom_content`, not a custom tool call
 
-### 5. Smaller open items
+The schema travels as `custom_content.form_schema` on the assistant message and
+the filled value as `custom_content.form_value` on the user message — the chat
+completion encoding, unchanged.
+
+Modelling forms as a `custom_tool_call` named `dial:forms` was the attractive
+alternative: the round-trip becomes a first-class pair of items and the filled
+value gets a natural home in `custom_tool_call_output`. It loses on the same rule
+as decision 1, and it additionally requires the client to opt in by sending
+`tools: [{"type": "custom", "name": "dial:forms"}]`, which is a behaviour change
+for DIAL Chat for no application-visible gain.
+
+### 4. A failed stream ends with `response.failed`
+
+Once the stream has started, a failure closes every open item as `incomplete` and
+emits `response.failed`, with the DIAL error object (`message`, `type`, `code`,
+`param`, `display_message`) in `response.error`. See [Errors](#errors) for the
+full behaviour, including the pre-first-flush case that stays a plain HTTP error.
+
+Rejected: OpenAI's standalone `event: error` (leaves the response without a
+terminal state) and chat completion's bare `data: {"error": …}` (not a Responses
+event at all).
+
+---
+
+## Open questions
+
+None of these block the SDK surface; they need a decision before or during
+implementation.
 
 - **Endpoint shape.** `POST /openai/deployments/{name}/responses` is what the SDK
   registers. Does Core also expose the OpenAI-native `POST /v1/responses` with
   `model` in the body, and if so does the SDK need to serve it?
-- **Handler name.** `responses` (chosen, matches `chat_completion` /
+- **Handler name.** `responses` (chosen here, matches `chat_completion` /
   `embeddings`) vs `create_response` (reads better in isolation).
 - **`discarded_input_items` vs `discarded_messages`** as the `statistics` field
   name. The indices point into `input`, so the former is proposed.
-- **`file_type`**. Redundant when `file_data` is a data URI, needed alongside
+- **`file_type`.** Redundant when `file_data` is a data URI, needed alongside
   `file_url`. Keep it, or require the type to be carried by the URL?
 - **`tokenize` / `truncate_prompt`.** Their DIAL request bodies embed
   chat-completion requests. Out of v1; a Responses-shaped variant would need its
@@ -1104,31 +1131,5 @@ machine consistent and preserves the partial `output`.
 
 ---
 
-## Implementation plan
-
-The chat completion package maps onto this design closely enough that most files
-have a direct counterpart, which keeps the work reviewable in small pieces.
-
-| step | deliverable | verify |
-|---|---|---|
-| 1 | `responses/request.py` — models, `RawItem` fallback, navigation helpers, stateful-field rejection | round-trip tests over recorded OpenAI Responses payloads; unknown item types survive |
-| 2 | `responses/events.py` — the event dataclasses (counterpart of `chat_completion/chunks.py`), owning `sequence_number` / index assignment | golden-file tests: builder call sequence → exact SSE transcript |
-| 3 | `responses/response.py` + item builders, snapshot accumulation | the same handler produces a consistent snapshot in `stream: true` and `stream: false`; guard-rail errors |
-| 4 | `responses/base.py`, `DIALApp.add_responses`, heartbeats, error paths | end-to-end tests through `TestClient`, streaming and block; error before/after first flush |
-| 5 | `aidial_sdk.forms` extraction + re-exports | existing chat completion form tests unchanged |
-| 6 | ported `examples/echo` and `examples/langchain_rag`, README section | run them against a local DIAL |
-
-Two implementation notes worth fixing now:
-
-- **The snapshot is the source of truth.** Items write into the accumulating
-  response object and *derive* events from those writes, rather than the chat
-  completion arrangement where chunks are the source of truth and the block
-  response is merged back out of them. This removes `merge_chunks` /
-  `cleanup_indices` from the Responses path entirely and guarantees streaming and
-  block modes agree by construction.
-- **Wire mapping behind one seam.** Given the open protocol questions, the
-  translation from builder writes to events should sit in a single module
-  (`events.py`) with no application-visible surface, so that resolving
-  [decision 1](#1-stages-on-the-wire) or
-  [decision 3](#3-forms-custom_contentform_schema-vs-custom_tool_call) is a change
-  in one file and not an SDK-wide migration.
+Implementation sequencing and notes live in
+[implementation_draft.md](./implementation_draft.md).
