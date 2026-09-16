@@ -15,6 +15,7 @@ from aidial_sdk.chat_completion.request import Attachment
 from aidial_sdk.utils._attachment import create_attachment
 from aidial_sdk.utils._content_stream import ContentStream
 from aidial_sdk.utils.errors import runtime_error
+from aidial_sdk.utils.logging import log_warning
 
 
 class Stage:
@@ -22,7 +23,8 @@ class Stage:
     _choice_index: int
     _stage_index: int
     _name: str | None
-    _parent_stage_index: int | None
+    _parent: "Stage | None"
+    _children: list["Stage"]
     _last_attachment_index: int
     _closed: bool
     _opened: bool
@@ -33,8 +35,13 @@ class Stage:
         choice_index: int,
         stage_index: int,
         name: str | None = None,
-        parent_stage_index: int | None = None,
+        parent: "Stage | None" = None,
     ):
+        if parent is not None and parent._choice_index != choice_index:
+            raise runtime_error(
+                "Trying to create a stage whose parent stage belongs to another choice"
+            )
+
         self._queue = queue
         self._choice_index = choice_index
         self._stage_index = stage_index
@@ -42,11 +49,23 @@ class Stage:
         self._opened = False
         self._closed = False
         self._name = name
-        self._parent_stage_index = parent_stage_index
+        self._parent = parent
+        self._children = []
+
+        if parent is not None:
+            parent._children.append(self)
 
     @property
     def stage_index(self) -> int:
         return self._stage_index
+
+    @property
+    def opened(self) -> bool:
+        return self._opened
+
+    @property
+    def closed(self) -> bool:
+        return self._closed
 
     def __enter__(self):
         self.open()
@@ -126,13 +145,24 @@ class Stage:
         if self._opened:
             raise runtime_error("The stage is already open")
 
+        parent = self._parent
+        if parent is not None:
+            if not parent.opened:
+                raise runtime_error(
+                    "Trying to open a stage whose parent stage is not open"
+                )
+            if parent.closed:
+                raise runtime_error(
+                    "Trying to open a stage whose parent stage is already closed"
+                )
+
         self._opened = True
         self._queue.put_nowait(
             StartStageChunk(
                 self._choice_index,
                 self._stage_index,
                 self._name,
-                self._parent_stage_index,
+                parent.stage_index if parent is not None else None,
             )
         )
 
@@ -141,6 +171,17 @@ class Stage:
             raise runtime_error("Trying to close an unopened stage")
         if self._closed:
             raise runtime_error("The stage is already closed")
+
+        open_children = [
+            child.stage_index
+            for child in self._children
+            if child.opened and not child.closed
+        ]
+        if open_children:
+            log_warning(
+                f"Closing the stage {self._stage_index} which still has "
+                f"open child stages: {open_children}"
+            )
 
         self._closed = True
         self._queue.put_nowait(

@@ -192,13 +192,12 @@ class Choice(ChoiceBase):
         if self._closed:
             raise runtime_error("Trying to create stage to a closed choice")
 
-        parent_stage_index = parent.stage_index if parent is not None else None
         stage = Stage(
             self._queue,
             self._index,
             self._last_stage_index,
             name,
-            parent_stage_index,
+            parent,
         )
         self._last_stage_index += 1
 

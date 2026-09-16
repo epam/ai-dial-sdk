@@ -217,11 +217,7 @@ class StartStageChunk(BaseChunk):
                 {
                     "index": self.choice_index,
                     "finish_reason": None,
-                    "delta": {
-                        "custom_content": {
-                            "stages": [stage]
-                        }
-                    },
+                    "delta": {"custom_content": {"stages": [stage]}},
                 }
             ],
             "usage": None,
