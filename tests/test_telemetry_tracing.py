@@ -69,8 +69,11 @@ async def test_traceparent_wins_over_a_context_left_by_another_request():
         if span.kind is SpanKind.SERVER
     ]
     assert len(servers) == 1
-    assert f"{servers[0].context.trace_id:032x}" == CALLER_TRACE_ID
-    assert f"{servers[0].parent.span_id:016x}" == CALLER_SPAN_ID
+    server = servers[0]
+    assert server.context is not None
+    assert server.parent is not None
+    assert f"{server.context.trace_id:032x}" == CALLER_TRACE_ID
+    assert f"{server.parent.span_id:016x}" == CALLER_SPAN_ID
 
 
 def test_reset_becomes_the_outermost_middleware():
