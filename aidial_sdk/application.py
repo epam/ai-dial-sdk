@@ -1,7 +1,7 @@
 import logging
 import re
 import warnings
-from collections.abc import Callable, Coroutine
+from collections.abc import Callable, Coroutine, Iterator
 from typing import Any, Literal, TypeVar
 
 from fastapi import FastAPI, HTTPException, Request
@@ -20,12 +20,16 @@ from aidial_sdk.chat_completion.response import (
     Response as ChatCompletionResponse,
 )
 from aidial_sdk.deployment.configuration import ConfigurationRequest
-from aidial_sdk.deployment.from_request_mixin import FromRequestMixin
+from aidial_sdk.deployment.from_request_mixin import (
+    FromRequestMixin,
+    resolve_deployment_id,
+)
 from aidial_sdk.deployment.rate import RateRequest
 from aidial_sdk.deployment.tokenize import TokenizeRequest
 from aidial_sdk.deployment.truncate_prompt import TruncatePromptRequest
 from aidial_sdk.embeddings.base import Embeddings
 from aidial_sdk.embeddings.request import Request as EmbeddingsRequest
+from aidial_sdk.exceptions import DeploymentNotFoundError
 from aidial_sdk.exceptions import HTTPException as DIALException
 from aidial_sdk.header_propagator import HeaderPropagator
 from aidial_sdk.telemetry.types import TelemetryConfig
@@ -44,6 +48,8 @@ from aidial_sdk.utils.streaming import (
 configure_sdk_logger()
 
 RequestType = TypeVar("RequestType", bound=FromRequestMixin)
+
+Handler = Callable[[Request], Coroutine[Any, Any, Response]]
 
 
 def _interpolate_deployment_id(deployment_id: str, path_params: dict) -> str:
@@ -70,6 +76,7 @@ class PathFilter(logging.Filter):
 class DIALApp(FastAPI):
     _allow_extra_request_fields: bool
     _dial_url: str | None
+    _v1_handlers: dict[str, dict[str, Handler]]
 
     def __init__(
         self,
@@ -95,6 +102,7 @@ class DIALApp(FastAPI):
 
         self._allow_extra_request_fields = allow_extra_request_fields
         self._dial_url = dial_url
+        self._v1_handlers = {}
 
         self.configure_telemetry(telemetry_config)
 
@@ -152,6 +160,13 @@ class DIALApp(FastAPI):
             methods=["POST"],
         )
 
+        self._add_v1_route(
+            deployment_name,
+            "embeddings",
+            self._embeddings(None, impl),
+            methods=["POST"],
+        )
+
         return self
 
     def add_chat_completion(
@@ -161,60 +176,115 @@ class DIALApp(FastAPI):
         *,
         heartbeat_interval: float | None = None,
     ) -> "DIALApp":
-        self.add_api_route(
-            f"/openai/deployments/{deployment_name}/chat/completions",
-            self._chat_completion(
-                deployment_name,
-                impl,
-                heartbeat_interval=heartbeat_interval,
-            ),
-            methods=["POST"],
-        )
-
-        self.add_api_route(
-            f"/openai/deployments/{deployment_name}/rate",
-            self._rate_response(deployment_name, impl),
-            methods=["POST"],
-        )
-
-        if endpoint_impl := get_method_implementation(impl, "tokenize"):
+        for endpoint, handler, methods in self._chat_completion_handlers(
+            deployment_name, impl, heartbeat_interval
+        ):
             self.add_api_route(
-                f"/openai/deployments/{deployment_name}/tokenize",
-                self._endpoint_factory(
-                    deployment_name, endpoint_impl, "tokenize", TokenizeRequest
-                ),
-                methods=["POST"],
+                f"/openai/deployments/{deployment_name}/{endpoint}",
+                handler,
+                methods=methods,
             )
 
-        if endpoint_impl := get_method_implementation(impl, "truncate_prompt"):
-            self.add_api_route(
-                f"/openai/deployments/{deployment_name}/truncate_prompt",
-                self._endpoint_factory(
-                    deployment_name,
-                    endpoint_impl,
-                    "truncate_prompt",
-                    TruncatePromptRequest,
-                ),
-                methods=["POST"],
-            )
-
-        if endpoint_impl := get_method_implementation(impl, "configuration"):
-            self.add_api_route(
-                f"/openai/deployments/{deployment_name}/configuration",
-                self._endpoint_factory(
-                    deployment_name,
-                    endpoint_impl,
-                    "configuration",
-                    ConfigurationRequest,
-                ),
-                methods=["GET"],
+        for endpoint, handler, methods in self._chat_completion_handlers(
+            None, impl, heartbeat_interval
+        ):
+            self._add_v1_route(
+                deployment_name, endpoint, handler, methods=methods
             )
 
         return self
 
+    def _chat_completion_handlers(
+        self,
+        deployment_id: str | None,
+        impl: ChatCompletion,
+        heartbeat_interval: float | None,
+    ) -> Iterator[tuple[str, Handler, list[str]]]:
+        yield (
+            "chat/completions",
+            self._chat_completion(
+                deployment_id, impl, heartbeat_interval=heartbeat_interval
+            ),
+            ["POST"],
+        )
+
+        yield "rate", self._rate_response(deployment_id, impl), ["POST"]
+
+        if endpoint_impl := get_method_implementation(impl, "tokenize"):
+            yield (
+                "tokenize",
+                self._endpoint_factory(
+                    deployment_id, endpoint_impl, "tokenize", TokenizeRequest
+                ),
+                ["POST"],
+            )
+
+        if endpoint_impl := get_method_implementation(impl, "truncate_prompt"):
+            yield (
+                "truncate_prompt",
+                self._endpoint_factory(
+                    deployment_id,
+                    endpoint_impl,
+                    "truncate_prompt",
+                    TruncatePromptRequest,
+                ),
+                ["POST"],
+            )
+
+        if endpoint_impl := get_method_implementation(impl, "configuration"):
+            yield (
+                "configuration",
+                self._endpoint_factory(
+                    deployment_id,
+                    endpoint_impl,
+                    "configuration",
+                    ConfigurationRequest,
+                ),
+                ["GET"],
+            )
+
+    def _add_v1_route(
+        self,
+        deployment_name: str,
+        endpoint: str,
+        handler: Handler,
+        *,
+        methods: list[str],
+    ) -> None:
+        """The /openai/v1 endpoints are shared by all the deployments of
+        the application, so they are dispatched by the deployment id
+        resolved from the request headers."""
+
+        if endpoint not in self._v1_handlers:
+            self._v1_handlers[endpoint] = {}
+            self.add_api_route(
+                f"/openai/v1/{endpoint}",
+                self._v1_dispatcher(endpoint),
+                methods=methods,
+            )
+
+        self._v1_handlers[endpoint][deployment_name] = handler
+
+    def _v1_dispatcher(self, endpoint: str) -> Handler:
+        async def _handler(original_request: Request) -> Response:
+            deployment_id = resolve_deployment_id(
+                original_request.headers, None
+            )
+            set_log_deployment(deployment_id)
+
+            handler = self._v1_handlers[endpoint].get(deployment_id)
+            if handler is None:
+                raise DeploymentNotFoundError(
+                    f"The deployment {deployment_id!r} doesn't provide the {endpoint!r} endpoint"
+                )
+
+            return await handler(original_request)
+
+        return _handler
+
     def _endpoint_factory(
         self,
-        deployment_id: str,
+        deployment_id: str | None,
         endpoint_impl: Callable[[RequestType], Coroutine[Any, Any, Any]],
         endpoint: Literal["tokenize", "truncate_prompt", "configuration"],
         request_type: type["RequestType"],
@@ -242,7 +312,7 @@ class DIALApp(FastAPI):
 
         return _handler
 
-    def _rate_response(self, deployment_id: str, impl: ChatCompletion):
+    def _rate_response(self, deployment_id: str | None, impl: ChatCompletion):
         async def _handler(original_request: Request):
             request = await self._parse_request(
                 RateRequest, original_request, deployment_id
@@ -257,15 +327,16 @@ class DIALApp(FastAPI):
         self,
         request: type[RequestType],
         original_request: Request,
-        deployment_id: str,
+        deployment_id: str | None,
     ) -> RequestType:
-        interpolated_deployment_id = _interpolate_deployment_id(
-            deployment_id, original_request.path_params
-        )
-        set_log_deployment(interpolated_deployment_id)
+        if deployment_id is not None:
+            deployment_id = _interpolate_deployment_id(
+                deployment_id, original_request.path_params
+            )
+            set_log_deployment(deployment_id)
 
         ret = await request.from_request(
-            original_request, interpolated_deployment_id, self._dial_url
+            original_request, deployment_id, self._dial_url
         )
         if not self._allow_extra_request_fields:
             model_validate_extra_fields(ret)
@@ -273,7 +344,7 @@ class DIALApp(FastAPI):
 
     def _chat_completion(
         self,
-        deployment_id: str,
+        deployment_id: str | None,
         impl: ChatCompletion,
         *,
         heartbeat_interval: float | None,
@@ -316,7 +387,7 @@ class DIALApp(FastAPI):
 
         return _handler
 
-    def _embeddings(self, deployment_id: str, impl: Embeddings):
+    def _embeddings(self, deployment_id: str | None, impl: Embeddings):
         async def _handler(original_request: Request):
             request = await self._parse_request(
                 EmbeddingsRequest, original_request, deployment_id

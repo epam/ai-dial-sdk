@@ -1,17 +1,17 @@
 ---
+analyzer:
+  skip_excluded: true
 excludes:
   paths:
     - pattern: "examples/**"
       reason: "EXAMPLE_OF"
   scopes:
+    - pattern: "dev"
+      reason: "DEV_DEPENDENCY_OF"
+      comment: "Packages for development only."
     - pattern: "lint"
       reason: "DEV_DEPENDENCY_OF"
       comment: "Packages for static code analysis only."
     - pattern: "test"
       reason: "TEST_DEPENDENCY_OF"
       comment: "Packages for testing only."
-resolutions:
-  rule_violations:
-    - message: ".*PyPI::(fastapi|starlette|typing-extensions|typing-inspection|urllib3|idna|anyio|setuptools|httpcore|httpx).*"
-      reason: "CANT_FIX_EXCEPTION"
-      comment: "ORT cannot pick up license information"
