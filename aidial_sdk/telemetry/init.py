@@ -34,6 +34,7 @@ from opentelemetry.sdk.trace.export import BatchSpanProcessor
 from opentelemetry.trace import set_tracer_provider
 from prometheus_client import start_http_server
 
+from aidial_sdk.telemetry._context import reset_context_per_request
 from aidial_sdk.telemetry.types import TelemetryConfig
 from aidial_sdk.utils._logging import remove_stream_handlers
 
@@ -143,3 +144,6 @@ def init_telemetry(app: FastAPI | None, config: TelemetryConfig):
     if app and (config.tracing is not None or config.metrics is not None):
         # FastAPI instrumentor reports both metrics and traces
         FastAPIInstrumentor.instrument_app(app)
+        # Has to come after instrument_app, so that the reset ends up
+        # outside the instrumentation's own middleware.
+        reset_context_per_request(app)
