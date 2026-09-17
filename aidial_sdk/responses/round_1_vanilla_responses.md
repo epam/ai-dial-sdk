@@ -2,8 +2,6 @@
 
 > Part of the [Responses API SDK design](./design_draft.md). This round delivers a
 > working, spec-compliant Responses endpoint with **no DIAL-specific features**.
-> [Round 2](./round_2_dial_features.md) adds stages, files, state and forms;
-> [round 3](./round_3_improvements.md) collects optional follow-ups.
 
 - [Scope](#scope)
 - [Quickstart](#quickstart)
@@ -31,10 +29,6 @@ client that knows nothing about DIAL:
   custom tool calls
 - streaming and block responses, with the SDK owning all protocol bookkeeping
 - errors
-
-A round-1 response payload contains no `custom_content` and no `statistics`
-anywhere. That is the acceptance criterion for this round: diff a round-1 response
-against an OpenAI Responses response and only the values should differ.
 
 ---
 
@@ -179,8 +173,6 @@ class ResponsesRequest(ExtraAllowModel):
     conversation: StrictStr | ConversationRef | None = None
 ```
 
-Round 2 adds the DIAL request extensions (`max_prompt_tokens`, `custom_fields`).
-
 **Stateful fields are rejected.** `previous_response_id`, `background`,
 `conversation` and `store: true` fail at parse time with a
 `RequestValidationError` (HTTP 422) before the handler runs. `store: false` and an
@@ -256,10 +248,6 @@ InputContentPart = (
 > concatenation of all `input_text` / `output_text` parts and `""` when there are
 > none. It never raises. Use `message.content` directly when you care about the
 > structure.
-
-Round 2 adds `custom_content` / `custom_fields` to `InputMessage` and a
-`files()` accessor that normalises `input_file` parts and DIAL's
-`custom_content.files` into one list.
 
 ### Navigation helpers
 
@@ -516,9 +504,6 @@ Guard rails match chat completion: `set_response_id` / `set_created` /
 call. Unlike chat completion, `set_usage` does **not** require all output to be
 finished — the Responses `usage` field lives on the response snapshot, which is
 only serialised at the end anyway.
-
-Round 2 adds `set_state`, `set_form_schema`, `add_usage_per_model`,
-`set_discarded_input_items` and `set_cache_breakpoint`.
 
 ---
 
