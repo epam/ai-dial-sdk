@@ -5,7 +5,7 @@ from opentelemetry.context import Context, attach, detach
 
 
 @contextlib.contextmanager
-def reset_trace_context() -> Iterator[None]:
+def reset_otel_context() -> Iterator[None]:
     token = attach(Context())
     try:
         yield

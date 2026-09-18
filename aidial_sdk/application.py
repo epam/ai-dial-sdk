@@ -150,7 +150,7 @@ class DIALApp(FastAPI):
             return
 
         try:
-            from aidial_sdk.telemetry._context import reset_trace_context
+            from aidial_sdk.telemetry._context import reset_otel_context
             from aidial_sdk.telemetry.init import init_telemetry
 
             init_telemetry(app=self, config=config)
@@ -160,7 +160,7 @@ class DIALApp(FastAPI):
                 "Install the package with the extras: aidial-sdk[telemetry]"
             )
 
-        self._reset_otel_context = reset_trace_context
+        self._reset_otel_context = reset_otel_context
 
     async def __call__(
         self, scope: Scope, receive: Receive, send: Send

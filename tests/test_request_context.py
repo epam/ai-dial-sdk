@@ -16,7 +16,7 @@ from opentelemetry.sdk.trace.export.in_memory_span_exporter import (
 from opentelemetry.trace import SpanKind
 
 from aidial_sdk import DIALApp
-from aidial_sdk.telemetry._context import reset_trace_context
+from aidial_sdk.telemetry._context import reset_otel_context
 from aidial_sdk.telemetry.types import TelemetryConfig, TracingConfig
 from aidial_sdk.utils.logging import deployment_id, set_log_deployment
 
@@ -91,7 +91,7 @@ async def test_each_request_is_traced_under_its_own_traceparent():
     # What `configure_telemetry` does, minus the global tracer provider that a
     # test must not install.
     FastAPIInstrumentor.instrument_app(app, tracer_provider=provider)
-    app._reset_otel_context = reset_trace_context
+    app._reset_otel_context = reset_otel_context
 
     sock = socket.socket()
     sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -141,7 +141,7 @@ def test_telemetry_installs_the_trace_context_reset(monkeypatch):
             tracing=TracingConfig(otlp_export=False)
         )
     )
-    assert app._reset_otel_context is reset_trace_context
+    assert app._reset_otel_context is reset_otel_context
 
 
 async def test_deployment_id_is_not_inherited_from_another_request():
