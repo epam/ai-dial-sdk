@@ -165,22 +165,7 @@ class DIALApp(FastAPI):
     async def __call__(
         self, scope: Scope, receive: Receive, send: Send
     ) -> None:
-        # Workaround for the bug in asyncio:
-        # https://github.com/python/cpython/pull/141158
-        #
-        # This is the outermost point of the application: outside the entire
-        # middleware stack, including the middleware that
-        # `FastAPIInstrumentor.instrument_app` installs around it. State a
-        # request inherits from an earlier request on the same connection has
-        # to be dropped here, before anything reads it.
-        #
-        # `deployment_id` feeds the log prefix and is resolved from the
-        # headers before the body is read - which is the point asyncio pins
-        # this task's context to the connection. Without the reset, every log
-        # line a request emits before routing (a client disconnect, a
-        # validation error) names the previous request's deployment. Not
-        # restored on the way out on purpose: leaving it cleared is what stops
-        # the value reaching the next request.
+        # Workaround for the bug in asyncio: https://github.com/python/cpython/pull/141158
         reset_log_context()
         with self._reset_otel_context():
             await super().__call__(scope, receive, send)

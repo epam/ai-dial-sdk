@@ -13,12 +13,6 @@ def set_log_deployment(new_deployment_id: str):
 
 
 def reset_log_context() -> None:
-    """Forgets a deployment inherited from an earlier request.
-
-    A request's task can start with the ``contextvars`` of an earlier request
-    on the same connection, so `DIALApp.__call__` calls this at the ASGI entry
-    point. See `aidial_sdk.telemetry._context.reset_trace_context`.
-    """
     deployment_id.set(None)
 
 
