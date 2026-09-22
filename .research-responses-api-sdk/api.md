@@ -239,35 +239,16 @@ Response (ctx — entered and exited by the framework, never by application code
 │  ├─ set_action(Action) -> self                     # no event; output_item.done only
 │  └─ add_source(url, ...) -> self                   # no event; output_item.done only
 │
-├─ create_file_search() -> FileSearch (ctx)                           # server-side
-│  │    enter: response.output_item.added            item.type="file_search_call"
-│  │           response.file_search_call.in_progress
-│  │    exit:  response.file_search_call.completed
-│  │           response.output_item.done
-│  │    err:   response.output_item.done  (item.status="failed")
-│  │           …and NOT .completed — there is no file_search_call failure event
-│  ├─ set_incomplete() -> self                      # no event; sets item.status="incomplete"
-│  ├─ searching(queries=[...]) -> self               # -> response.file_search_call.searching
-│  └─ add_result(file_id, filename, text, score, attributes=None) -> self   # no event
-│
-├─ create_image_generation() -> ImageGeneration (ctx)                 # server-side
-│  │    enter: response.output_item.added            item.type="image_generation_call"
-│  │           response.image_generation_call.in_progress
-│  │    exit:  response.image_generation_call.completed
-│  │           response.output_item.done
-│  │    err:   response.output_item.done  (item.status="failed")
-│  │           …and NOT .completed — there is no image_generation_call failure event
-│  ├─ generating() -> self                           # -> response.image_generation_call.generating
-│  ├─ append_partial(b64) -> self                    # -> response.image_generation_call.partial_image
-│  └─ set_result(b64) -> self                        # no event; output_item.done only
-│
-└─ create_audio() -> Audio (ctx)                     # response-level: no item, no output_index
-   │    enter: (no event)
-   │    exit:  response.audio.transcript.done
-   │           response.audio.done
-   │    err:   propagate
-   ├─ append(bytes | b64) -> self                    # -> response.audio.delta
-   └─ append_transcript(str) -> self                 # -> response.audio.transcript.delta
+└─ create_image_generation() -> ImageGeneration (ctx)                 # server-side
+   │    enter: response.output_item.added            item.type="image_generation_call"
+   │           response.image_generation_call.in_progress
+   │    exit:  response.image_generation_call.completed
+   │           response.output_item.done
+   │    err:   response.output_item.done  (item.status="failed")
+   │           …and NOT .completed — there is no image_generation_call failure event
+   ├─ generating() -> self                           # -> response.image_generation_call.generating
+   ├─ append_partial(b64) -> self                    # -> response.image_generation_call.partial_image
+   └─ set_result(b64) -> self                        # no event; output_item.done only
 ```
 
 ### M2 — sub-streams and one-shots
@@ -283,6 +264,25 @@ exception, and C6 turns it into `error` + `response.failed`.
 
 ```
 Response
+│
+├─ create_audio() -> Audio (ctx)                     # response-level: no item, no output_index
+│  │    enter: (no event)
+│  │    exit:  response.audio.transcript.done
+│  │           response.audio.done
+│  │    err:   propagate
+│  ├─ append(bytes | b64) -> self                    # -> response.audio.delta
+│  └─ append_transcript(str) -> self                 # -> response.audio.transcript.delta
+│
+├─ create_file_search() -> FileSearch (ctx)                           # server-side
+│  │    enter: response.output_item.added            item.type="file_search_call"
+│  │           response.file_search_call.in_progress
+│  │    exit:  response.file_search_call.completed
+│  │           response.output_item.done
+│  │    err:   response.output_item.done  (item.status="failed")
+│  │           …and NOT .completed — there is no file_search_call failure event
+│  ├─ set_incomplete() -> self                      # no event; sets item.status="incomplete"
+│  ├─ searching(queries=[...]) -> self               # -> response.file_search_call.searching
+│  └─ add_result(file_id, filename, text, score, attributes=None) -> self   # no event
 │
 ├─ create_code_interpreter(container_id) -> CodeInterpreter (ctx)     # server-side
 │  │    enter: response.output_item.added            item.type="code_interpreter_call"
