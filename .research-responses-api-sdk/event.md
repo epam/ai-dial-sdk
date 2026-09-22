@@ -12,6 +12,7 @@
   - [response.failed](#responsefailed)
   - [error](#error)
 - [Output item lifecycle](#output-item-lifecycle)
+  - [The 28 item types](#the-28-item-types)
   - [response.output\_item.added](#responseoutput_itemadded)
   - [response.output\_item.done](#responseoutput_itemdone)
 - [Content part lifecycle](#content-part-lifecycle)
@@ -88,7 +89,7 @@ Referenced child shapes (not expanded — they are large):
 | Reference | OpenAI type | Note |
 |---|---|---|
 | `<Response>` | `openai.types.responses.Response` | full response snapshot: `id`, `status`, `output[]`, `usage`, `error`, … |
-| `<OutputItem>` | `ResponseOutputItem` | discriminated union of **28** item types (`message`, `reasoning`, `function_call`, `mcp_call`, …) |
+| `<OutputItem>` | `ResponseOutputItem` | discriminated union of **28** item types — [enumerated below](#the-28-item-types) |
 | `<Logprob>` | `ResponseTextDeltaEvent.Logprob` | `{token, logprob, top_logprobs[]}` |
 | `<Annotation>` | typed `object` on the wire | `url_citation` \| `file_citation` \| `container_file_citation` \| `file_path` |
 
@@ -260,6 +261,46 @@ with no response snapshot attached. Usually followed by `response.failed`.
 Two generic events that bracket **every** output item, whatever its kind. All 28
 item types go through this pair; the item-specific events below are refinements
 that happen *between* them.
+
+## The 28 item types
+
+Only **10** have events of their own. For the other **18** the bracket pair is
+the *entire* protocol — they are delivered whole in `item`, with no intermediate
+events, which is why they appear nowhere else in this document.
+
+| `item.type` | OpenAI type | Its own events |
+|---|---|---|
+| `message` | `ResponseOutputMessage` | [`content_part.*`](#responsecontent_partadded), [`output_text.*`](#responseoutput_textdelta), [`refusal.*`](#responserefusaldelta) |
+| `file_search_call` | `ResponseFileSearchToolCall` | [`file_search_call.*`](#responsefile_search_callin_progress) |
+| `function_call` | `ResponseFunctionToolCall` | [`function_call_arguments.*`](#responsefunction_call_argumentsdelta) |
+| `function_call_output` | `ResponseFunctionToolCallOutputItem` | — *bracket pair only* |
+| `web_search_call` | `ResponseFunctionWebSearch` | [`web_search_call.*`](#responseweb_search_callin_progress) |
+| `computer_call` | `ResponseComputerToolCall` | — *bracket pair only* |
+| `computer_call_output` | `ResponseComputerToolCallOutputItem` | — *bracket pair only* |
+| `reasoning` | `ResponseReasoningItem` | [`reasoning_summary_part.*`](#responsereasoning_summary_partadded), [`reasoning_summary_text.*`](#responsereasoning_summary_textdelta), [`content_part.*`](#responsecontent_partadded), [`reasoning_text.*`](#responsereasoning_textdelta) |
+| `program` | `Program` | — *bracket pair only* |
+| `program_output` | `ProgramOutput` | — *bracket pair only* |
+| `tool_search_call` | `ResponseToolSearchCall` | — *bracket pair only* |
+| `tool_search_output` | `ResponseToolSearchOutputItem` | — *bracket pair only* |
+| `additional_tools` | `AdditionalTools` | — *bracket pair only* |
+| `compaction` | `ResponseCompactionItem` | — *bracket pair only* |
+| `image_generation_call` | `ImageGenerationCall` | [`image_generation_call.*`](#responseimage_generation_callin_progress) |
+| `code_interpreter_call` | `ResponseCodeInterpreterToolCall` | [`code_interpreter_call.*`](#responsecode_interpreter_callin_progress), [`code_interpreter_call_code.*`](#responsecode_interpreter_call_codedelta) |
+| `local_shell_call` | `LocalShellCall` | — *bracket pair only* |
+| `local_shell_call_output` | `LocalShellCallOutput` | — *bracket pair only* |
+| `shell_call` | `ResponseFunctionShellToolCall` | — *bracket pair only* |
+| `shell_call_output` | `ResponseFunctionShellToolCallOutput` | — *bracket pair only* |
+| `apply_patch_call` | `ResponseApplyPatchToolCall` | — *bracket pair only* |
+| `apply_patch_call_output` | `ResponseApplyPatchToolCallOutput` | — *bracket pair only* |
+| `mcp_call` | `McpCall` | [`mcp_call.*`](#responsemcp_callin_progress), [`mcp_call_arguments.*`](#responsemcp_call_argumentsdelta) |
+| `mcp_list_tools` | `McpListTools` | [`mcp_list_tools.*`](#responsemcp_list_toolsin_progress) |
+| `mcp_approval_request` | `McpApprovalRequest` | — *bracket pair only* |
+| `mcp_approval_response` | `McpApprovalResponse` | — *bracket pair only* |
+| `custom_tool_call` | `ResponseCustomToolCall` | [`custom_tool_call_input.*`](#responsecustom_tool_call_inputdelta) |
+| `custom_tool_call_output` | `ResponseCustomToolCallOutputItem` | — *bracket pair only* |
+
+The `*_output` rows are how a tool **result** re-enters the output list; the
+streaming-capable calls above them are how the **request** for that tool goes out.
 
 ## response.output_item.added
 
