@@ -67,26 +67,36 @@ on the same item. So you never write `flush()`.
 `response.created` / `.completed` / `.failed` / `.incomplete`. None of these
 appear in application code.
 
-**C6 — exceptions are part of the protocol.** An exception escaping a block
-still closes it — the bracket is emitted, so no client is left waiting on a
-`.done` that never arrives — and then propagates outward, closing each enclosing
-block in turn, until `Response` ends the stream with `error` + `response.failed`.
-Each builder's `err:` line in the [object model](#object-model) says exactly what
-its unwind emits. Three rules generate all of them:
+**C6 — exceptions are part of the protocol.** A builder gets one question on the
+error path: *can this item state its own failure?* Only two answers, and the
+`err:` line in the [object model](#object-model) gives each builder's.
 
-1. **Delta streams still flush.** A partial `output_text.done` is better than a
-   dangling one; the text it restates is the text already sent.
-2. **The bad news rides on `status`, not on the event type.** `output_item.done`
-   carries `status="incomplete"` (generation stopped) or `"failed"` (it broke).
-   `reasoning_summary_part.done` is the one *part*-level event with a `status`
-   field, and it gets `"incomplete"` too.
-3. **A tool's terminal status event is skipped unless a failure variant exists.**
-   MCP has `mcp_call.failed` and `mcp_list_tools.failed`, so those are emitted.
-   Web search, file search, image generation and code interpreter have only a
-   `.completed` — emitting it for a call that just threw would state the
-   opposite of what happened, so it is omitted and `output_item.done` with
-   `status="failed"` carries the outcome. That asymmetry is a gap in the
-   protocol, not a choice the SDK gets to make well.
+**`err: propagate`** — emit nothing, re-raise. The block does *not* close. There
+is no honest way to close it: `content_part.done`, `output_text.done`,
+`refusal.done`, `reasoning_text.done` and both audio `.done` events have no
+status field whatsoever, and `message`, `reasoning` and `function_call` items
+have only `in_progress | completed | incomplete` — no `failed`. `custom_tool_call`
+has no `status` field at all. Emitting a `.done` there would assert the content
+finished normally, which is the one thing that did not happen. So the error
+travels up the stack until something can report it, and `Response` always can:
+`error` + `response.failed` end the stream, and a client discards the unclosed
+item. A dangling `content_part.added` is unambiguous; a lying `.done` is not.
+
+**Anything else** — close with the failure recorded, then re-raise. Only the
+server-side tools can do this. `web_search_call`, `file_search_call`,
+`image_generation_call` and `code_interpreter_call` carry `status: "failed"`, so
+`output_item.done` states it — but none of them has a `.failed` *event*, so the
+terminal status event is skipped rather than claiming `.completed`. MCP is the
+only family with real failure events, and uses them: `mcp_call.failed`,
+`mcp_list_tools.failed`.
+
+Either way the exception keeps travelling; nothing swallows it. The difference is
+only whether a truthful record gets left behind on the way out.
+
+**Corollary — `incomplete` is not `failed`.** `set_incomplete()` is for
+generation stopping early (`max_output_tokens`, a content filter) and ends the
+stream with `response.incomplete`. An exception is not that, and the SDK never
+substitutes one for the other.
 
 ---
 
@@ -115,12 +125,19 @@ honest signal that they are not supported yet.
 | `-> self` | fluent mutator, chainable (C4) |
 | `# ->` | the event(s) this call puts on the wire |
 | `enter:` / `exit:` | what a `(ctx)` block emits on the normal path |
-| `err:` | what it emits instead when an exception leaves the block (C6) |
+| `err:` | what it emits when an exception leaves the block; `propagate` means **nothing** (C6) |
 
-Every `(ctx)` builder also has `.close()`; every one that is an **output item**
-additionally has `.id -> str` (the `item_id` the SDK assigned) and
-`.set_incomplete()` (close with `status="incomplete"`). Neither is repeated in
-the trees below.
+Every `(ctx)` builder has `.close()`, and every one that is an **output item**
+has `.id -> str` (the `item_id` the SDK assigned). Those two are universal and
+are not repeated in the trees below.
+
+`set_incomplete()` is **not** universal, so it is listed per builder. Only 6 of
+the 10 item types admit `status: "incomplete"` — `message`, `reasoning`,
+`function_call`, `file_search_call`, `code_interpreter_call` and `mcp_call`.
+`web_search_call` and `image_generation_call` go straight from `in_progress` to
+`completed` or `failed`, and `custom_tool_call` and `mcp_list_tools` have no
+`status` field at all, so for those four a truncated generation is simply not
+expressible and the SDK does not pretend otherwise.
 
 ### M1 — streaming core
 
@@ -148,7 +165,8 @@ Response (ctx — entered and exited by the framework, never by application code
 ├─ create_message() -> Message (ctx)
 │  │    enter: response.output_item.added            item.type="message"
 │  │    exit:  response.output_item.done
-│  │    err:   response.output_item.done  (item.status="incomplete")
+│  │    err:   propagate
+│  ├─ set_incomplete() -> self                      # no event; sets item.status="incomplete"
 │  ├─ set_phase("commentary" | "final_answer") -> self           # no event
 │  ├─ append_text(str) -> self                       # shortcut into a default TextPart
 │  ├─ append_refusal(str) -> self                    # shortcut into a default RefusalPart
@@ -157,8 +175,7 @@ Response (ctx — entered and exited by the framework, never by application code
 │  │  │    enter: response.content_part.added        part.type="output_text"
 │  │  │    exit:  response.output_text.done
 │  │  │           response.content_part.done
-│  │  │    err:   response.output_text.done  (whatever was appended)
-│  │  │           response.content_part.done
+│  │  │    err:   propagate
 │  │  ├─ append(str) -> self                         # -> response.output_text.delta
 │  │  ├─ add_annotation(Annotation) -> self          # -> response.output_text.annotation.added
 │  │  └─ add_logprobs([Logprob]) -> self             # no event; rides the next delta
@@ -167,14 +184,14 @@ Response (ctx — entered and exited by the framework, never by application code
 │     │    enter: response.content_part.added        part.type="refusal"
 │     │    exit:  response.refusal.done
 │     │           response.content_part.done
-│     │    err:   response.refusal.done  (whatever was appended)
-│     │           response.content_part.done
+│     │    err:   propagate
 │     └─ append(str) -> self                         # -> response.refusal.delta
 │
 ├─ create_reasoning() -> Reasoning (ctx)
 │  │    enter: response.output_item.added            item.type="reasoning"
 │  │    exit:  response.output_item.done
-│  │    err:   response.output_item.done  (item.status="incomplete")
+│  │    err:   propagate
+│  ├─ set_incomplete() -> self                      # no event; sets item.status="incomplete"
 │  ├─ set_encrypted_content(str) -> self             # no event; output_item.done only
 │  ├─ append_summary(str) -> self                    # shortcut into a default SummaryPart
 │  ├─ append_text(str) -> self                       # shortcut into a default ReasoningTextPart
@@ -183,8 +200,7 @@ Response (ctx — entered and exited by the framework, never by application code
 │  │  │    enter: response.reasoning_summary_part.added
 │  │  │    exit:  response.reasoning_summary_text.done
 │  │  │           response.reasoning_summary_part.done
-│  │  │    err:   response.reasoning_summary_text.done
-│  │  │           response.reasoning_summary_part.done  (status="incomplete")
+│  │  │    err:   propagate
 │  │  ├─ append(str) -> self                         # -> response.reasoning_summary_text.delta
 │  │  └─ set_incomplete() -> self                    # no event; sets part.status on the exit event
 │  │
@@ -192,16 +208,15 @@ Response (ctx — entered and exited by the framework, never by application code
 │     │    enter: response.content_part.added        part.type="reasoning_text"
 │     │    exit:  response.reasoning_text.done
 │     │           response.content_part.done
-│     │    err:   response.reasoning_text.done
-│     │           response.content_part.done
+│     │    err:   propagate
 │     └─ append(str) -> self                         # -> response.reasoning_text.delta
 │
 ├─ create_function_call(call_id, name) -> FunctionCall (ctx)          # client-side
 │  │    enter: response.output_item.added            item.type="function_call"
 │  │    exit:  response.function_call_arguments.done
 │  │           response.output_item.done
-│  │    err:   response.function_call_arguments.done  (partial JSON)
-│  │           response.output_item.done  (item.status="incomplete")
+│  │    err:   propagate
+│  ├─ set_incomplete() -> self                      # no event; sets item.status="incomplete"
 │  ├─ append_arguments(str) -> self                  # -> response.function_call_arguments.delta
 │  └─ set_arguments(str | dict) -> self              # -> response.function_call_arguments.delta  (one shot)
 │
@@ -209,8 +224,7 @@ Response (ctx — entered and exited by the framework, never by application code
 │  │    enter: response.output_item.added            item.type="custom_tool_call"
 │  │    exit:  response.custom_tool_call_input.done
 │  │           response.output_item.done
-│  │    err:   response.custom_tool_call_input.done  (partial)
-│  │           response.output_item.done  (item.status="incomplete")
+│  │    err:   propagate
 │  ├─ append_input(str) -> self                      # -> response.custom_tool_call_input.delta
 │  └─ set_input(str) -> self                         # -> response.custom_tool_call_input.delta  (one shot)
 │
@@ -232,6 +246,7 @@ Response (ctx — entered and exited by the framework, never by application code
 │  │           response.output_item.done
 │  │    err:   response.output_item.done  (item.status="failed")
 │  │           …and NOT .completed — there is no file_search_call failure event
+│  ├─ set_incomplete() -> self                      # no event; sets item.status="incomplete"
 │  ├─ searching(queries=[...]) -> self               # -> response.file_search_call.searching
 │  └─ add_result(file_id, filename, text, score, attributes=None) -> self   # no event
 │
@@ -250,8 +265,7 @@ Response (ctx — entered and exited by the framework, never by application code
    │    enter: (no event)
    │    exit:  response.audio.transcript.done
    │           response.audio.done
-   │    err:   response.audio.transcript.done
-   │           response.audio.done
+   │    err:   propagate
    ├─ append(bytes | b64) -> self                    # -> response.audio.delta
    └─ append_transcript(str) -> self                 # -> response.audio.transcript.delta
 ```
@@ -275,9 +289,9 @@ Response
 │  │           response.code_interpreter_call.in_progress
 │  │    exit:  response.code_interpreter_call.completed
 │  │           response.output_item.done
-│  │    err:   response.code_interpreter_call_code.done  (if the code stream is open)
-│  │           response.output_item.done  (item.status="failed")
+│  │    err:   response.output_item.done  (item.status="failed")
 │  │           …and NOT .completed — there is no code_interpreter_call failure event
+│  ├─ set_incomplete() -> self                      # no event; sets item.status="incomplete"
 │  ├─ append_code(str) -> self                       # -> response.code_interpreter_call_code.delta
 │  ├─ interpreting() -> self                         # -> response.code_interpreter_call_code.done   (C3 flush)
 │  │                                                 #    response.code_interpreter_call.interpreting
@@ -299,9 +313,9 @@ Response
 │  │           response.mcp_call.in_progress
 │  │    exit:  response.mcp_call.completed  — or  response.mcp_call.failed
 │  │           response.output_item.done
-│  │    err:   response.mcp_call_arguments.done  (if open)
-│  │           response.mcp_call.failed
+│  │    err:   response.mcp_call.failed
 │  │           response.output_item.done
+│  ├─ set_incomplete() -> self                      # no event; sets item.status="incomplete"
 │  ├─ append_arguments(str) -> self                  # -> response.mcp_call_arguments.delta
 │  ├─ set_output(str) -> self                        # -> response.mcp_call_arguments.done   (C3 flush)
 │  └─ fail(error) -> self                            # -> response.mcp_call_arguments.done   (C3 flush)
