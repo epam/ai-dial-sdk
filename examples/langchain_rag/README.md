@@ -19,8 +19,8 @@ Upon start the Docker image exposes `openai/deployments/simple-rag/chat/completi
 |Variable|Default|Description|
 |---|---|---|
 |DIAL_URL||Required. URL of the DIAL server. Used to access embeddings and chat completion models|
-|EMBEDDINGS_MODEL|text-embedding-ada-002|Embeddings model|
-|CHAT_MODEL|gpt-4|Chat completion model|
+|EMBEDDINGS_MODEL|gemini-embedding-2-preview|Embeddings model|
+|CHAT_MODEL|gpt-5.2-2025-12-11|Chat completion model|
 |API_VERSION|2024-02-01|Azure OpenAI API version|
 |LANGCHAIN_DEBUG|False|Flag to enable debug logs from Langchain|
 |OPENAI_LOG||Flag that controls openai library logging. Set to `debug` to enable debug logging|

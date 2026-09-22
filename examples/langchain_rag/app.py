@@ -7,13 +7,13 @@ from urllib.parse import urljoin
 from uuid import uuid4
 
 import uvicorn
-from langchain.callbacks.base import AsyncCallbackHandler
-from langchain.chains.retrieval_qa.base import RetrievalQA
-from langchain.embeddings import CacheBackedEmbeddings
-from langchain.globals import set_debug
-from langchain.storage import LocalFileStore
+from langchain_classic.chains.retrieval_qa.base import RetrievalQA
+from langchain_classic.embeddings import CacheBackedEmbeddings
+from langchain_classic.storage import LocalFileStore
 from langchain_community.document_loaders import PyPDFLoader, WebBaseLoader
 from langchain_community.vectorstores import Chroma
+from langchain_core.callbacks.base import AsyncCallbackHandler
+from langchain_core.globals import set_debug
 from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from pydantic import SecretStr
