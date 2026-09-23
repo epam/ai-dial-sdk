@@ -73,49 +73,6 @@ It listens on all interfaces and does not appear in the FastAPI route table, so 
 
 Both exporters can run at once — `OTEL_METRICS_EXPORTER=otlp,prometheus` pushes to the collector and serves scrapes.
 
-## Configuring in code
-
-Every field below defaults from the environment, so you only need this to override something. `TelemetryConfig` accepts `service_name` plus one optional config per signal:
-
-```python
-from aidial_sdk.telemetry.types import (
-    LogsConfig,
-    MetricsConfig,
-    TelemetryConfig,
-    TracingConfig,
-)
-
-config = TelemetryConfig(
-    service_name="my-app",
-    tracing=TracingConfig(otlp_export=True, logging=True),
-    logs=LogsConfig(otlp_export=True),
-    metrics=MetricsConfig(otlp_export=True, prometheus_export=True, port=9090),
-)
-```
-
-| Model | Field | Default |
-| --- | --- | --- |
-| `TelemetryConfig` | `service_name` | `None` |
-| | `tracing` | `TracingConfig()` if `OTEL_TRACES_EXPORTER` is set, else `None` |
-| | `metrics` | `MetricsConfig()` if `OTEL_METRICS_EXPORTER` is set, else `None` |
-| | `logs` | `LogsConfig()` if `OTEL_LOGS_EXPORTER` is set, else `None` |
-| `TracingConfig` | `otlp_export` | `otlp` is in `OTEL_TRACES_EXPORTER` |
-| | `logging` | value of `OTEL_PYTHON_LOG_CORRELATION` |
-| `MetricsConfig` | `otlp_export` | `otlp` is in `OTEL_METRICS_EXPORTER` |
-| | `prometheus_export` | `prometheus` is in `OTEL_METRICS_EXPORTER` |
-| | `port` | `OTEL_EXPORTER_PROMETHEUS_PORT`, or `9464` |
-| `LogsConfig` | `otlp_export` | `otlp` is in `OTEL_LOGS_EXPORTER` |
-| | `console_export` | `console` is in `OTEL_LOGS_EXPORTER` |
-| | `level` | deprecated and ignored — set levels per logger |
-
-Setting a signal's config to a non-`None` value enables that signal whether or not its environment variable is set, so this is also how you turn telemetry on without touching the environment.
-
-## Two things that catch people out
-
-**The defaults are read once, at import.** They are class attribute defaults evaluated when `aidial_sdk.telemetry.types` is first imported, not each time you construct a `TelemetryConfig`. Setting `OTEL_*` from Python after importing the SDK has no effect — set them in the environment before the process starts.
-
-**An empty value is not the same as unset.** `OTEL_TRACES_EXPORTER=""` counts as set, so tracing is configured with no exporter: the instrumentors are installed and spans are produced, then dropped. Unset the variable instead of blanking it.
-
 ## Missing dependencies
 
 Asking for a signal without the extra installed raises at startup:
