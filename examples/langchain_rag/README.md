@@ -1,6 +1,6 @@
 # Overview
 
-An example of a simple DIAL RAG application based on Langchain utilizing Chroma vector database and RetrievalQA chain.
+An example of a simple DIAL RAG application based on Langchain utilizing an in-memory vector store and RetrievalQA chain.
 
 The application processes chat completion request in the following way:
 
@@ -40,7 +40,7 @@ Then you may call the application using DIAL API key:
 
 ```sh
 curl -v "http://localhost:5000/openai/deployments/simple-rag/chat/completions" \
-  -H "Content-Type: application:json" \
+  -H "Content-Type: application/json" \
   -H "api-key:${DIAL_API_KEY}" \
   -d '{
   "stream": true,
