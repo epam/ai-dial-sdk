@@ -4,16 +4,15 @@ A simple RAG application based on LangChain.
 
 import os
 from urllib.parse import urljoin
-from uuid import uuid4
 
 import uvicorn
-from langchain.callbacks.base import AsyncCallbackHandler
-from langchain.chains.retrieval_qa.base import RetrievalQA
-from langchain.embeddings import CacheBackedEmbeddings
-from langchain.globals import set_debug
-from langchain.storage import LocalFileStore
+from langchain_classic.chains.retrieval_qa.base import RetrievalQA
+from langchain_classic.embeddings import CacheBackedEmbeddings
+from langchain_classic.storage import LocalFileStore
 from langchain_community.document_loaders import PyPDFLoader, WebBaseLoader
-from langchain_community.vectorstores import Chroma
+from langchain_core.callbacks.base import AsyncCallbackHandler
+from langchain_core.globals import set_debug
+from langchain_core.vectorstores import InMemoryVectorStore
 from langchain_openai import AzureChatOpenAI, AzureOpenAIEmbeddings
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from pydantic import SecretStr
@@ -59,8 +58,6 @@ class SimpleRAGApplication(ChatCompletion):
     async def chat_completion(
         self, request: Request, response: Response
     ) -> None:
-        collection_name = str(uuid4())
-
         with response.create_single_choice() as choice:
             message = request.messages[-1]
             user_query = message.text()
@@ -113,8 +110,13 @@ class SimpleRAGApplication(ChatCompletion):
                     key_encoder="sha256",
                 )
 
-                docsearch = Chroma.from_documents(
-                    texts, embeddings, collection_name=collection_name
+                # The embeddings are only needed to answer the current
+                # request, so an in-memory store is sufficient here.
+                # Any other vector store supported by LangChain could be
+                # used instead:
+                # https://docs.langchain.com/oss/python/integrations/vectorstores
+                docsearch = await InMemoryVectorStore.afrom_documents(
+                    texts, embeddings
                 )
 
             # CustomCallbackHandler allows to pass tokens to the users as they are generated, so as not to wait for a complete response.
@@ -138,8 +140,6 @@ class SimpleRAGApplication(ChatCompletion):
             )
 
             await qa.ainvoke({"query": user_query})
-
-            docsearch.delete_collection()
 
 
 app = DIALApp(DIAL_URL, propagate_auth_headers=True)
