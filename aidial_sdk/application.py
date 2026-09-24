@@ -34,6 +34,7 @@ from aidial_sdk.embeddings.request import Request as EmbeddingsRequest
 from aidial_sdk.exceptions import DeploymentNotFoundError
 from aidial_sdk.exceptions import HTTPException as DIALException
 from aidial_sdk.header_propagator import HeaderPropagator
+from aidial_sdk.response_headers import NonForwardableHeadersMiddleware
 from aidial_sdk.telemetry.types import TelemetryConfig
 from aidial_sdk.utils._disconnect_middleware import DisconnectMiddleware
 from aidial_sdk.utils._reflection import get_method_implementation
@@ -136,6 +137,7 @@ class DIALApp(FastAPI):
             logging.getLogger("uvicorn.access").addFilter(PathFilter(path))
 
         self.add_middleware(DisconnectMiddleware)
+        self.add_middleware(NonForwardableHeadersMiddleware)
 
         self.add_exception_handler(
             ValidationError, pydantic_validation_exception_handler
