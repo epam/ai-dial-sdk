@@ -1,7 +1,7 @@
 """Tests for nested stages.
 
-Covers the wire format of ``parent_stage_index``, the ``Choice.create_stage``
-parent parameter, the validation rules around the parent lifecycle and the
+Covers the wire format of ``parent_stage_index``, ``Stage.create_stage`` for
+child stages, the validation rules around the parent lifecycle and the
 request-side model which has to accept the field back in the history.
 """
 
@@ -79,22 +79,8 @@ class TestStageProperties:
         stages = [choice.create_stage(f"s{i}") for i in range(5)]
         assert [stage.stage_index for stage in stages] == [0, 1, 2, 3, 4]
 
-    def test_opened_and_closed_track_the_lifecycle(self):
-        choice, _ = _opened_choice()
-        stage = choice.create_stage("step")
-        assert not stage.opened
-        assert not stage.closed
 
-        stage.open()
-        assert stage.opened
-        assert not stage.closed
-
-        stage.close()
-        assert stage.opened
-        assert stage.closed
-
-
-class TestCreateStageWithParent:
+class TestCreateStageFromParent:
     def test_root_stage_emits_no_parent_stage_index(self):
         choice, queue = _opened_choice()
         choice.create_stage("root").open()
@@ -105,7 +91,7 @@ class TestCreateStageWithParent:
         choice.create_stage("skipped")  # index 0, never opened
         parent = choice.create_stage("parent")  # index 1
         parent.open()
-        choice.create_stage("child", parent=parent).open()  # index 2
+        parent.create_stage("child").open()  # index 2
 
         stages = _start_stages(queue)
         assert "parent_stage_index" not in stages[1]
@@ -116,7 +102,7 @@ class TestCreateStageWithParent:
         parent = choice.create_stage("level-0")
         parent.open()
         for level in range(1, 4):
-            child = choice.create_stage(f"level-{level}", parent=parent)
+            child = parent.create_stage(f"level-{level}")
             child.open()
             parent = child
 
@@ -129,8 +115,8 @@ class TestCreateStageWithParent:
         choice, queue = _opened_choice()
         parent = choice.create_stage("parent")
         parent.open()
-        choice.create_stage("first", parent=parent).open()
-        choice.create_stage("second", parent=parent).open()
+        parent.create_stage("first").open()
+        parent.create_stage("second").open()
 
         stages = _start_stages(queue)
         assert stages[1]["parent_stage_index"] == 0
@@ -139,11 +125,18 @@ class TestCreateStageWithParent:
     def test_parent_may_be_opened_after_the_child_is_created(self):
         choice, queue = _opened_choice()
         parent = choice.create_stage("parent")
-        child = choice.create_stage("child", parent=parent)
+        child = parent.create_stage("child")
         parent.open()
         child.open()
 
         assert _start_stages(queue)[1]["parent_stage_index"] == 0
+
+    def test_child_is_allocated_on_the_parents_choice(self):
+        choice, _ = _opened_choice()
+        parent = choice.create_stage("parent")
+        child = parent.create_stage("child")
+        assert child.stage_index == 1
+        assert choice.create_stage("next").stage_index == 2
 
 
 class TestParentValidation:
@@ -157,7 +150,7 @@ class TestParentValidation:
         foreign_parent.open()
 
         with pytest.raises(RuntimeServerError):
-            second.create_stage("child", parent=foreign_parent)
+            second._create_stage("child", parent=foreign_parent)
 
     def test_rejected_parent_does_not_consume_a_stage_index(self):
         queue = asyncio.Queue()
@@ -168,14 +161,14 @@ class TestParentValidation:
         foreign_parent = first.create_stage("parent")
 
         with pytest.raises(RuntimeServerError):
-            second.create_stage("child", parent=foreign_parent)
+            second._create_stage("child", parent=foreign_parent)
 
         assert second.create_stage("next").stage_index == 0
 
     def test_opening_a_child_of_an_unopened_parent_is_rejected(self):
         choice, _ = _opened_choice()
         parent = choice.create_stage("parent")
-        child = choice.create_stage("child", parent=parent)
+        child = parent.create_stage("child")
 
         with pytest.raises(RuntimeServerError):
             child.open()
@@ -185,7 +178,7 @@ class TestParentValidation:
         parent = choice.create_stage("parent")
         parent.open()
         parent.close()
-        child = choice.create_stage("child", parent=parent)
+        child = parent.create_stage("child")
 
         with pytest.raises(RuntimeServerError):
             child.open()
@@ -196,7 +189,7 @@ class TestClosingParentWithOpenChildren:
         choice, _ = _opened_choice()
         parent = choice.create_stage("parent")
         parent.open()
-        choice.create_stage("child", parent=parent).open()
+        parent.create_stage("child").open()
 
         with patch(
             "aidial_sdk.chat_completion.stage.log_warning"
@@ -210,7 +203,7 @@ class TestClosingParentWithOpenChildren:
         choice, _ = _opened_choice()
         parent = choice.create_stage("parent")
         parent.open()
-        child = choice.create_stage("child", parent=parent)
+        child = parent.create_stage("child")
         child.open()
         child.close()
 
@@ -225,7 +218,7 @@ class TestClosingParentWithOpenChildren:
         choice, _ = _opened_choice()
         parent = choice.create_stage("parent")
         parent.open()
-        choice.create_stage("child", parent=parent)
+        parent.create_stage("child")
 
         with patch(
             "aidial_sdk.chat_completion.stage.log_warning"
@@ -238,7 +231,7 @@ class TestClosingParentWithOpenChildren:
         choice, queue = _opened_choice()
         parent = choice.create_stage("parent")
         parent.open()
-        choice.create_stage("child", parent=parent).open()
+        parent.create_stage("child").open()
         parent.close(Status.FAILED)
 
         statuses = [

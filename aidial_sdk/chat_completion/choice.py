@@ -194,11 +194,14 @@ class Choice(ChoiceBase):
         self._schema_submitted = True
         self.send_chunk(FormSchemaChunk(self._index, form_schema))
 
-    def create_stage(
+    def create_stage(self, name: str | None = None) -> Stage:
+        return self._create_stage(name, parent=None)
+
+    def _create_stage(
         self,
         name: str | None = None,
         *,
-        parent: "Stage | None" = None,
+        parent: Stage | None = None,
     ) -> Stage:
         if not self._opened:
             raise runtime_error("Trying to create stage to an unopened choice")
@@ -206,8 +209,7 @@ class Choice(ChoiceBase):
             raise runtime_error("Trying to create stage to a closed choice")
 
         stage = Stage(
-            self._queue,
-            self._index,
+            self,
             self._last_stage_index,
             name,
             parent,

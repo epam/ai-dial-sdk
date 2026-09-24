@@ -1,5 +1,5 @@
 from types import TracebackType
-from typing import overload
+from typing import TYPE_CHECKING, overload
 
 from aidial_sdk._pydantic import ValidationError
 from aidial_sdk.chat_completion._types import ChunkQueue
@@ -17,8 +17,12 @@ from aidial_sdk.utils._content_stream import ContentStream
 from aidial_sdk.utils.errors import runtime_error
 from aidial_sdk.utils.logging import log_warning
 
+if TYPE_CHECKING:
+    from aidial_sdk.chat_completion.choice import Choice
+
 
 class Stage:
+    _choice: "Choice"
     _queue: ChunkQueue
     _choice_index: int
     _stage_index: int
@@ -31,19 +35,19 @@ class Stage:
 
     def __init__(
         self,
-        queue: ChunkQueue,
-        choice_index: int,
+        choice: "Choice",
         stage_index: int,
         name: str | None = None,
         parent: "Stage | None" = None,
     ):
-        if parent is not None and parent._choice_index != choice_index:
+        if parent is not None and parent._choice is not choice:
             raise runtime_error(
                 "Trying to create a stage whose parent stage belongs to another choice"
             )
 
-        self._queue = queue
-        self._choice_index = choice_index
+        self._choice = choice
+        self._queue = choice._queue
+        self._choice_index = choice.index
         self._stage_index = stage_index
         self._last_attachment_index = 0
         self._opened = False
@@ -59,13 +63,8 @@ class Stage:
     def stage_index(self) -> int:
         return self._stage_index
 
-    @property
-    def opened(self) -> bool:
-        return self._opened
-
-    @property
-    def closed(self) -> bool:
-        return self._closed
+    def create_stage(self, name: str | None = None) -> "Stage":
+        return self._choice._create_stage(name, parent=self)
 
     def __enter__(self):
         self.open()
@@ -147,11 +146,11 @@ class Stage:
 
         parent = self._parent
         if parent is not None:
-            if not parent.opened:
+            if not parent._opened:
                 raise runtime_error(
                     "Trying to open a stage whose parent stage is not open"
                 )
-            if parent.closed:
+            if parent._closed:
                 raise runtime_error(
                     "Trying to open a stage whose parent stage is already closed"
                 )
@@ -162,7 +161,7 @@ class Stage:
                 self._choice_index,
                 self._stage_index,
                 self._name,
-                parent.stage_index if parent is not None else None,
+                parent._stage_index if parent is not None else None,
             )
         )
 
@@ -173,9 +172,9 @@ class Stage:
             raise runtime_error("The stage is already closed")
 
         open_children = [
-            child.stage_index
+            child._stage_index
             for child in self._children
-            if child.opened and not child.closed
+            if child._opened and not child._closed
         ]
         if open_children:
             log_warning(
