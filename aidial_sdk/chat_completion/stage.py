@@ -39,7 +39,9 @@ class Stage:
         name: str | None = None,
         parent: "Stage | None" = None,
     ):
-        if parent is not None and parent._choice_index != choice_index:
+        if parent is not None and (
+            parent._queue is not queue or parent._choice_index != choice_index
+        ):
             raise runtime_error(
                 "Trying to create a stage whose parent stage belongs to another choice"
             )
@@ -57,10 +59,6 @@ class Stage:
 
         if parent is not None:
             parent._children.append(self)
-
-    @property
-    def stage_index(self) -> int:
-        return self._stage_index
 
     def create_stage(self, name: str | None = None) -> "Stage":
         if self._allocate_child is None:

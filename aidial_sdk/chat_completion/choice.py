@@ -215,8 +215,10 @@ class Choice(ChoiceBase):
             name,
             parent,
         )
-        stage._allocate_child = lambda child_name, _parent=stage: self._create_stage(
-            child_name, parent=_parent
+        stage._allocate_child = (
+            lambda child_name, _parent=stage: self._create_stage(
+                child_name, parent=_parent
+            )
         )
         self._last_stage_index += 1
 

@@ -13,6 +13,7 @@ import pytest
 from aidial_sdk.chat_completion import Choice, RequestStage, Status
 from aidial_sdk.chat_completion.chunks import StartStageChunk
 from aidial_sdk.exceptions import RuntimeServerError
+from aidial_sdk.utils.merge_chunks import cleanup_indices, merge
 from tests.utils.pydantic import model_parse
 
 
@@ -73,11 +74,13 @@ class TestStartStageChunkWireFormat:
         assert stage["status"] is None
 
 
-class TestStageProperties:
+class TestStageIndexAllocation:
     def test_stage_index_follows_allocation_order(self):
-        choice, _ = _opened_choice()
-        stages = [choice.create_stage(f"s{i}") for i in range(5)]
-        assert [stage.stage_index for stage in stages] == [0, 1, 2, 3, 4]
+        choice, queue = _opened_choice()
+        for i in range(5):
+            choice.create_stage(f"s{i}").open()
+
+        assert list(_start_stages(queue)) == [0, 1, 2, 3, 4]
 
 
 class TestCreateStageFromParent:
@@ -132,19 +135,22 @@ class TestCreateStageFromParent:
         assert _start_stages(queue)[1]["parent_stage_index"] == 0
 
     def test_child_is_allocated_on_the_parents_choice(self):
-        choice, _ = _opened_choice()
+        choice, queue = _opened_choice()
         parent = choice.create_stage("parent")
         child = parent.create_stage("child")
-        assert child.stage_index == 1
-        assert choice.create_stage("next").stage_index == 2
+        next_stage = choice.create_stage("next")
+        parent.open()
+        child.open()
+        next_stage.open()
+
+        assert list(_start_stages(queue)) == [0, 1, 2]
 
 
 class TestParentValidation:
     def test_parent_from_another_choice_is_rejected(self):
-        queue = asyncio.Queue()
-        first = Choice(queue, 0)
+        first = Choice(asyncio.Queue(), 0)
         first.open()
-        second = Choice(queue, 1)
+        second = Choice(asyncio.Queue(), 0)
         second.open()
         foreign_parent = first.create_stage("parent")
         foreign_parent.open()
@@ -153,17 +159,19 @@ class TestParentValidation:
             second._create_stage("child", parent=foreign_parent)
 
     def test_rejected_parent_does_not_consume_a_stage_index(self):
-        queue = asyncio.Queue()
-        first = Choice(queue, 0)
+        first = Choice(asyncio.Queue(), 0)
         first.open()
-        second = Choice(queue, 1)
+        second_queue = asyncio.Queue()
+        second = Choice(second_queue, 0)
         second.open()
+        _drain(second_queue)
         foreign_parent = first.create_stage("parent")
 
         with pytest.raises(RuntimeServerError):
             second._create_stage("child", parent=foreign_parent)
 
-        assert second.create_stage("next").stage_index == 0
+        second.create_stage("next").open()
+        assert list(_start_stages(second_queue)) == [0]
 
     def test_opening_a_child_of_an_unopened_parent_is_rejected(self):
         choice, _ = _opened_choice()
@@ -266,3 +274,25 @@ class TestRequestStage:
             allow_extra_fields=False,
         )
         assert stage.parent_stage_index is None
+
+
+def test_parent_stage_index_survives_non_streaming_merge():
+    choice, queue = _opened_choice()
+    parent = choice.create_stage("parent")
+    parent.open()
+    child = parent.create_stage("child")
+    child.open()
+    child.close()
+    parent.close()
+
+    merged = cleanup_indices(merge(*[item.to_dict() for item in _drain(queue)]))
+    stages = merged["choices"][0]["delta"]["custom_content"]["stages"]
+
+    assert stages == [
+        {"name": "parent", "status": "completed"},
+        {
+            "name": "child",
+            "parent_stage_index": 0,
+            "status": "completed",
+        },
+    ]
