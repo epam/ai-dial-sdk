@@ -1,6 +1,5 @@
-from collections.abc import Callable
 from types import TracebackType
-from typing import overload
+from typing import TYPE_CHECKING, overload
 
 from aidial_sdk._pydantic import ValidationError
 from aidial_sdk.chat_completion._types import ChunkQueue
@@ -18,36 +17,37 @@ from aidial_sdk.utils._content_stream import ContentStream
 from aidial_sdk.utils.errors import runtime_error
 from aidial_sdk.utils.logging import log_warning
 
+if TYPE_CHECKING:
+    from aidial_sdk.chat_completion.choice import Choice
+
 
 class Stage:
+    _choice: "Choice"
     _queue: ChunkQueue
     _choice_index: int
     _stage_index: int
     _name: str | None
     _parent: "Stage | None"
     _children: list["Stage"]
-    _allocate_child: Callable[[str | None], "Stage"] | None
     _last_attachment_index: int
     _closed: bool
     _opened: bool
 
     def __init__(
         self,
-        queue: ChunkQueue,
-        choice_index: int,
+        choice: "Choice",
         stage_index: int,
         name: str | None = None,
         parent: "Stage | None" = None,
     ):
-        if parent is not None and (
-            parent._queue is not queue or parent._choice_index != choice_index
-        ):
+        if parent is not None and parent._choice is not choice:
             raise runtime_error(
                 "Trying to create a stage whose parent stage belongs to another choice"
             )
 
-        self._queue = queue
-        self._choice_index = choice_index
+        self._choice = choice
+        self._queue = choice._queue
+        self._choice_index = choice.index
         self._stage_index = stage_index
         self._last_attachment_index = 0
         self._opened = False
@@ -55,18 +55,12 @@ class Stage:
         self._name = name
         self._parent = parent
         self._children = []
-        self._allocate_child = None
 
         if parent is not None:
             parent._children.append(self)
 
     def create_stage(self, name: str | None = None) -> "Stage":
-        if self._allocate_child is None:
-            raise runtime_error(
-                "Trying to create a child stage on a Stage that was not "
-                "created via Choice.create_stage"
-            )
-        return self._allocate_child(name)
+        return self._choice._create_stage(name, parent=self)
 
     def __enter__(self):
         self.open()

@@ -209,16 +209,10 @@ class Choice(ChoiceBase):
             raise runtime_error("Trying to create stage to a closed choice")
 
         stage = Stage(
-            self._queue,
-            self._index,
+            self,
             self._last_stage_index,
             name,
             parent,
-        )
-        stage._allocate_child = (
-            lambda child_name, _parent=stage: self._create_stage(
-                child_name, parent=_parent
-            )
         )
         self._last_stage_index += 1
 
