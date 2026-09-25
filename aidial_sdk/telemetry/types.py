@@ -1,11 +1,8 @@
 import logging
 import os
-from typing import Literal, get_args
 
 from aidial_sdk._pydantic._compat import BaseModel
 from aidial_sdk.utils.env import env_var_list
-
-ExcludableASGISpan = Literal["receive", "send"]
 
 # OpenTelemetry SDK configuration env vars:
 # https://opentelemetry.io/docs/specs/otel/configuration/sdk-environment-variables/
@@ -19,32 +16,9 @@ OTEL_EXPORTER_PROMETHEUS_PORT = int(
 OTEL_PYTHON_LOG_CORRELATION = (
     os.getenv("OTEL_PYTHON_LOG_CORRELATION", "false").lower() == "true"
 )
-# Which ASGI lifecycle sub-spans the FastAPI instrumentation should not emit:
-# a comma-separated subset of `receive,send`. Empty by default, which keeps
-# emitting both.
-#
-# The instrumentation opens one span per ASGI message, so for a streaming
-# deployment `send` means one span per streamed chunk -- on a long completion
-# that is thousands of spans carrying nothing the request span doesn't
-# already say, and the cost of building and exporting them falls on the
-# event loop.
-#
-# The name matches the one proposed upstream in
-# open-telemetry/opentelemetry-python-contrib#3992, so that if the
-# instrumentation grows its own support for this variable, the same
-# configuration keeps working and this handling can simply be dropped.
 OTEL_PYTHON_FASTAPI_EXCLUDE_SPANS = env_var_list(
     "OTEL_PYTHON_FASTAPI_EXCLUDE_SPANS"
 )
-
-
-def _parse_excluded_asgi_spans() -> list[ExcludableASGISpan]:
-    allowed = get_args(ExcludableASGISpan)
-    return [
-        span
-        for raw in OTEL_PYTHON_FASTAPI_EXCLUDE_SPANS
-        if (span := raw.strip().lower()) in allowed
-    ]
 
 
 class LogsConfig(BaseModel):
@@ -59,7 +33,7 @@ class LogsConfig(BaseModel):
 class TracingConfig(BaseModel):
     otlp_export: bool = "otlp" in OTEL_TRACES_EXPORTER
     logging: bool = OTEL_PYTHON_LOG_CORRELATION
-    excluded_asgi_spans: list[ExcludableASGISpan] = _parse_excluded_asgi_spans()
+    excluded_asgi_spans: list[str] = OTEL_PYTHON_FASTAPI_EXCLUDE_SPANS
 
 
 class MetricsConfig(BaseModel):

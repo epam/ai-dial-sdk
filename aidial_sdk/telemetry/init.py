@@ -37,6 +37,8 @@ from prometheus_client import start_http_server
 from aidial_sdk.telemetry.types import TelemetryConfig
 from aidial_sdk.utils._logging import remove_stream_handlers
 
+_log = logging.getLogger(__name__)
+
 
 def init_telemetry(app: FastAPI | None, config: TelemetryConfig):
     resource = Resource.create(
@@ -111,9 +113,8 @@ def init_telemetry(app: FastAPI | None, config: TelemetryConfig):
                         out=sys.stderr,
                         # Default formatter is multi-line (indent=4); force one
                         # compact JSON object per line.
-                        formatter=lambda record: (
-                            record.to_json(indent=None) + "\n"
-                        ),
+                        formatter=lambda record: record.to_json(indent=None)
+                        + "\n",
                     )
                 )
             )
@@ -143,30 +144,20 @@ def init_telemetry(app: FastAPI | None, config: TelemetryConfig):
 
     if app and (config.tracing is not None or config.metrics is not None):
         # FastAPI instrumentor reports both metrics and traces
-        _instrument_fastapi_app(app, config)
+        excl = config.tracing.excluded_asgi_spans if config.tracing else []
+        _instrument_fastapi_app(app, excl)
 
 
-def _instrument_fastapi_app(app: FastAPI, config: TelemetryConfig) -> None:
-    excluded_spans = (
-        config.tracing.excluded_asgi_spans if config.tracing else []
-    )
-
-    if not excluded_spans:
+def _instrument_fastapi_app(app: FastAPI, exclude_spans: list[str]) -> None:
+    if not exclude_spans:
         FastAPIInstrumentor.instrument_app(app)
         return
 
-    # `exclude_spans` is newer than the floor this package allows for
-    # opentelemetry-instrumentation-fastapi, so it is only passed when the
-    # operator has actually asked for it, and its absence is reported rather
-    # than raised -- losing the exclusion is not a reason to fail start-up.
     try:
-        FastAPIInstrumentor.instrument_app(app, exclude_spans=excluded_spans)
+        FastAPIInstrumentor.instrument_app(app, exclude_spans=exclude_spans)  # type: ignore
     except TypeError:
-        logging.getLogger(__name__).warning(
-            "OTEL_PYTHON_FASTAPI_EXCLUDE_SPANS is set to %s, but the installed "
-            "opentelemetry-instrumentation-fastapi does not support "
-            "`exclude_spans`; the ASGI receive/send spans will still be "
-            "emitted. Upgrade the instrumentation to use this setting.",
-            ",".join(excluded_spans),
+        _log.warning(
+            "OTEL_PYTHON_FASTAPI_EXCLUDE_SPANS is ignored: it requires "
+            "opentelemetry-instrumentation-fastapi>=0.48b0."
         )
         FastAPIInstrumentor.instrument_app(app)
