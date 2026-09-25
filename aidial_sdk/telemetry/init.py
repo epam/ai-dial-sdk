@@ -37,6 +37,8 @@ from prometheus_client import start_http_server
 from aidial_sdk.telemetry.types import TelemetryConfig
 from aidial_sdk.utils._logging import remove_stream_handlers
 
+_log = logging.getLogger(__name__)
+
 
 def init_telemetry(app: FastAPI | None, config: TelemetryConfig):
     resource = Resource.create(
@@ -142,4 +144,20 @@ def init_telemetry(app: FastAPI | None, config: TelemetryConfig):
 
     if app and (config.tracing is not None or config.metrics is not None):
         # FastAPI instrumentor reports both metrics and traces
+        excl = config.tracing.excluded_asgi_spans if config.tracing else []
+        _instrument_fastapi_app(app, excl)
+
+
+def _instrument_fastapi_app(app: FastAPI, exclude_spans: list[str]) -> None:
+    if not exclude_spans:
+        FastAPIInstrumentor.instrument_app(app)
+        return
+
+    try:
+        FastAPIInstrumentor.instrument_app(app, exclude_spans=exclude_spans)  # type: ignore
+    except TypeError:
+        _log.warning(
+            "OTEL_PYTHON_FASTAPI_EXCLUDE_SPANS is ignored: it requires "
+            "opentelemetry-instrumentation-fastapi>=0.48b0."
+        )
         FastAPIInstrumentor.instrument_app(app)
