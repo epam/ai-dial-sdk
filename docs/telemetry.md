@@ -37,10 +37,36 @@ Required var in **bold**, optional (customization) vars in plain.
 | `OTEL_EXPORTER_PROMETHEUS_PORT` | `9464` | Port for the Prometheus endpoint. |
 | `OTEL_SERVICE_NAME` | `unknown_service` | Used only when `service_name` is not set in code. |
 | `OTEL_PYTHON_LOG_CORRELATION` | `false` | Injects trace and span IDs into console logs. |
+| `OTEL_PYTHON_FASTAPI_EXCLUDE_SPANS` | unset | Comma-separated subset of `receive,send`. Suppresses the ASGI lifecycle sub-spans. See [Streaming deployments](#streaming-deployments). |
 
 All other OpenTelemetry SDK variables apply as normal, because the exporters are constructed with no arguments and read their own configuration from the environment — `OTEL_EXPORTER_OTLP_HEADERS`, `OTEL_METRIC_EXPORT_INTERVAL`, `OTEL_TRACES_SAMPLER` and `OTEL_RESOURCE_ATTRIBUTES` among them.
 
 Two variables are worth calling out together. `OTEL_PYTHON_LOG_CORRELATION` is **silently ignored unless `OTEL_TRACES_EXPORTER` is also set**, because there are no trace IDs to inject without a tracer. And an explicit `service_name` **takes over** from `OTEL_SERVICE_NAME` rather than merging with it.
+
+### Streaming deployments
+
+The FastAPI instrumentation opens a span for **every ASGI message**, and each
+chunk of a streamed response is one message. A deployment that streams a
+thousand-token completion therefore produces a thousand `... http send` spans
+for that one request, none of which say anything the request span does not.
+The cost of building them lands on the event loop, and the cost of encoding
+them on the OTLP exporter thread.
+
+Set `OTEL_PYTHON_FASTAPI_EXCLUDE_SPANS=receive,send` to drop them while
+keeping the per-request server span:
+
+```sh
+OTEL_TRACES_EXPORTER=otlp
+OTEL_PYTHON_FASTAPI_EXCLUDE_SPANS=receive,send
+```
+
+It is off by default, so existing traces are unchanged unless you opt in.
+The name matches the one proposed upstream in
+[opentelemetry-python-contrib#3992](https://github.com/open-telemetry/opentelemetry-python-contrib/issues/3992);
+if the instrumentation grows native support, the same configuration keeps
+working. The setting needs a version of
+`opentelemetry-instrumentation-fastapi` that accepts `exclude_spans` — on an
+older one it is reported as a warning and otherwise ignored.
 
 ## What gets instrumented
 
