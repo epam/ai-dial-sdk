@@ -46,6 +46,7 @@ class Stage(ExtraAllowModel, IgnoreIndex):
     status: Status
     content: StrictStr | None = None
     attachments: list[Attachment] | None = None
+    parent_stage_index: StrictInt | None = None
 
 
 class CustomContent(ExtraAllowModel):
