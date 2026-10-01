@@ -10,4 +10,4 @@ openai==2.32.0
 httpx==0.28.1
 beautifulsoup4==4.14.3
 uvicorn==0.44.0
-pypdf==6.16.1
+pypdf==6.19.0
