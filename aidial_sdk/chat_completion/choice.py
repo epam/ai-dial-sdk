@@ -1,11 +1,12 @@
 import json
 from types import TracebackType
-from typing import overload
+from typing import Any, overload
 
 from aidial_sdk._pydantic import ValidationError
 from aidial_sdk.chat_completion._types import ChunkQueue
 from aidial_sdk.chat_completion.choice_base import ChoiceBase
 from aidial_sdk.chat_completion.chunks import (
+    AnnotationChunk,
     AttachmentChunk,
     BaseChunk,
     ContentChunk,
@@ -30,6 +31,7 @@ class Choice(ChoiceBase):
     _queue: ChunkQueue
     _index: int
     _last_attachment_index: int
+    _last_annotation_index: int
     _last_stage_index: int
     _last_tool_call_index: int
     _has_function_call: bool
@@ -43,6 +45,7 @@ class Choice(ChoiceBase):
         self._queue = queue
         self._index = choice_index
         self._last_attachment_index = 0
+        self._last_annotation_index = 0
         self._last_stage_index = 0
         self._last_tool_call_index = 0
         self._has_function_call = False
@@ -165,6 +168,22 @@ class Choice(ChoiceBase):
 
         self.send_chunk(attachment_chunk)
         self._last_attachment_index += 1
+
+    def add_annotation(self, annotation: dict[str, Any]) -> None:
+        """Emit an annotation with an index assigned by this choice."""
+        if not self._opened:
+            raise runtime_error(
+                "Trying to add annotation to an unopened choice"
+            )
+        if self._closed:
+            raise runtime_error("Trying to add annotation to a closed choice")
+
+        self.send_chunk(
+            AnnotationChunk(
+                annotation, self._index, self._last_annotation_index
+            )
+        )
+        self._last_annotation_index += 1
 
     def set_state(self, state: dict) -> None:
         if self._state_submitted:

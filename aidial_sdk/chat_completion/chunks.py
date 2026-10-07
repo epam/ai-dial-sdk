@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from copy import deepcopy
 from typing import Any, Literal, TypedDict
 
 from aidial_sdk._pydantic._compat import BaseModel
@@ -33,6 +34,31 @@ class BaseChunkWithDefaults:
             return {**self.chunk.to_dict(), **self.defaults}
         else:
             return self.chunk.to_dict()
+
+
+class AnnotationChunk(BaseChunk):
+    def __init__(
+        self,
+        annotation: dict[str, Any],
+        choice_index: int,
+        annotation_index: int,
+    ):
+        self.annotation = {**deepcopy(annotation), "index": annotation_index}
+        self.choice_index = choice_index
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "choices": [
+                {
+                    "index": self.choice_index,
+                    "finish_reason": None,
+                    "delta": {
+                        "custom_content": {"annotations": [self.annotation]}
+                    },
+                }
+            ],
+            "usage": None,
+        }
 
 
 class StartChoiceChunk(BaseChunk):
