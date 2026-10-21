@@ -12,6 +12,10 @@ def set_log_deployment(new_deployment_id: str):
     deployment_id.set(new_deployment_id)
 
 
+def reset_log_context() -> None:
+    deployment_id.set(None)
+
+
 def log_info(message: str, *args, **kwargs):
     logger.info(f"[{deployment_id.get()}] {message}", *args, **kwargs)
 

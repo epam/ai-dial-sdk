@@ -11,6 +11,7 @@ from aidial_sdk.chat_completion.chunks import (
     ContentChunk,
     EndChoiceChunk,
     FormSchemaChunk,
+    ReasoningContentChunk,
     StartChoiceChunk,
     StateChunk,
 )
@@ -95,6 +96,18 @@ class Choice(ChoiceBase):
 
         self.send_chunk(ContentChunk(content, self._index))
         self._last_finish_reason = FinishReason.STOP
+
+    def append_reasoning_content(self, content: str) -> None:
+        if not self._opened:
+            raise runtime_error(
+                "Trying to append reasoning content to an unopened choice"
+            )
+        if self._closed:
+            raise runtime_error(
+                "Trying to append reasoning content to a closed choice"
+            )
+
+        self.send_chunk(ReasoningContentChunk(content, self._index))
 
     @property
     def content_stream(self) -> ContentStream:
@@ -182,12 +195,25 @@ class Choice(ChoiceBase):
         self.send_chunk(FormSchemaChunk(self._index, form_schema))
 
     def create_stage(self, name: str | None = None) -> Stage:
+        return self._create_stage(name, parent=None)
+
+    def _create_stage(
+        self,
+        name: str | None = None,
+        *,
+        parent: Stage | None = None,
+    ) -> Stage:
         if not self._opened:
             raise runtime_error("Trying to create stage to an unopened choice")
         if self._closed:
             raise runtime_error("Trying to create stage to a closed choice")
 
-        stage = Stage(self._queue, self._index, self._last_stage_index, name)
+        stage = Stage(
+            self,
+            self._last_stage_index,
+            name,
+            parent,
+        )
         self._last_stage_index += 1
 
         return stage

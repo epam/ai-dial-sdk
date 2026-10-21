@@ -16,6 +16,9 @@ OTEL_EXPORTER_PROMETHEUS_PORT = int(
 OTEL_PYTHON_LOG_CORRELATION = (
     os.getenv("OTEL_PYTHON_LOG_CORRELATION", "false").lower() == "true"
 )
+OTEL_PYTHON_FASTAPI_EXCLUDE_SPANS = env_var_list(
+    "OTEL_PYTHON_FASTAPI_EXCLUDE_SPANS"
+)
 
 
 class LogsConfig(BaseModel):
@@ -30,6 +33,7 @@ class LogsConfig(BaseModel):
 class TracingConfig(BaseModel):
     otlp_export: bool = "otlp" in OTEL_TRACES_EXPORTER
     logging: bool = OTEL_PYTHON_LOG_CORRELATION
+    excluded_asgi_spans: list[str] = OTEL_PYTHON_FASTAPI_EXCLUDE_SPANS
 
 
 class MetricsConfig(BaseModel):

@@ -22,6 +22,7 @@
   - [Echo application example](#echo-application-example)
     - [Run](#run)
     - [Check](#check)
+  - [Endpoints](#endpoints)
 - [Development](#development)
   - [Development Environment](#development-environment)
   - [Setup](#setup)
@@ -37,9 +38,9 @@
 
 ## Overview
 
-Framework to create applications and model adapters for [AI DIAL](https://epam-rail.com).
+Framework to create applications and model adapters for [AI DIAL](https://dialx.ai).
 
-Applications and model adapters implemented using this framework will be compatible with [AI DIAL API](https://epam-rail.com/dial_api) that was designed based on [Azure OpenAI API](https://learn.microsoft.com/en-us/azure/ai-services/openai/reference).
+Applications and model adapters implemented using this framework will be compatible with [AI DIAL API](https://dialx.ai/dial_api) that was designed based on [Azure OpenAI API](https://learn.microsoft.com/en-us/azure/ai-services/openai/reference).
 
 ---
 
@@ -135,6 +136,34 @@ You will see the JSON response as:
     "object": "chat.completion"
 }
 ```
+
+---
+
+### Endpoints
+
+Every deployment is exposed under two base paths:
+
+|Base path|Description|
+|---|---|
+|`/openai/deployments/{deployment_name}`|The DIAL API path. The deployment name is a part of the path.|
+|`/openai/v1`|The Azure OpenAI v1 API path. The deployment name comes from the request headers.|
+
+The following endpoints are served under each of them:
+
+- `POST <base path>/chat/completions`
+- `POST <base path>/rate`
+- `POST <base path>/tokenize`
+- `POST <base path>/truncate_prompt`
+- `GET <base path>/configuration`
+- `POST <base path>/embeddings`
+
+`request.deployment_id` is resolved from the first of the following sources that is set:
+
+1. the `X-DIAL-OVERRIDE-NAME` header,
+2. the deployment name from the path, for the `/openai/deployments/{deployment_name}` requests,
+3. the `X-DIAL-DEPLOYMENT-ID` header, which DIAL Core sets when it calls the `/openai/v1` endpoints.
+
+An `/openai/v1` request with none of the headers set fails with `500 Internal Server Error`.
 
 ---
 
