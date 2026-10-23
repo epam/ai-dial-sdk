@@ -1,4 +1,5 @@
 from enum import Enum
+from typing import assert_never
 from urllib.parse import urlparse
 
 import aiohttp
@@ -7,7 +8,6 @@ import requests
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from typing_extensions import assert_never
 
 app = FastAPI()
 
