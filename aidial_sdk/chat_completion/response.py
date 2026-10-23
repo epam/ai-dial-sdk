@@ -1,10 +1,8 @@
 import asyncio
 from collections.abc import Callable, Coroutine
 from time import time
-from typing import Any
+from typing import Any, assert_never
 from uuid import uuid4
-
-from typing_extensions import assert_never
 
 from aidial_sdk.chat_completion._cache import CacheBreakpointPath
 from aidial_sdk.chat_completion._types import ChunkQueue

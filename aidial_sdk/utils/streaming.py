@@ -4,10 +4,9 @@ from collections.abc import AsyncIterator, Awaitable, Callable
 from typing import (
     Any,
     TypeVar,
+    assert_never,
     cast,
 )
-
-from typing_extensions import assert_never
 
 from aidial_sdk.chat_completion.chunks import BaseChunkWithDefaults
 from aidial_sdk.exceptions import HTTPException as DIALException

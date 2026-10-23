@@ -106,7 +106,7 @@ async def test_cancellation(
             )
 
         await asyncio.wait_for(_exhaust_stream(stream), timeout=2)
-    except asyncio.TimeoutError:
+    except TimeoutError:
         pass
     else:
         assert False, "Stream should have timed out"
