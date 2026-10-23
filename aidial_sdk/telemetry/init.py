@@ -18,7 +18,7 @@ from opentelemetry.instrumentation.system_metrics import (
 )
 from opentelemetry.instrumentation.urllib import URLLibInstrumentor
 from opentelemetry.metrics import set_meter_provider
-from opentelemetry.sdk._logs import LoggerProvider, LoggingHandler
+from opentelemetry.sdk._logs import LoggerProvider
 from opentelemetry.sdk._logs.export import (
     BatchLogRecordProcessor,
     ConsoleLogRecordExporter,
@@ -86,13 +86,6 @@ def init_telemetry(app: FastAPI | None, config: TelemetryConfig):
         except ImportError:
             pass
 
-        set_logging_format = config.tracing.logging
-        if set_logging_format:
-            # Remove any competing handlers to avoid duplicate logging
-            remove_stream_handlers(logging.getLogger(), sys.stderr)
-
-        LoggingInstrumentor().instrument(set_logging_format=set_logging_format)
-
     if config.logs is not None:
         # Adding a handler to the root logger which exports the logs to OTLP or to the console as JSON.
         provider = LoggerProvider(resource=resource)
@@ -120,7 +113,24 @@ def init_telemetry(app: FastAPI | None, config: TelemetryConfig):
             )
 
         set_logger_provider(provider)
-        root.addHandler(LoggingHandler())
+
+    if config.tracing is not None or config.logs is not None:
+        # OTel's text format writes to stderr, which `console_export` takes over.
+        set_logging_format = (
+            config.tracing is not None
+            and config.tracing.logging
+            and not (config.logs is not None and config.logs.console_export)
+        )
+
+        if set_logging_format:
+            # Remove any competing handlers to avoid duplicate logging
+            remove_stream_handlers(logging.getLogger(), sys.stderr)
+
+        LoggingInstrumentor().instrument(
+            set_logging_format=set_logging_format,
+            inject_trace_context=config.tracing is not None,
+            enable_log_auto_instrumentation=config.logs is not None,
+        )
 
     if config.metrics is not None:
         metric_readers = []
