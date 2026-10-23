@@ -53,6 +53,7 @@ class CustomContent(ExtraAllowModel):
     stages: list[Stage] | None = None
     attachments: list[Attachment] | None = None
     state: dict | None = None
+    annotations: list[dict[str, Any]] | None = None
     form_value: Any | None = None
     form_schema: Any | None = None
 
