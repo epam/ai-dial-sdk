@@ -123,22 +123,12 @@ def init_telemetry(app: FastAPI | None, config: TelemetryConfig):
         )
 
         if set_logging_format:
-            # Remove any competing handlers, so that the instrumentor's
-            # `logging.basicConfig()` call installs OTel's own.
+            # Remove any competing handlers to avoid duplicate logging
             remove_stream_handlers(logging.getLogger(), sys.stderr)
 
-        # The instrumentor is a singleton, so it's instrumented exactly once -
-        # here, where the logger provider its log handler binds to is set.
         LoggingInstrumentor().instrument(
             set_logging_format=set_logging_format,
-            # Add the otel* fields to every log record even when the logging
-            # format isn't taken over, so that the SDK's own formatters
-            # could report the trace context.
             inject_trace_context=config.tracing is not None,
-            # The instrumentor installs the log handler exporting the logs
-            # as per the `config.logs` settings. Not left to the instrumentor's
-            # own `OTEL_PYTHON_LOG_AUTO_INSTRUMENTATION` (default: true), which
-            # doesn't know about `config.logs`.
             enable_log_auto_instrumentation=config.logs is not None,
         )
 
