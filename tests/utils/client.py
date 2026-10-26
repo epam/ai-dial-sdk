@@ -4,6 +4,7 @@ from starlette.testclient import TestClient
 
 from aidial_sdk import DIALApp
 from aidial_sdk.chat_completion.base import ChatCompletion
+from tests.utils import virtual_clock
 
 
 def create_app_client(
@@ -26,4 +27,5 @@ def create_test_client(
         app=app,
         headers=headers,
         base_url=f"http://testserver/openai/deployments/{name}",
+        backend_options=virtual_clock.backend_options(),
     )
