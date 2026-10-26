@@ -69,7 +69,9 @@ filterwarnings = [
     # muting deprecation warnings coming from old pydantic
     "ignore::DeprecationWarning:pydantic.typing",
 ]
-markers = ["slow: marker for slow running tests"]
+markers = [
+    "virtual_clock: run the test on a clock that skips ahead to the next timer",
+]
 
 [tool.pyright]
 typeCheckingMode = "basic"

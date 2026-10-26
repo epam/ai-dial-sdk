@@ -1,5 +1,6 @@
 import asyncio
 import contextlib
+import threading
 
 import httpx
 import pytest
@@ -14,23 +15,9 @@ class WaitingApp(ChatCompletion):
         self.non_empty_stream = non_empty_stream
 
         self.is_cancelled = False
-        self._started = None
-        self._cancelled = None
 
-    @property
-    def started(self) -> asyncio.Event:
-        # NOTE: lazily init events to ensure that they are
-        # attached to the event loop inside the uvicorn thread,
-        # instead of the test's event loop.
-        if self._started is None:
-            self._started = asyncio.Event()
-        return self._started
-
-    @property
-    def cancelled(self) -> asyncio.Event:
-        if self._cancelled is None:
-            self._cancelled = asyncio.Event()
-        return self._cancelled
+        self.started = threading.Event()
+        self.cancelled = threading.Event()
 
     async def _wait(self):
         for _ in range(1000):
@@ -65,7 +52,6 @@ def chat_completion(non_empty_stream):
     return WaitingApp(non_empty_stream)
 
 
-@pytest.mark.slow
 @pytest.mark.parametrize(
     "stream", [False, True], ids=lambda b: "stream" if b else "block"
 )
@@ -94,10 +80,10 @@ async def run_disconnect_test(
         )
     )
 
-    await asyncio.wait_for(chat_completion.started.wait(), timeout=1)
+    assert await asyncio.to_thread(chat_completion.started.wait, 1)
     await test_http_client.aclose()
 
-    await asyncio.wait_for(chat_completion.cancelled.wait(), timeout=1)
+    assert await asyncio.to_thread(chat_completion.cancelled.wait, 1)
     assert chat_completion.is_cancelled
 
     with contextlib.suppress(httpx.ReadError):

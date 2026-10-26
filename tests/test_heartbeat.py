@@ -76,7 +76,7 @@ class TestCase(BaseModel):
     expected: list[str | dict]
 
 
-@pytest.mark.slow
+@pytest.mark.virtual_clock
 @pytest.mark.parametrize(
     "test_case",
     [

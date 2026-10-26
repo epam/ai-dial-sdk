@@ -1,9 +1,21 @@
+import asyncio
+
 import httpx
 import pytest
 
 from aidial_sdk import DIALApp
 from aidial_sdk.chat_completion.base import ChatCompletion
+from tests.utils import virtual_clock
 from tests.utils.uvicorn import run_uvicorn_in_thread
+
+
+@pytest.fixture
+def event_loop_policy(request: pytest.FixtureRequest):
+    if request.node.get_closest_marker("virtual_clock") and (
+        virtual_clock.is_enabled()
+    ):
+        return virtual_clock.VirtualClockEventLoopPolicy()
+    return asyncio.DefaultEventLoopPolicy()
 
 
 @pytest.fixture
