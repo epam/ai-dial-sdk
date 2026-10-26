@@ -43,7 +43,7 @@ class UsePydanticV2(Enum):
     NO = "0"
 
 
-_python_matrix = nox.session(python=["3.10", "3.11", "3.12", "3.13"])
+_python_matrix = nox.session(python=["3.11", "3.12", "3.13"])
 
 
 @_python_matrix
