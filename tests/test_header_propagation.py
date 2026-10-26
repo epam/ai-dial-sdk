@@ -3,7 +3,7 @@ import json
 from collections.abc import Generator, Mapping
 from dataclasses import dataclass, field
 from itertools import product
-from typing import Any, Literal
+from typing import Any, Literal, assert_never
 
 import aiointercept
 import httpx
@@ -14,7 +14,6 @@ import respx
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from requests.structures import CaseInsensitiveDict
-from typing_extensions import assert_never
 
 from aidial_sdk.header_propagator import HeaderPropagator
 from aidial_sdk.utils.json import remove_nones

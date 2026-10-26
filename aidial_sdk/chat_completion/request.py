@@ -1,8 +1,6 @@
 from collections.abc import Mapping
 from enum import Enum
-from typing import Annotated, Any, Literal
-
-from typing_extensions import assert_never
+from typing import Annotated, Any, Literal, assert_never
 
 from aidial_sdk._pydantic import (
     PYDANTIC_V2,
