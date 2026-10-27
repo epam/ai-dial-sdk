@@ -11,7 +11,7 @@ concurrency:
 
 jobs:
   release:
-    uses: epam/ai-dial-ci/.github/workflows/python_package_release.yml@4.12.0
+    uses: epam/ai-dial-ci/.github/workflows/python_package_release.yml@4.13.1
     with:
       trivy-severity: "CRITICAL,HIGH,MEDIUM,LOW"
       trivy-severity-for-sarif: "CRITICAL,HIGH,MEDIUM,LOW"

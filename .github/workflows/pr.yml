@@ -10,7 +10,7 @@ concurrency:
 
 jobs:
   run_tests:
-    uses: epam/ai-dial-ci/.github/workflows/python_package_pr.yml@4.12.0
+    uses: epam/ai-dial-ci/.github/workflows/python_package_pr.yml@4.13.1
     secrets: inherit
     with:
       trivy-severity: "CRITICAL,HIGH,MEDIUM,LOW"
