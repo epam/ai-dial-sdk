@@ -277,6 +277,8 @@ class ReasoningEffort(str, Enum):
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
+    XHIGH = "xhigh"
+    MAX = "max"
 
 
 class AzureChatCompletionRequest(ExtraAllowModel):
