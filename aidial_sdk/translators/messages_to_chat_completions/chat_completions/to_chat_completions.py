@@ -1,7 +1,7 @@
 import json
 from collections.abc import Iterable
 from dataclasses import dataclass
-from typing import Literal, Self, TypeVar, assert_never, cast
+from typing import Literal, Self, TypeVar, cast
 
 from anthropic.types.beta import (
     BetaCacheControlEphemeralParam as CacheControl,
@@ -67,9 +67,7 @@ from aidial_sdk.translators.messages_to_chat_completions.errors import (
 from aidial_sdk.translators.messages_to_chat_completions.translation_state import (
     TranslationState,
 )
-from aidial_sdk.translators.messages_to_chat_completions.utils.log_config import (
-    bedrock_logger as log,
-)
+from aidial_sdk.utils.logging import logger as log
 
 _SERVICE_TIERS = {"auto": "auto", "standard_only": "default"}
 
@@ -650,7 +648,8 @@ def _static_tool_name(tool: BetaToolUnionParam) -> str:
         return tool["name"]
     if "mcp_server_name" in tool:
         return tool["mcp_server_name"]
-    assert_never(tool)
+    # Toolsets (e.g. `browser_toolset_20260801`) carry no name
+    return tool["type"]
 
 
 def _parameters(tool: BetaToolParam) -> dict[str, object]:

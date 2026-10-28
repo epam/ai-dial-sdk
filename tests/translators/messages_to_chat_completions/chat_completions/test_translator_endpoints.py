@@ -5,9 +5,14 @@ from collections.abc import AsyncIterator, Iterator
 import httpx
 import pytest
 import respx
-from asgi_lifespan import LifespanManager
+from fastapi import Request
 from httpx import ASGITransport
 
+from aidial_sdk import DIALApp
+from aidial_sdk.translators.messages_to_chat_completions import (
+    ClientFactory,
+    mount_translator,
+)
 from tests.translators.messages_to_chat_completions.helpers import (
     features_header,
     parse_anthropic_sse,
@@ -42,22 +47,36 @@ _MESSAGES_BODY: dict[str, object] = {
 
 
 @pytest.fixture
+async def core_client() -> AsyncIterator[httpx.AsyncClient]:
+    async with httpx.AsyncClient() as c:
+        yield c
+
+
+def _transport(get_client: ClientFactory[httpx.AsyncClient]) -> ASGITransport:
+    app = DIALApp()
+    mount_translator(app, get_client)
+    # httpx<0.28 types the ASGI messages as dict
+    return ASGITransport(app)  # type: ignore
+
+
+@pytest.fixture
+def transport(core_client: httpx.AsyncClient) -> ASGITransport:
+    async def get_client(request: Request) -> httpx.AsyncClient:
+        return core_client
+
+    return _transport(get_client)
+
+
+@pytest.fixture
 async def client(
-    monkeypatch: pytest.MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch, transport: ASGITransport
 ) -> AsyncIterator[httpx.AsyncClient]:
     monkeypatch.setenv("DIAL_URL", _CORE)
-    from aidial_sdk.translators.messages_to_chat_completions.chat_completions.app import (
-        app,
-    )
-
-    async with (
-        LifespanManager(app),
-        httpx.AsyncClient(
-            transport=ASGITransport(app),
-            base_url="http://test-app.com",
-            headers={"api-key": "dummy-key"},
-        ) as c,
-    ):
+    async with httpx.AsyncClient(
+        transport=transport,
+        base_url="http://test-app.com",
+        headers={"api-key": "dummy-key"},
+    ) as c:
         yield c
 
 
@@ -89,6 +108,28 @@ async def test_non_streaming_happy_path(
         "cache_read_input_tokens": 0,
         "output_tokens_details": {"thinking_tokens": 0},
     }
+
+
+async def test_mount_with_client_instance(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("DIAL_URL", _CORE)
+    core_client = httpx.AsyncClient(
+        transport=httpx.MockTransport(
+            lambda request: httpx.Response(200, json=_RESPONSE_OBJECT)
+        )
+    )
+
+    async with (
+        core_client,
+        httpx.AsyncClient(
+            transport=_transport(core_client), base_url="http://test-app.com"
+        ) as c,
+    ):
+        response = await c.post(_MESSAGES_URL, json=_MESSAGES_BODY)
+
+    assert response.status_code == 200
+    assert response.json()["content"][0]["text"] == "hi there"
 
 
 async def test_request_shape_and_headers_not_leaked(
@@ -159,22 +200,19 @@ async def test_cores_own_routing_headers_do_not_travel_on(
 async def test_only_the_api_key_core_minted_travels_on(
     mock_core: respx.MockRouter,
     monkeypatch: pytest.MonkeyPatch,
+    transport: ASGITransport,
     inbound: dict[str, str],
     forwarded: str | None,
 ) -> None:
     monkeypatch.setenv("DIAL_URL", _CORE)
-    from aidial_sdk.translators.messages_to_chat_completions.chat_completions.app import (
-        app,
-    )
 
     route = mock_core.post(_CORE_PATH).respond(
         json=_RESPONSE_OBJECT, content_type="application/json"
     )
 
     async with (
-        LifespanManager(app),
         httpx.AsyncClient(
-            transport=ASGITransport(app),
+            transport=transport,
             base_url="http://test-app.com",
         ) as bare,
     ):
@@ -445,11 +483,13 @@ async def test_debug_logging_emits_request_and_response_lines(
     mock_core.post(_CORE_PATH).respond(
         json=_RESPONSE_OBJECT, content_type="application/json"
     )
-    with caplog.at_level(logging.DEBUG, logger="bedrock"):
+    with caplog.at_level(logging.DEBUG, logger="aidial_sdk"):
         response = await client.post(_MESSAGES_URL, json=_MESSAGES_BODY)
 
     assert response.status_code == 200
-    messages = [r.getMessage() for r in caplog.records if r.name == "bedrock"]
+    messages = [
+        r.getMessage() for r in caplog.records if r.name == "aidial_sdk"
+    ]
     assert any(m.startswith("request: ") for m in messages)
     assert any(m.startswith("response: ") for m in messages)
 
@@ -468,28 +508,26 @@ async def test_debug_logging_emits_stream_chunk_lines(
     mock_core.post(_CORE_PATH).respond(
         content=upstream_sse, content_type="text/event-stream"
     )
-    with caplog.at_level(logging.DEBUG, logger="bedrock"):
+    with caplog.at_level(logging.DEBUG, logger="aidial_sdk"):
         response = await client.post(
             _MESSAGES_URL, json={**_MESSAGES_BODY, "stream": True}
         )
 
     assert response.status_code == 200
-    messages = [r.getMessage() for r in caplog.records if r.name == "bedrock"]
+    messages = [
+        r.getMessage() for r in caplog.records if r.name == "aidial_sdk"
+    ]
     assert any(m.startswith("response chunk: ") for m in messages)
 
 
 async def test_missing_dial_url_returns_500(
-    monkeypatch: pytest.MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch, transport: ASGITransport
 ) -> None:
     monkeypatch.delenv("DIAL_URL", raising=False)
-    from aidial_sdk.translators.messages_to_chat_completions.chat_completions.app import (
-        app,
-    )
 
     async with (
-        LifespanManager(app),
         httpx.AsyncClient(
-            transport=ASGITransport(app),
+            transport=transport,
             base_url="http://test-app.com",
         ) as c,
     ):
@@ -892,7 +930,7 @@ async def test_invalid_upstream_response_returns_generic_server_error(
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     mock_core.post(_CORE_PATH).respond(json={**_RESPONSE_OBJECT, "id": 42})
-    with caplog.at_level(logging.ERROR, logger="bedrock"):
+    with caplog.at_level(logging.ERROR, logger="aidial_sdk"):
         response = await client.post(_MESSAGES_URL, json=_MESSAGES_BODY)
     assert response.status_code == 500
     assert response.json() == {

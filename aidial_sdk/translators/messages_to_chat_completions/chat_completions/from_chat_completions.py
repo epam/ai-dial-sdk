@@ -34,9 +34,7 @@ from aidial_sdk.translators.messages_to_chat_completions.chat_completions.dial_e
 from aidial_sdk.translators.messages_to_chat_completions.translation_state import (
     TranslationState,
 )
-from aidial_sdk.translators.messages_to_chat_completions.utils.log_config import (
-    bedrock_logger as log,
-)
+from aidial_sdk.utils.logging import logger as log
 
 
 def to_anthropic_response(

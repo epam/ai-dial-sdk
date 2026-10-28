@@ -657,13 +657,16 @@ def test_provider_tools_become_static_functions_as_sent() -> None:
             "display_height_px": 100,
         },
         {"type": "mcp_toolset", "mcp_server_name": "docs"},
+        {"type": "browser_toolset_20260801"},
     ]
     result = convert({**user("hi"), "tools": provider_tools})
     assert result.model_dump(mode="json", exclude_none=True)["tools"] == [
         {
             "type": "static_function",
             "static_function": {
-                "name": tool.get("name") or tool["mcp_server_name"],
+                "name": tool.get("name")
+                or tool.get("mcp_server_name")
+                or tool["type"],
                 "configuration": tool,
             },
         }

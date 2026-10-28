@@ -10,9 +10,7 @@ from aidial_sdk.translators.messages_to_chat_completions.errors import (
     AnthropicErrorType,
     anthropic_error_response,
 )
-from aidial_sdk.translators.messages_to_chat_completions.utils.log_config import (
-    bedrock_logger as log,
-)
+from aidial_sdk.utils.logging import logger as log
 
 
 async def not_found(request: Request) -> Response:

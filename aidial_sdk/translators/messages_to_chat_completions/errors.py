@@ -9,9 +9,7 @@ import openai
 from fastapi.responses import JSONResponse, Response
 from typing_extensions import TypedDict
 
-from aidial_sdk.translators.messages_to_chat_completions.utils.log_config import (
-    bedrock_logger as log,
-)
+from aidial_sdk.utils.logging import logger as log
 
 INTERNAL_ERROR_MESSAGE = "Internal server error"
 CONNECTION_ERROR_MESSAGE = "Failed to reach DIAL Core"

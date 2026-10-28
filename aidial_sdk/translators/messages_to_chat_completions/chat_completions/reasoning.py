@@ -9,9 +9,7 @@ from aidial_sdk.translators.messages_to_chat_completions.errors import (
     AnthropicErrorType,
     AnthropicHTTPError,
 )
-from aidial_sdk.translators.messages_to_chat_completions.utils.log_config import (
-    bedrock_logger as log,
-)
+from aidial_sdk.utils.logging import logger as log
 
 _EFFORT = TypeAdapter(ReasoningEffort)
 

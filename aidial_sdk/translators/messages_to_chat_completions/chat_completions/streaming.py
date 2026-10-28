@@ -35,9 +35,7 @@ from aidial_sdk.translators.messages_to_chat_completions.sse_stream import (
 from aidial_sdk.translators.messages_to_chat_completions.translation_state import (
     TranslationState,
 )
-from aidial_sdk.translators.messages_to_chat_completions.utils.log_config import (
-    bedrock_logger as log,
-)
+from aidial_sdk.utils.logging import logger as log
 from aidial_sdk.utils.merge_chunks import merge
 
 _TEXT_KEY = "text"

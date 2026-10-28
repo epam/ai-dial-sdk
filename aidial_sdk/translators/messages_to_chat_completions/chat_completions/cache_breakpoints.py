@@ -4,9 +4,7 @@ from datetime import UTC, datetime, timedelta
 from anthropic.types.beta import BetaCacheControlEphemeralParam as CacheControl
 
 from aidial_sdk.chat_completion.request import CacheBreakpoint
-from aidial_sdk.translators.messages_to_chat_completions.utils.log_config import (
-    bedrock_logger as log,
-)
+from aidial_sdk.utils.logging import logger as log
 
 _TTL = re.compile(r"^([1-9]\d*)([mh])$")
 

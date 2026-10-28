@@ -5,8 +5,8 @@ from anthropic.types.beta import BetaMessageParam, BetaOutputConfigParam
 
 
 class MessageParam(BetaMessageParam, total=False):
-    # anthropic>=1.0 types these system-turn fields, but aidial-adapter-anthropic
-    # pins anthropic<1.
+    # anthropic>=1.0 types these system-turn fields, but the translator
+    # supports anthropic<1.
     clear_at: Literal["next_user_message", "never"] | None
     output_config: BetaOutputConfigParam | None
 

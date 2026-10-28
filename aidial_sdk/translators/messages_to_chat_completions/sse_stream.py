@@ -34,9 +34,7 @@ from aidial_sdk.translators.messages_to_chat_completions.errors import (
     ErrorDetail,
     anthropic_error_type_from_stream,
 )
-from aidial_sdk.translators.messages_to_chat_completions.utils.log_config import (
-    bedrock_logger as log,
-)
+from aidial_sdk.utils.logging import logger as log
 
 _T = TypeVar("_T")
 _T_co = TypeVar("_T_co", covariant=True)

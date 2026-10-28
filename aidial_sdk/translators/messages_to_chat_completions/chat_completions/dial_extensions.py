@@ -4,12 +4,8 @@ from collections.abc import Mapping
 from openai.types.chat.chat_completion_message import Annotation
 from pydantic import ValidationError
 
-from aidial_sdk.translators.messages_to_chat_completions.utils.log_config import (
-    bedrock_logger as log,
-)
-from aidial_sdk.translators.messages_to_chat_completions.utils.pydantic import (
-    ExtraAllowModel,
-)
+from aidial_sdk.utils.logging import logger as log
+from aidial_sdk.utils.pydantic import ExtraAllowModel
 
 _REASONING_STAGE = re.compile(r"think|thought|reason", re.IGNORECASE)
 

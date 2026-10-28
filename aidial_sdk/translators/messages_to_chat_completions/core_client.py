@@ -1,11 +1,9 @@
 from urllib.parse import quote
 
+import httpx
 from fastapi import Request
 from openai import AsyncOpenAI, Omit, omit
 
-from aidial_sdk.translators.messages_to_chat_completions.bedrock import (
-    get_anthropic_http_client,
-)
 from aidial_sdk.translators.messages_to_chat_completions.settings import (
     get_dial_api_version,
 )
@@ -23,7 +21,9 @@ _FORWARDED_HEADERS = {
 
 
 def _client(
-    base_url: str, default_query: dict[str, str] | None = None
+    base_url: str,
+    http_client: httpx.AsyncClient,
+    default_query: dict[str, str] | None = None,
 ) -> AsyncOpenAI:
     return AsyncOpenAI(
         # Required by the SDK; Core authenticates the forwarded `api-key` header.
@@ -31,17 +31,22 @@ def _client(
         base_url=base_url,
         default_query=default_query,
         max_retries=0,
-        http_client=get_anthropic_http_client(),
+        http_client=http_client,
     )
 
 
-def core_v1_client(dial_url: str) -> AsyncOpenAI:
-    return _client(f"{dial_url}/openai/v1")
+def core_v1_client(
+    dial_url: str, http_client: httpx.AsyncClient
+) -> AsyncOpenAI:
+    return _client(f"{dial_url}/openai/v1", http_client)
 
 
-def core_legacy_client(dial_url: str, deployment: str) -> AsyncOpenAI:
+def core_legacy_client(
+    dial_url: str, deployment: str, http_client: httpx.AsyncClient
+) -> AsyncOpenAI:
     return _client(
         f"{dial_url}/openai/deployments/{quote(deployment, safe='')}",
+        http_client,
         {"api-version": get_dial_api_version()},
     )
 

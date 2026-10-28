@@ -1,6 +1,9 @@
 import json
 import logging
+from collections.abc import Awaitable, Callable
+from typing import TypeVar
 
+import httpx
 from anthropic.types.beta.message_create_params import MessageCreateParams
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
@@ -36,14 +39,17 @@ from aidial_sdk.translators.messages_to_chat_completions.settings import (
 from aidial_sdk.translators.messages_to_chat_completions.translation_state import (
     TranslationState,
 )
-from aidial_sdk.translators.messages_to_chat_completions.utils.log_config import (
-    bedrock_logger as log,
-)
+from aidial_sdk.utils.logging import logger as log
 
-app = FastAPI()
+ClientT = TypeVar("ClientT")
+ClientFactory = Callable[[Request], Awaitable[ClientT]] | ClientT
 
 
-async def _handle_messages(request: Request, legacy: bool) -> Response:
+async def _handle_messages(
+    request: Request,
+    get_client: ClientFactory[httpx.AsyncClient],
+    legacy: bool,
+) -> Response:
     dial_url = get_dial_url()
     translation_state = TranslationState()
 
@@ -64,10 +70,15 @@ async def _handle_messages(request: Request, legacy: bool) -> Response:
     if log.isEnabledFor(logging.DEBUG):
         log.debug(f"Translated request to Core: {json.dumps(body)}")
 
+    http_client = (
+        get_client
+        if isinstance(get_client, httpx.AsyncClient)
+        else await get_client(request)
+    )
     client = (
-        core_legacy_client(dial_url, deployment)
+        core_legacy_client(dial_url, deployment, http_client)
         if legacy
-        else core_v1_client(dial_url)
+        else core_v1_client(dial_url, http_client)
     )
     headers = core_headers(request)
 
@@ -97,22 +108,27 @@ async def _handle_messages(request: Request, legacy: bool) -> Response:
     )
 
 
-@app.post("/anthropic/v1/messages")
-@with_debug_logging
-@translator_error_handler
-async def _handle_v1_messages(request: Request) -> Response:
-    return await _handle_messages(request, legacy=False)
+def create_anthropic_api_app(
+    get_client: ClientFactory[httpx.AsyncClient],
+) -> FastAPI:
+    app = FastAPI()
 
+    @app.post("/anthropic/v1/messages")
+    @with_debug_logging
+    @translator_error_handler
+    async def _handle_v1_messages(request: Request) -> Response:
+        return await _handle_messages(request, get_client, legacy=False)
 
-@app.post("/legacy/anthropic/v1/messages")
-@with_debug_logging
-@translator_error_handler
-async def _handle_legacy_messages(request: Request) -> Response:
-    return await _handle_messages(request, legacy=True)
+    @app.post("/legacy/anthropic/v1/messages")
+    @with_debug_logging
+    @translator_error_handler
+    async def _handle_legacy_messages(request: Request) -> Response:
+        return await _handle_messages(request, get_client, legacy=True)
 
+    app.add_api_route(
+        "/{full_path:path}",
+        not_found,
+        methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+    )
 
-app.add_api_route(
-    "/{full_path:path}",
-    not_found,
-    methods=["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
-)
+    return app
