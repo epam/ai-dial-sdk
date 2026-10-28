@@ -201,6 +201,9 @@ The second argument is the HTTP client the translator calls DIAL Core with: eith
 
 To expose a Chat Completions model under `/anthropic/v1/messages`, add an `anthropicMessages` interface to its DIAL Core config, pointing `base_url` at the mount path of the application that runs the translator (or at `/openaiChatCompletions/legacy` to call DIAL Core's legacy per-deployment endpoint):
 
+<details>
+<summary>DIAL Core config example</summary>
+
 ```json
 {
   "models": {
@@ -224,6 +227,8 @@ To expose a Chat Completions model under `/anthropic/v1/messages`, add an `anthr
   }
 }
 ```
+
+</details>
 
 See the [translation guide](docs/messages-to-chat-translation.md) for how request parameters, content blocks, tools, caching, usage, and errors are translated, and for the translator's limitations.
 

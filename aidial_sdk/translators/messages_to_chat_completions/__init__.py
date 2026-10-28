@@ -1,21 +1,3 @@
-"""Translator from the Anthropic Messages API to the Chat Completions API.
-
-Exposes the Anthropic Messages API as a mountable sub-application that
-serves the requests by calling the Chat Completions API of DIAL Core
-at `DIAL_URL`.
-
-Typical usage::
-
-    import httpx
-    from aidial_sdk import DIALApp
-    from aidial_sdk.translators.messages_to_chat_completions import (
-        mount_translator,
-    )
-
-    app = DIALApp(...)
-    mount_translator(app, httpx.AsyncClient())
-"""
-
 import httpx
 from starlette.applications import Starlette
 
