@@ -1,5 +1,5 @@
 import httpx
-from starlette.applications import Starlette
+from fastapi import FastAPI
 
 from aidial_sdk._pydantic import PYDANTIC_V2
 
@@ -18,7 +18,7 @@ __all__ = ["ClientFactory", "create_anthropic_api_app", "mount_translator"]
 
 
 def mount_translator(
-    app: Starlette,
+    app: FastAPI,
     get_client: ClientFactory[httpx.AsyncClient],
     *,
     path: str = "/openaiChatCompletions",
