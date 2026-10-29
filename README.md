@@ -23,6 +23,7 @@
     - [Run](#run)
     - [Check](#check)
   - [Endpoints](#endpoints)
+  - [Anthropic Messages to Chat Completions translator](#anthropic-messages-to-chat-completions-translator)
 - [Development](#development)
   - [Development Environment](#development-environment)
   - [Setup](#setup)
@@ -164,6 +165,72 @@ The following endpoints are served under each of them:
 3. the `X-DIAL-DEPLOYMENT-ID` header, which DIAL Core sets when it calls the `/openai/v1` endpoints.
 
 An `/openai/v1` request with none of the headers set fails with `500 Internal Server Error`.
+
+---
+
+### Anthropic Messages to Chat Completions translator
+
+The translator lets an Anthropic-native client (e.g. Claude Code) talk to a model that only speaks the [Chat Completions API](https://platform.openai.com/docs/api-reference/chat). It converts an Anthropic Messages request into a Chat Completions request to DIAL Core at `DIAL_URL`, and converts the response, streaming or not, back into the Anthropic Messages shape.
+
+The translator requires the `translators` extra and Pydantic V2 models (`PYDANTIC_V2=True`):
+
+```sh
+pip install "aidial-sdk[translators]"
+```
+
+Mount it on your application:
+
+```python
+import httpx
+
+from aidial_sdk import DIALApp
+from aidial_sdk.translators.messages_to_chat_completions import mount_translator
+
+app = DIALApp()
+mount_translator(app, httpx.AsyncClient())
+```
+
+The second argument is the HTTP client the translator calls DIAL Core with: either an `httpx.AsyncClient` or an async function that takes the incoming `Request` and returns one. The `path` (`/openaiChatCompletions` by default) and `name` keyword arguments configure the mount.
+
+|Endpoint|Calls on DIAL Core|
+|---|---|
+|`POST /openaiChatCompletions/anthropic/v1/messages`|`POST {DIAL_URL}/openai/v1/chat/completions`|
+|`POST /openaiChatCompletions/legacy/anthropic/v1/messages`|`POST {DIAL_URL}/openai/deployments/{deployment}/chat/completions`|
+
+`DIAL_URL` must be set, otherwise the endpoints answer `500`.
+
+To expose a Chat Completions model under `/anthropic/v1/messages`, add an `anthropicMessages` interface to its DIAL Core config, pointing `base_url` at the mount path of the application that runs the translator (or at `/openaiChatCompletions/legacy` to call DIAL Core's legacy per-deployment endpoint):
+
+<details>
+<summary>DIAL Core config example</summary>
+
+```json
+{
+  "models": {
+    "gpt-5.5": {
+      "type": "chat",
+      "interfaces": {
+        "openaiChatCompletions": {
+          "base_url": "${OPENAI_ADAPTER_ORIGIN}"
+        },
+        "anthropicMessages": {
+          "base_url": "${TRANSLATOR_ORIGIN}/openaiChatCompletions"
+        }
+      },
+      "upstreams": [
+        {
+          "endpoint": "https://api.openai.com/v1/chat/completions",
+          "key": "..."
+        }
+      ]
+    }
+  }
+}
+```
+
+</details>
+
+See the [translation guide](docs/messages-to-chat-translation.md) for how request parameters, content blocks, tools, caching, usage, and errors are translated, and for the translator's limitations.
 
 ---
 
