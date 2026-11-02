@@ -44,12 +44,12 @@ def get_upstream_deployment_id(
     return (
         headers.get(DIAL_OVERRIDE_NAME)
         or deployment_id
-        or get_user_deployment_id(headers)
+        or get_client_deployment_id(headers)
     )
 
 
-def get_user_deployment_id(headers: Mapping[str, str]) -> str:
-    """The user-facing deployment id that a DIAL application is expected
+def get_client_deployment_id(headers: Mapping[str, str]) -> str:
+    """The client-facing deployment id that a DIAL application is expected
     to return as a model parameter in the response."""
 
     if (deployment_id := headers.get(DIAL_DEPLOYMENT_ID)) is None:

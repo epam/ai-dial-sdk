@@ -6,7 +6,7 @@ from tests.utils.chunks import check_sse_stream, create_single_choice_chunk
 from tests.utils.client import create_test_client
 
 _UPSTREAM_DEPLOYMENT = "upstream-deployment"
-_USER_DEPLOYMENT = "user-deployment"
+_CLIENT_DEPLOYMENT = "client-deployment"
 
 _RUNTIME_ERROR = {
     "error": {
@@ -44,7 +44,7 @@ def _post(impl: ChatCompletion, *, stream: bool):
         name=_UPSTREAM_DEPLOYMENT,
         headers={
             "api-key": "TEST_API_KEY",
-            "x-dial-deployment-id": _USER_DEPLOYMENT,
+            "x-dial-deployment-id": _CLIENT_DEPLOYMENT,
         },
     )
     return client.post(
@@ -58,7 +58,7 @@ def _post(impl: ChatCompletion, *, stream: bool):
 
 _MODELS = pytest.mark.parametrize(
     "model, expected_model",
-    [(None, _USER_DEPLOYMENT), ("gpt-5.5", "gpt-5.5")],
+    [(None, _CLIENT_DEPLOYMENT), ("gpt-5.5", "gpt-5.5")],
     ids=["model-not-set", "model-set"],
 )
 
@@ -112,7 +112,7 @@ def test_setting_the_model_after_the_start_fails_a_streaming_response(
         response.iter_lines(),
         [
             create_single_choice_chunk(
-                delta={"role": "assistant"}, model=_USER_DEPLOYMENT
+                delta={"role": "assistant"}, model=_CLIENT_DEPLOYMENT
             ),
             _RUNTIME_ERROR,
         ],
