@@ -2,6 +2,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from aidial_sdk import DIALApp
+from aidial_sdk.deployment._headers import DIAL_DEPLOYMENT_ID
 from tests.applications.validator import RequestValidator, ValidatorApplication
 from tests.utils.errors import extra_fields_error
 
@@ -17,7 +18,7 @@ def _create_client(allow_extra: bool, validator: RequestValidator):
 
     return TestClient(
         dial_app,
-        headers={"Api-Key": "TEST_API_KEY"},
+        headers={"Api-Key": "TEST_API_KEY", DIAL_DEPLOYMENT_ID: "test-app"},
         base_url="http://testserver/openai/deployments/test-app",
     )
 

@@ -4,12 +4,13 @@ from collections.abc import Iterable
 from typing import Literal
 
 from aidial_sdk.utils.json import remove_nones
+from tests.utils.constants import DEPLOYMENT_NAME
 
 
 def create_chunk(
     *,
     id: str = "test_id",
-    model: str | None = None,
+    model: str | None = DEPLOYMENT_NAME,
     created: int = 0,
     choices: list[dict],
     usage: dict | None = None,
