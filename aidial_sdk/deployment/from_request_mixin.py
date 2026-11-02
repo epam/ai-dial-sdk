@@ -36,24 +36,27 @@ from aidial_sdk.utils.pydantic import ExtraAllowModel
 T = TypeVar("T", bound="FromRequestMixin")
 
 
-def resolve_deployment_id(
+def get_upstream_deployment_id(
     headers: Mapping[str, str], deployment_id: str | None
 ) -> str:
-    """The deployment id of a request comes either from the path it was
-    sent to or, for the deployment-agnostic paths, from its headers."""
+    """The upstream deployment id that a DIAL application is expected to call."""
 
-    effective_deployment_id = (
+    return (
         headers.get(DIAL_OVERRIDE_NAME)
         or deployment_id
-        or headers.get(DIAL_DEPLOYMENT_ID)
+        or get_user_deployment_id(headers)
     )
 
-    if effective_deployment_id is None:
+
+def get_user_deployment_id(headers: Mapping[str, str]) -> str:
+    """The user-facing deployment id that a DIAL application is expected
+    to return as a model parameter in the response."""
+
+    if (deployment_id := headers.get(DIAL_DEPLOYMENT_ID)) is None:
         raise InternalServerError(
             f"The request headers are missing {DIAL_DEPLOYMENT_ID} header."
         )
-
-    return effective_deployment_id
+    return deployment_id
 
 
 class FromRequestMixin(ABC, ExtraAllowModel):
@@ -235,7 +238,7 @@ class FromRequestDeploymentMixin(FromRequestMixin):
             bearer_token_secret=(
                 SecretStr(bearer_token) if bearer_token else None
             ),
-            deployment_id=resolve_deployment_id(headers, deployment_id),
+            deployment_id=get_upstream_deployment_id(headers, deployment_id),
             api_version=request.query_params.get("api-version"),
             headers=headers,
             original_request=request,
