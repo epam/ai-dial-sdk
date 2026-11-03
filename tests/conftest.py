@@ -5,6 +5,7 @@ import pytest
 
 from aidial_sdk import DIALApp
 from aidial_sdk.chat_completion.base import ChatCompletion
+from aidial_sdk.deployment._headers import DIAL_DEPLOYMENT_ID
 from tests.utils import virtual_clock
 from tests.utils.uvicorn import run_uvicorn_in_thread
 
@@ -26,7 +27,7 @@ async def test_http_client(chat_completion: ChatCompletion):
         run_uvicorn_in_thread(app) as base_url,
         httpx.AsyncClient(
             base_url=f"{base_url}/openai/deployments/app",
-            headers={"api-key": "test-api-key"},
+            headers={"api-key": "test-api-key", DIAL_DEPLOYMENT_ID: "app"},
         ) as client,
     ):
         yield client

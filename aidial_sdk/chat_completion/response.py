@@ -27,6 +27,7 @@ from aidial_sdk.deployment._headers import (
     DIAL_CACHE_EXPIRE_AT,
     DIAL_CACHE_EXTRA_METADATA,
 )
+from aidial_sdk.deployment.from_request_mixin import get_client_deployment_id
 from aidial_sdk.exceptions import HTTPException as DIALException
 from aidial_sdk.exceptions import RequestValidationError, RuntimeServerError
 from aidial_sdk.utils._cancel_scope import CancelScope
@@ -69,6 +70,7 @@ class Response:
                 if self.request.stream
                 else "chat.completion"
             ),
+            model=get_client_deployment_id(request.headers),
         )
 
         self._headers = []

@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 from starlette.testclient import TestClient
 
+from aidial_sdk.deployment._headers import DIAL_DEPLOYMENT_ID
 from tests.utils.errors import Error
 from tests.utils.json import match_objects
 
@@ -40,7 +41,11 @@ def run_endpoint_test(testcase: TestCase):
     actual_response = client.post(
         f"/openai/deployments/{testcase.deployment}/{testcase.endpoint}",
         json=testcase.request_body,
-        headers={"Api-Key": "TEST_API_KEY", **testcase.request_headers},
+        headers={
+            "Api-Key": "TEST_API_KEY",
+            DIAL_DEPLOYMENT_ID: testcase.deployment,
+            **testcase.request_headers,
+        },
     )
 
     if actual_response.text == "":

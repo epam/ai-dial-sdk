@@ -10,6 +10,7 @@ from starlette.testclient import TestClient
 from aidial_sdk import DIALApp, HTTPException
 from aidial_sdk._pydantic import SecretStr
 from aidial_sdk.chat_completion import ChatCompletion, Request, Response
+from aidial_sdk.deployment._headers import DIAL_DEPLOYMENT_ID
 from aidial_sdk.deployment.configuration import (
     ConfigurationRequest,
     ConfigurationResponse,
@@ -91,7 +92,7 @@ def client():
     yield TestClient(
         app,
         base_url=f"https://testserver/openai/deployments/{DEPLOYMENT_NAME}",
-        headers={"Api-Key": API_KEY},
+        headers={"Api-Key": API_KEY, DIAL_DEPLOYMENT_ID: DEPLOYMENT_NAME},
     )
 
 
@@ -101,7 +102,7 @@ def client_without_base_url():
     yield TestClient(
         app,
         base_url=f"https://testserver/openai/deployments/{DEPLOYMENT_NAME}",
-        headers={"Api-Key": API_KEY},
+        headers={"Api-Key": API_KEY, DIAL_DEPLOYMENT_ID: DEPLOYMENT_NAME},
     )
 
 

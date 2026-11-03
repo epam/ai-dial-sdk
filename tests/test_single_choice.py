@@ -1,6 +1,7 @@
 from tests.applications.single_choice import SingleChoiceApplication
 from tests.utils.chunks import check_sse_stream, create_single_choice_chunk
 from tests.utils.client import create_app_client
+from tests.utils.constants import DEPLOYMENT_NAME
 
 
 def test_single_choice():
@@ -27,6 +28,7 @@ def test_single_choice():
         ],
         "usage": None,
         "id": "test_id",
+        "model": DEPLOYMENT_NAME,
         "created": 0,
         "object": "chat.completion",
     }

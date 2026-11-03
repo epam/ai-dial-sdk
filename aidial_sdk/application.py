@@ -24,7 +24,7 @@ from aidial_sdk.chat_completion.response import (
 from aidial_sdk.deployment.configuration import ConfigurationRequest
 from aidial_sdk.deployment.from_request_mixin import (
     FromRequestMixin,
-    resolve_deployment_id,
+    get_upstream_deployment_id,
 )
 from aidial_sdk.deployment.rate import RateRequest
 from aidial_sdk.deployment.tokenize import TokenizeRequest
@@ -288,7 +288,7 @@ class DIALApp(FastAPI):
 
     def _v1_dispatcher(self, endpoint: str) -> Handler:
         async def _handler(original_request: Request) -> Response:
-            deployment_id = resolve_deployment_id(
+            deployment_id = get_upstream_deployment_id(
                 original_request.headers, None
             )
             set_log_deployment(deployment_id)

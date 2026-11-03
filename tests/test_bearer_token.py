@@ -5,6 +5,7 @@ from starlette.testclient import TestClient
 
 from aidial_sdk import DIALApp
 from aidial_sdk.chat_completion import ChatCompletion, Request, Response
+from aidial_sdk.deployment._headers import DIAL_DEPLOYMENT_ID
 
 
 class TokenEchoApp(ChatCompletion):
@@ -18,7 +19,7 @@ def create_client(app_instance: ChatCompletion):
     return TestClient(
         app,
         base_url="https://testserver/openai/deployments/echo",
-        headers={"Api-Key": "test-api-key"},
+        headers={"Api-Key": "test-api-key", DIAL_DEPLOYMENT_ID: "echo"},
     )
 
 
