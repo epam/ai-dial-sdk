@@ -51,7 +51,7 @@ async def _handle_exceptions_in_block_response(
 
     async for chunk in stream:
         if isinstance(chunk, DIALException):
-            raise chunk.to_fastapi_exception()
+            raise chunk
         else:
             # Setting defaults only for the first chunk to make
             # the follow-up merging logic simpler.
@@ -60,9 +60,16 @@ async def _handle_exceptions_in_block_response(
         is_first_chunk = False
 
 
-async def to_block_response(stream: ResponseStream) -> dict:
+async def merge_response_stream(stream: ResponseStream) -> dict:
     chunk_stream = _handle_exceptions_in_block_response(stream)
     return await merge_chunks(chunk_stream)
+
+
+async def to_block_response(stream: ResponseStream) -> dict:
+    try:
+        return await merge_response_stream(stream)
+    except DIALException as e:
+        raise e.to_fastapi_exception()
 
 
 async def to_streaming_response(

@@ -12,6 +12,9 @@ from aidial_sdk._constants import DIAL_SDK_SSE_HEARTBEAT_INTERVAL
 from aidial_sdk._errors import error_handler
 from aidial_sdk.deployment.from_request_mixin import get_client_deployment_id
 from aidial_sdk.exceptions import InvalidRequestError, ResourceNotFoundError
+from aidial_sdk.translators.messages_to_chat_completions.backend.client import (
+    ChatClient,
+)
 from aidial_sdk.translators.messages_to_chat_completions.backend.http import (
     ChatClientHttp,
     core_headers,
@@ -46,7 +49,7 @@ async def _not_found(request: Request) -> Response:
 
 
 async def handle_anthropic_messages(
-    request: Request, client: ChatClientHttp
+    request: Request, client: ChatClient
 ) -> Response:
     deployment = get_client_deployment_id(request.headers)
 
@@ -65,17 +68,24 @@ async def handle_anthropic_messages(
         log.debug(f"chat request: {json.dumps(body)}")
 
     if chat_request.stream:
-        events = await client.create_stream(body)
-        return StreamingResponse(
+        events, headers = await client.create_stream(body)
+        resp = StreamingResponse(
             translate_stream(events, deployment, translation_state),
             media_type="text/event-stream",
         )
+    else:
+        completion, headers = await client.create_block(body)
+        message = to_anthropic_response(
+            completion, deployment, translation_state
+        )
+        resp = JSONResponse(
+            content=message.model_dump(mode="json", exclude_unset=True)
+        )
 
-    response = await client.create_block(body)
-    message = to_anthropic_response(response, deployment, translation_state)
-    return JSONResponse(
-        content=message.model_dump(mode="json", exclude_unset=True)
-    )
+    for key, value in headers:
+        resp.headers.append(key, value)
+
+    return resp
 
 
 def create_anthropic_api_app(

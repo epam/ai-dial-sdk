@@ -1094,6 +1094,6 @@ async def test_a_heartbeat_is_yielded_while_dial_core_is_idle(
         heartbeat_interval=1.5,
     )
 
-    stream = await backend.create_stream({"stream": True})
+    stream, _ = await backend.create_stream({"stream": True})
 
     assert [item async for item in stream] == [hello, HEARTBEAT, there]
