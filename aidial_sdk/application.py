@@ -9,6 +9,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 from starlette.types import Receive, Scope, Send
 
+from aidial_sdk._constants import DIAL_SDK_SSE_HEARTBEAT_INTERVAL
 from aidial_sdk._errors import (
     Handler,
     dial_exception_handler,
@@ -41,7 +42,7 @@ from aidial_sdk.telemetry.types import TelemetryConfig
 from aidial_sdk.utils._disconnect_middleware import DisconnectMiddleware
 from aidial_sdk.utils._logging_middleware import LoggingMiddleware
 from aidial_sdk.utils._reflection import get_method_implementation
-from aidial_sdk.utils.env import env_float, env_var_list
+from aidial_sdk.utils.env import env_var_list
 from aidial_sdk.utils.log_config import configure_sdk_logger
 from aidial_sdk.utils.logging import (
     reset_log_context,
@@ -49,7 +50,7 @@ from aidial_sdk.utils.logging import (
 )
 from aidial_sdk.utils.pydantic import model_validate_extra_fields
 from aidial_sdk.utils.streaming import (
-    add_heartbeat,
+    start_streaming,
     to_block_response,
     to_streaming_response,
 )
@@ -209,6 +210,10 @@ class DIALApp(FastAPI):
         *,
         heartbeat_interval: float | None = None,
     ) -> "DIALApp":
+        heartbeat_interval = (
+            heartbeat_interval or DIAL_SDK_SSE_HEARTBEAT_INTERVAL
+        )
+
         for endpoint, handler, methods in self._chat_completion_handlers(
             deployment_name, impl, heartbeat_interval
         ):
@@ -382,10 +387,6 @@ class DIALApp(FastAPI):
         *,
         heartbeat_interval: float | None,
     ) -> Handler:
-        heartbeat_interval = heartbeat_interval or env_float(
-            "DIAL_SDK_SSE_HEARTBEAT_INTERVAL"
-        )
-
         async def _handler(original_request: Request) -> Response:
             request = await self._parse_request(
                 ChatCompletionRequest, original_request, deployment_id
@@ -395,15 +396,13 @@ class DIALApp(FastAPI):
             stream = response._generate_stream(impl.chat_completion)
 
             if request.stream:
-                if heartbeat_interval:
-                    stream = add_heartbeat(
-                        stream,
-                        heartbeat_interval=heartbeat_interval,
-                        heartbeat_object=": heartbeat\n\n",
-                    )
-
+                sse_stream = await start_streaming(
+                    stream,
+                    heartbeat_interval=heartbeat_interval,
+                    heartbeat=": heartbeat\n\n",
+                )
                 resp = StreamingResponse(
-                    await to_streaming_response(stream),
+                    await to_streaming_response(sse_stream),
                     media_type="text/event-stream",
                 )
             else:

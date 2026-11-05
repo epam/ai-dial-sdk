@@ -8,6 +8,7 @@ from anthropic.types.beta.message_create_params import MessageCreateParams
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
 
+from aidial_sdk._constants import DIAL_SDK_SSE_HEARTBEAT_INTERVAL
 from aidial_sdk._errors import error_handler
 from aidial_sdk.deployment.from_request_mixin import get_client_deployment_id
 from aidial_sdk.exceptions import InvalidRequestError, ResourceNotFoundError
@@ -94,7 +95,9 @@ def create_anthropic_api_app(
         else:
             client = core_v1_client(dial_url, http_client)
 
-        return ChatClientHttp(client, core_headers(request))
+        return ChatClientHttp(
+            client, core_headers(request), DIAL_SDK_SSE_HEARTBEAT_INTERVAL
+        )
 
     @app.post("/anthropic/v1/messages")
     @error_handler("anthropic")

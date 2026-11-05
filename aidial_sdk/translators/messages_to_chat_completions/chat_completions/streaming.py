@@ -16,6 +16,9 @@ from openai.types.chat import ChatCompletionChunk
 from openai.types.chat.chat_completion_chunk import Choice, ChoiceDeltaToolCall
 from openai.types.completion_usage import CompletionUsage
 
+from aidial_sdk.translators.messages_to_chat_completions.backend.client import (
+    Heartbeat,
+)
 from aidial_sdk.translators.messages_to_chat_completions.chat_completions.dial_extensions import (
     CustomContent,
     is_reasoning_stage,
@@ -60,8 +63,12 @@ class ChatCompletionsToAnthropicStream(AnthropicStreamState):
         self._signed = False
         self._tools: dict[int, int] = {}
 
-    def handle(self, chunk: ChatCompletionChunk) -> Iterator[bytes]:
+    def handle(self, chunk: ChatCompletionChunk | Heartbeat) -> Iterator[bytes]:
         if self.terminated:
+            return
+
+        if isinstance(chunk, Heartbeat):
+            yield format_sse({"type": "ping"})
             return
 
         if not self.started:
@@ -228,7 +235,7 @@ def _merge_usage(
 
 
 async def translate_stream(
-    stream: AsyncGenerator[ChatCompletionChunk, None],
+    stream: AsyncGenerator[ChatCompletionChunk | Heartbeat, None],
     requested_model: str,
     translation_state: TranslationState,
 ) -> AsyncIterator[bytes]:

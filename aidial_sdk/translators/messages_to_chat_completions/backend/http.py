@@ -10,10 +10,15 @@ from openai import AsyncOpenAI, AsyncStream, Omit, omit
 from openai.types.chat import ChatCompletion, ChatCompletionChunk
 
 from aidial_sdk.exceptions import HTTPException as DIALException
+from aidial_sdk.translators.messages_to_chat_completions.backend.client import (
+    HEARTBEAT,
+    Heartbeat,
+)
 from aidial_sdk.translators.messages_to_chat_completions.settings import (
     get_dial_api_version,
 )
 from aidial_sdk.utils.logging import logger as log
+from aidial_sdk.utils.streaming import with_heartbeat
 
 # The headers of the inbound request that DIAL Core reads when the translator
 # calls it back. Any other header is not forwarded.
@@ -122,12 +127,16 @@ def _core_errors() -> Iterator[None]:
         raise _from_core_error(e) from e
 
 
-async def _chunks(
-    stream: AsyncStream[ChatCompletionChunk],
-) -> AsyncGenerator[ChatCompletionChunk, None]:
+async def _with_heartbeat(
+    stream: AsyncStream[ChatCompletionChunk], heartbeat_interval: float | None
+) -> AsyncGenerator[ChatCompletionChunk | Heartbeat, None]:
     with _core_errors():
         async with stream:
-            async for item in stream:
+            async for item in with_heartbeat(
+                aiter(stream),
+                heartbeat_interval=heartbeat_interval,
+                heartbeat=HEARTBEAT,
+            ):
                 yield item
 
 
@@ -135,10 +144,11 @@ async def _chunks(
 class ChatClientHttp:
     client: AsyncOpenAI
     core_headers: dict[str, str | Omit]
+    heartbeat_interval: float | None
 
     async def create_stream(
         self, body: dict
-    ) -> AsyncGenerator[ChatCompletionChunk, None]:
+    ) -> AsyncGenerator[ChatCompletionChunk | Heartbeat, None]:
         with _core_errors():
             stream = await self.client.post(
                 "/chat/completions",
@@ -148,7 +158,7 @@ class ChatClientHttp:
                 stream=True,
                 stream_cls=AsyncStream[ChatCompletionChunk],
             )
-        return _chunks(stream)
+        return _with_heartbeat(stream, self.heartbeat_interval)
 
     async def create_block(self, body: dict) -> ChatCompletion:
         with _core_errors():
