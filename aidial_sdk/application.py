@@ -1,3 +1,4 @@
+import json
 import logging
 import re
 import warnings
@@ -7,12 +8,15 @@ from typing import Any, Literal, TypeVar
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
-from starlette.types import Receive, Scope, Send
+from starlette.types import Message, Receive, Scope, Send
 
+from aidial_sdk._constants import DIAL_SDK_SSE_HEARTBEAT_INTERVAL
 from aidial_sdk._errors import (
+    Handler,
     dial_exception_handler,
-    fastapi_exception_handler,
-    pydantic_validation_exception_handler,
+    error_handler,
+    invalid_request_error,
+    unhandled_exception_handler,
 )
 from aidial_sdk._pydantic import ValidationError
 from aidial_sdk._pydantic._compat import BaseModel
@@ -37,17 +41,17 @@ from aidial_sdk.header_propagator import HeaderPropagator
 from aidial_sdk.response_headers import NonForwardableHeadersMiddleware
 from aidial_sdk.telemetry.types import TelemetryConfig
 from aidial_sdk.utils._disconnect_middleware import DisconnectMiddleware
+from aidial_sdk.utils._logging_middleware import LoggingMiddleware
 from aidial_sdk.utils._reflection import get_method_implementation
-from aidial_sdk.utils.env import env_float, env_var_list
+from aidial_sdk.utils.env import env_var_list
 from aidial_sdk.utils.log_config import configure_sdk_logger
 from aidial_sdk.utils.logging import (
-    log_debug,
     reset_log_context,
     set_log_deployment,
 )
 from aidial_sdk.utils.pydantic import model_validate_extra_fields
 from aidial_sdk.utils.streaming import (
-    add_heartbeat,
+    start_streaming,
     to_block_response,
     to_streaming_response,
 )
@@ -55,8 +59,6 @@ from aidial_sdk.utils.streaming import (
 configure_sdk_logger()
 
 RequestType = TypeVar("RequestType", bound=FromRequestMixin)
-
-Handler = Callable[[Request], Coroutine[Any, Any, Response]]
 
 
 def _interpolate_deployment_id(deployment_id: str, path_params: dict) -> str:
@@ -67,6 +69,15 @@ def _interpolate_deployment_id(deployment_id: str, path_params: dict) -> str:
         pattern = r"\{" + re.escape(key) + r"(?::[^}]*)?\}"
         result = re.sub(pattern, str(value), result)
     return result
+
+
+def _with_json_body(request: Request, body: dict) -> Request:
+    data = json.dumps(body).encode()
+
+    async def receive() -> Message:
+        return {"type": "http.request", "body": data, "more_body": False}
+
+    return Request(request.scope, receive)
 
 
 class PathFilter(logging.Filter):
@@ -83,7 +94,20 @@ class PathFilter(logging.Filter):
 class DIALApp(FastAPI):
     _allow_extra_request_fields: bool
     _dial_url: str | None
-    _v1_handlers: dict[str, dict[str, Handler]]
+
+    _generic_handlers: dict[str, dict[str, Handler]]
+    """
+    Request handlers for endpoints that do not allow to distinguish deployments in the path.
+    A dictionary from such a deployment-id-less endpoint to the handlers for each deployment:
+
+    /openai/v1/chat/completions:
+        gpt-5.4: handler1
+        gpt-5.5: handler2
+    /openai/v1/embeddings:
+        ada-embeddings-2024-10-10: handler3
+    ...
+    """
+
     _reset_otel_context: Callable[[], AbstractContextManager[None]]
 
     def __init__(
@@ -110,7 +134,7 @@ class DIALApp(FastAPI):
 
         self._allow_extra_request_fields = allow_extra_request_fields
         self._dial_url = dial_url
-        self._v1_handlers = {}
+        self._generic_handlers = {}
         self._reset_otel_context = nullcontext
 
         self.configure_telemetry(telemetry_config)
@@ -138,14 +162,12 @@ class DIALApp(FastAPI):
 
         self.add_middleware(DisconnectMiddleware)
         self.add_middleware(NonForwardableHeadersMiddleware)
+        self.add_middleware(LoggingMiddleware)
 
-        self.add_exception_handler(
-            ValidationError, pydantic_validation_exception_handler
-        )
-
-        self.add_exception_handler(HTTPException, fastapi_exception_handler)
-
+        # The routes DIALApp adds have error_handler, these are for custom ones
+        self.add_exception_handler(HTTPException, dial_exception_handler)
         self.add_exception_handler(DIALException, dial_exception_handler)
+        self.add_exception_handler(Exception, unhandled_exception_handler)
 
     def configure_telemetry(self, config: TelemetryConfig | None):
         if config is None or config.is_noop():
@@ -177,15 +199,16 @@ class DIALApp(FastAPI):
     ) -> "DIALApp":
         self.add_api_route(
             f"/openai/deployments/{deployment_name}/embeddings",
-            self._embeddings(deployment_name, impl),
+            error_handler("openai")(self._embeddings(deployment_name, impl)),
             methods=["POST"],
         )
 
-        self._add_v1_route(
+        self._add_generic_route(
             deployment_name,
-            "embeddings",
+            "/openai/v1/embeddings",
             self._embeddings(None, impl),
             methods=["POST"],
+            handler_decorator=error_handler("openai"),
         )
 
         return self
@@ -196,24 +219,68 @@ class DIALApp(FastAPI):
         impl: ChatCompletion,
         *,
         heartbeat_interval: float | None = None,
+        expose_as_anthropic_messages: bool = False,
     ) -> "DIALApp":
+        heartbeat_interval = (
+            heartbeat_interval or DIAL_SDK_SSE_HEARTBEAT_INTERVAL
+        )
+
         for endpoint, handler, methods in self._chat_completion_handlers(
             deployment_name, impl, heartbeat_interval
         ):
             self.add_api_route(
                 f"/openai/deployments/{deployment_name}/{endpoint}",
-                handler,
+                error_handler("openai")(handler),
                 methods=methods,
             )
 
         for endpoint, handler, methods in self._chat_completion_handlers(
             None, impl, heartbeat_interval
         ):
-            self._add_v1_route(
-                deployment_name, endpoint, handler, methods=methods
+            self._add_generic_route(
+                deployment_name,
+                f"/openai/v1/{endpoint}",
+                handler,
+                methods=methods,
+                handler_decorator=error_handler("openai"),
+            )
+
+        if expose_as_anthropic_messages:
+            self._add_generic_route(
+                deployment_name,
+                "/anthropic/v1/messages",
+                self._anthropic_messages_handler(impl, heartbeat_interval),
+                methods=["POST"],
+                handler_decorator=error_handler("anthropic"),
             )
 
         return self
+
+    def _anthropic_messages_handler(
+        self, impl: ChatCompletion, heartbeat_interval: float | None
+    ) -> Handler:
+        # The translator requires Pydantic v2 and the translators extra
+        from aidial_sdk.translators.messages_to_chat_completions.backend.sdk import (
+            ChatClientSdk,
+        )
+        from aidial_sdk.translators.messages_to_chat_completions.chat_completions.app import (
+            handle_anthropic_messages,
+        )
+
+        async def _handler(original_request: Request) -> Response:
+            async def _parse_request(body: dict) -> ChatCompletionRequest:
+                return await self._parse_request(
+                    ChatCompletionRequest,
+                    _with_json_body(original_request, body),
+                    None,
+                )
+
+            return await handle_anthropic_messages(
+                original_request,
+                ChatClientSdk(_parse_request, impl, heartbeat_interval),
+            )
+
+        return _handler
 
     def _chat_completion_handlers(
         self,
@@ -264,37 +331,33 @@ class DIALApp(FastAPI):
                 ["GET"],
             )
 
-    def _add_v1_route(
+    def _add_generic_route(
         self,
         deployment_name: str,
         endpoint: str,
         handler: Handler,
         *,
         methods: list[str],
+        handler_decorator: Callable[[Handler], Handler],
     ) -> None:
-        """The /openai/v1 endpoints are shared by all the deployments of
-        the application, so they are dispatched by the deployment id
-        resolved from the request headers."""
-
-        if endpoint not in self._v1_handlers:
-            self._v1_handlers[endpoint] = {}
+        if endpoint not in self._generic_handlers:
+            self._generic_handlers[endpoint] = {}
             self.add_api_route(
-                f"/openai/v1/{endpoint}",
-                self._v1_dispatcher(endpoint),
+                endpoint,
+                handler_decorator(self._generic_dispatcher(endpoint)),
                 methods=methods,
             )
+        self._generic_handlers[endpoint][deployment_name] = handler
 
-        self._v1_handlers[endpoint][deployment_name] = handler
-
-    def _v1_dispatcher(self, endpoint: str) -> Handler:
+    def _generic_dispatcher(self, endpoint: str) -> Handler:
         async def _handler(original_request: Request) -> Response:
             deployment_id = get_upstream_deployment_id(
                 original_request.headers, None
             )
             set_log_deployment(deployment_id)
 
-            handler = self._v1_handlers[endpoint].get(deployment_id)
-            if handler is None:
+            bundle = self._generic_handlers.get(endpoint) or {}
+            if (handler := bundle.get(deployment_id)) is None:
                 raise DeploymentNotFoundError(
                     f"The deployment {deployment_id!r} doesn't provide the {endpoint!r} endpoint"
                 )
@@ -314,7 +377,6 @@ class DIALApp(FastAPI):
             request = await self._parse_request(
                 request_type, original_request, deployment_id
             )
-            log_debug(f"request[{endpoint}]: {request}")
 
             response = await endpoint_impl(request)
 
@@ -326,8 +388,6 @@ class DIALApp(FastAPI):
                 raise ValueError(
                     f"Unexpected response type from {endpoint}: {type(response)}"
                 )
-
-            log_debug(f"response[{endpoint}]: {response_json}")
 
             return JSONResponse(content=response_json)
 
@@ -356,11 +416,14 @@ class DIALApp(FastAPI):
             )
             set_log_deployment(deployment_id)
 
-        ret = await request.from_request(
-            original_request, deployment_id, self._dial_url
-        )
-        if not self._allow_extra_request_fields:
-            model_validate_extra_fields(ret)
+        try:
+            ret = await request.from_request(
+                original_request, deployment_id, self._dial_url
+            )
+            if not self._allow_extra_request_fields:
+                model_validate_extra_fields(ret)
+        except ValidationError as e:
+            raise invalid_request_error(e) from e
         return ret
 
     def _chat_completion(
@@ -369,36 +432,27 @@ class DIALApp(FastAPI):
         impl: ChatCompletion,
         *,
         heartbeat_interval: float | None,
-    ):
-        heartbeat_interval = heartbeat_interval or env_float(
-            "DIAL_SDK_SSE_HEARTBEAT_INTERVAL"
-        )
-
+    ) -> Handler:
         async def _handler(original_request: Request) -> Response:
             request = await self._parse_request(
                 ChatCompletionRequest, original_request, deployment_id
             )
 
             response = ChatCompletionResponse(request)
-
             stream = response._generate_stream(impl.chat_completion)
 
             if request.stream:
-                if heartbeat_interval:
-                    stream = add_heartbeat(
-                        stream,
-                        heartbeat_interval=heartbeat_interval,
-                        heartbeat_callback=lambda: log_debug("heartbeat"),
-                        heartbeat_object=": heartbeat\n\n",
-                    )
-
+                sse_stream = await start_streaming(
+                    stream,
+                    heartbeat_interval=heartbeat_interval,
+                    heartbeat=": heartbeat\n\n",
+                )
                 resp = StreamingResponse(
-                    await to_streaming_response(stream),
+                    await to_streaming_response(sse_stream),
                     media_type="text/event-stream",
                 )
             else:
                 response_json = await to_block_response(stream)
-                log_debug(f"response: {response_json}")
                 resp = JSONResponse(content=response_json)
 
             for key, value in response.headers:

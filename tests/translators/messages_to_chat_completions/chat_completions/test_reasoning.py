@@ -3,12 +3,9 @@ from typing import cast
 import pytest
 from anthropic.types.beta.message_create_params import MessageCreateParams
 
+from aidial_sdk.exceptions import InvalidRequestError
 from aidial_sdk.translators.messages_to_chat_completions.chat_completions.reasoning import (
     resolve_effort,
-)
-from aidial_sdk.translators.messages_to_chat_completions.errors import (
-    AnthropicErrorType,
-    AnthropicHTTPError,
 )
 
 
@@ -34,7 +31,7 @@ def system_turn(effort: str | None, **fields: object) -> dict[str, object]:
 
 
 @pytest.mark.parametrize("effort", ["low", "medium", "high", "xhigh", "max"])
-def test_explicit_effort_is_preserved(effort: str) -> None:
+def test_explicit_effort_is_preserved(effort: str):
     assert (
         intent(
             {
@@ -46,7 +43,7 @@ def test_explicit_effort_is_preserved(effort: str) -> None:
     )
 
 
-def test_disabled_thinking_takes_precedence() -> None:
+def test_disabled_thinking_takes_precedence():
     assert (
         intent(
             {
@@ -58,16 +55,16 @@ def test_disabled_thinking_takes_precedence() -> None:
     )
 
 
-def test_omission_leaves_deployment_default() -> None:
+def test_omission_leaves_deployment_default():
     assert intent({}) is None
 
 
-def test_adaptive_thinking_leaves_deployment_default() -> None:
+def test_adaptive_thinking_leaves_deployment_default():
     assert intent({"thinking": {"type": "adaptive"}}) is None
 
 
 @pytest.mark.parametrize("budget", [1024, 8000, 8001, 24000, 24001, 999999])
-def test_budget_does_not_choose_effort(budget: int) -> None:
+def test_budget_does_not_choose_effort(budget: int):
     assert (
         intent({"thinking": {"type": "enabled", "budget_tokens": budget}})
         is None
@@ -83,7 +80,7 @@ def test_budget_does_not_choose_effort(budget: int) -> None:
     )
 
 
-def test_the_last_visible_system_turn_effort_wins_over_the_request() -> None:
+def test_the_last_visible_system_turn_effort_wins_over_the_request():
     assert (
         intent(
             {
@@ -99,7 +96,7 @@ def test_the_last_visible_system_turn_effort_wins_over_the_request() -> None:
     )
 
 
-def test_a_cleared_system_turn_effort_is_not_visible() -> None:
+def test_a_cleared_system_turn_effort_is_not_visible():
     assert (
         intent(
             {
@@ -114,7 +111,7 @@ def test_a_cleared_system_turn_effort_is_not_visible() -> None:
     )
 
 
-def test_a_system_turn_without_effort_falls_back_to_the_request() -> None:
+def test_a_system_turn_without_effort_falls_back_to_the_request():
     assert (
         intent(
             {
@@ -126,7 +123,7 @@ def test_a_system_turn_without_effort_falls_back_to_the_request() -> None:
     )
 
 
-def test_disabled_thinking_overrides_a_system_turn_effort() -> None:
+def test_disabled_thinking_overrides_a_system_turn_effort():
     assert (
         intent(
             {
@@ -145,7 +142,6 @@ def test_disabled_thinking_overrides_a_system_turn_effort() -> None:
         {"messages": [system_turn("extreme")]},
     ],
 )
-def test_an_unknown_effort_is_rejected(body: dict[str, object]) -> None:
-    with pytest.raises(AnthropicHTTPError) as error:
+def test_an_unknown_effort_is_rejected(body: dict[str, object]):
+    with pytest.raises(InvalidRequestError):
         intent(body)
-    assert error.value.error_type == AnthropicErrorType.INVALID_REQUEST

@@ -19,12 +19,9 @@ from aidial_sdk.chat_completion.request import (
 from aidial_sdk.chat_completion.request import (
     Tool as SdkTool,
 )
+from aidial_sdk.exceptions import InvalidRequestError
 from aidial_sdk.translators.messages_to_chat_completions.chat_completions.to_chat_completions import (
     to_chat_completions_request,
-)
-from aidial_sdk.translators.messages_to_chat_completions.errors import (
-    AnthropicErrorType,
-    AnthropicHTTPError,
 )
 from aidial_sdk.translators.messages_to_chat_completions.translation_state import (
     TranslationState,
@@ -39,7 +36,7 @@ LONG_MCP_NAME = "mcp__" + "s" * 60 + "__do_the_thing"
 
 
 @pytest.mark.parametrize("max_tokens", [100, 999999])
-def test_minimal_request(max_tokens: int) -> None:
+def test_minimal_request(max_tokens: int):
     result = convert({**user("hello"), "max_tokens": max_tokens})
     assert result.model_dump(mode="json", exclude_none=True) == {
         "model": DEPLOYMENT,
@@ -49,13 +46,13 @@ def test_minimal_request(max_tokens: int) -> None:
     }
 
 
-def test_system_string() -> None:
+def test_system_string():
     result = convert({"system": "be nice", **user("hi")})
     assert result.messages[0].role == Role.SYSTEM
     assert result.messages[0].content == "be nice"
 
 
-def test_system_blocks_joined_and_cache_control_stripped() -> None:
+def test_system_blocks_joined_and_cache_control_stripped():
     result = convert(
         {
             "system": [
@@ -78,7 +75,7 @@ def test_system_blocks_joined_and_cache_control_stripped() -> None:
     assert result.messages[0].custom_fields.cache_breakpoint is not None
 
 
-def test_all_three_system_sources_merge_into_one_leading_message() -> None:
+def test_all_three_system_sources_merge_into_one_leading_message():
     result = convert(
         {
             "system": "be nice",
@@ -103,7 +100,7 @@ def test_all_three_system_sources_merge_into_one_leading_message() -> None:
     assert system_messages[0] is result.messages[0]
 
 
-def test_system_sources_merge_in_client_order_not_grouped_by_kind() -> None:
+def test_system_sources_merge_in_client_order_not_grouped_by_kind():
     result = convert(
         {
             "system": "TOP",
@@ -126,7 +123,7 @@ def test_system_sources_merge_in_client_order_not_grouped_by_kind() -> None:
     assert result.messages[0].content == "TOP\n\nA\n\nB\n\nC"
 
 
-def test_mid_conv_system_on_an_assistant_message_is_merged_not_warned() -> None:
+def test_mid_conv_system_on_an_assistant_message_is_merged_not_warned():
     result = convert(
         {
             "messages": [
@@ -154,7 +151,7 @@ def test_mid_conv_system_on_an_assistant_message_is_merged_not_warned() -> None:
     assert result.messages[2].content == "hello"
 
 
-def test_mid_conv_system_inside_a_system_role_message() -> None:
+def test_mid_conv_system_inside_a_system_role_message():
     result = convert(
         {
             "messages": [
@@ -175,7 +172,7 @@ def test_mid_conv_system_inside_a_system_role_message() -> None:
     assert result.messages[0].content == "outer\n\ninner"
 
 
-def test_mid_conv_system_cache_control_marks_the_merged_message() -> None:
+def test_mid_conv_system_cache_control_marks_the_merged_message():
     result = convert(
         {
             "messages": [
@@ -196,7 +193,7 @@ def test_mid_conv_system_cache_control_marks_the_merged_message() -> None:
     assert result.messages[0].custom_fields.cache_breakpoint is not None
 
 
-def test_unsupported_system_role_content_block_is_dropped() -> None:
+def test_unsupported_system_role_content_block_is_dropped():
     result = convert(
         {
             "messages": [
@@ -222,7 +219,7 @@ def test_unsupported_system_role_content_block_is_dropped() -> None:
     assert system_messages[0].content == "keep me"
 
 
-def test_base64_image() -> None:
+def test_base64_image():
     result = convert(
         user(
             [
@@ -245,7 +242,7 @@ def test_base64_image() -> None:
     )
 
 
-def test_url_image() -> None:
+def test_url_image():
     result = convert(
         user(
             [
@@ -263,7 +260,7 @@ def test_url_image() -> None:
     )
 
 
-def test_pdf_document_base64() -> None:
+def test_pdf_document_base64():
     result = convert(
         user(
             [
@@ -299,13 +296,12 @@ def test_pdf_document_base64() -> None:
 )
 def test_document_url_or_file_source_is_rejected(
     source: dict[str, object],
-) -> None:
-    with pytest.raises(AnthropicHTTPError) as error:
+):
+    with pytest.raises(InvalidRequestError):
         convert(user([{"type": "document", "source": source}]))
-    assert error.value.error_type == AnthropicErrorType.INVALID_REQUEST
 
 
-def test_document_content_source_becomes_its_text_and_image_parts() -> None:
+def test_document_content_source_becomes_its_text_and_image_parts():
     result = convert(
         user(
             [
@@ -336,7 +332,7 @@ def test_document_content_source_becomes_its_text_and_image_parts() -> None:
     ]
 
 
-def test_search_result_becomes_a_text_part() -> None:
+def test_search_result_becomes_a_text_part():
     result = convert(
         user(
             [
@@ -360,7 +356,7 @@ def test_search_result_becomes_a_text_part() -> None:
     ]
 
 
-def test_replayed_compaction_becomes_its_summary_text() -> None:
+def test_replayed_compaction_becomes_its_summary_text():
     result = convert(
         {
             "messages": [
@@ -389,7 +385,7 @@ def test_replayed_compaction_becomes_its_summary_text() -> None:
     assert result.messages[1].content == "assistant summary\nok"
 
 
-def test_document_text_source_becomes_text_part() -> None:
+def test_document_text_source_becomes_text_part():
     result = convert(
         user(
             [
@@ -411,17 +407,16 @@ def test_document_text_source_becomes_text_part() -> None:
     )
 
 
-def test_image_file_source_is_rejected() -> None:
-    with pytest.raises(AnthropicHTTPError) as error:
+def test_image_file_source_is_rejected():
+    with pytest.raises(InvalidRequestError):
         convert(
             user(
                 [{"type": "image", "source": {"type": "file", "file_id": "f1"}}]
             )
         )
-    assert error.value.error_type == AnthropicErrorType.INVALID_REQUEST
 
 
-def test_assistant_tool_use_and_text_combine_into_one_message() -> None:
+def test_assistant_tool_use_and_text_combine_into_one_message():
     result = convert(
         {
             "messages": [
@@ -472,7 +467,7 @@ def test_assistant_tool_use_and_text_combine_into_one_message() -> None:
     ]
 
 
-def test_tool_result_only_turn_emits_no_user_message() -> None:
+def test_tool_result_only_turn_emits_no_user_message():
     result = convert(
         user(
             [
@@ -490,7 +485,7 @@ def test_tool_result_only_turn_emits_no_user_message() -> None:
     assert result.messages[0].content == "ok"
 
 
-def test_tool_result_is_error_prefixes_output() -> None:
+def test_tool_result_is_error_prefixes_output():
     result = convert(
         user(
             [
@@ -506,7 +501,7 @@ def test_tool_result_is_error_prefixes_output() -> None:
     assert result.messages[0].content == "Error: boom"
 
 
-def test_tool_result_image_becomes_user_image_url() -> None:
+def test_tool_result_image_becomes_user_image_url():
     result = convert(
         user(
             [
@@ -538,7 +533,7 @@ def test_tool_result_image_becomes_user_image_url() -> None:
     ]
 
 
-def test_tool_result_document_moves_to_the_following_user_message() -> None:
+def test_tool_result_document_moves_to_the_following_user_message():
     result = convert(
         user(
             [
@@ -573,7 +568,7 @@ def test_tool_result_document_moves_to_the_following_user_message() -> None:
     ]
 
 
-def test_custom_tool_mapping() -> None:
+def test_custom_tool_mapping():
     result = convert(
         {
             **user("hi"),
@@ -599,7 +594,7 @@ def test_custom_tool_mapping() -> None:
     assert tool.custom_fields is None
 
 
-def test_custom_tool_strict_is_forwarded() -> None:
+def test_custom_tool_strict_is_forwarded():
     result = convert(
         {
             **user("hi"),
@@ -615,7 +610,7 @@ def test_custom_tool_strict_is_forwarded() -> None:
     assert result.model_dump(mode="json")["tools"][0]["function"]["strict"]
 
 
-def test_schema_key_is_stripped_from_tool_parameters() -> None:
+def test_schema_key_is_stripped_from_tool_parameters():
     result = convert(
         {
             **user("hi"),
@@ -641,7 +636,7 @@ def test_schema_key_is_stripped_from_tool_parameters() -> None:
     }
 
 
-def test_provider_tools_become_static_functions_as_sent() -> None:
+def test_provider_tools_become_static_functions_as_sent():
     provider_tools: list[dict[str, object]] = [
         {
             "type": "web_search_20250305",
@@ -688,12 +683,12 @@ def test_provider_tools_become_static_functions_as_sent() -> None:
 )
 def test_tool_choice_matrix(
     tool_choice: dict[str, object], expected: str | ToolChoice | None
-) -> None:
+):
     result = convert({**user("hi"), "tool_choice": tool_choice})
     assert result.tool_choice == expected
 
 
-def test_disable_parallel_tool_use_inverts() -> None:
+def test_disable_parallel_tool_use_inverts():
     result = convert(
         {
             **user("hi"),
@@ -704,7 +699,7 @@ def test_disable_parallel_tool_use_inverts() -> None:
     assert result.parallel_tool_calls is False
 
 
-def test_a_long_mcp_name_is_aliased_identically_at_all_three_sites() -> None:
+def test_a_long_mcp_name_is_aliased_identically_at_all_three_sites():
     translation_state = TranslationState()
     result = convert(
         {
@@ -747,12 +742,12 @@ def test_a_long_mcp_name_is_aliased_identically_at_all_three_sites() -> None:
     assert translation_state.to_client_tool_name(alias) == LONG_MCP_NAME
 
 
-def test_no_cache_control_omits_cache_breakpoint() -> None:
+def test_no_cache_control_omits_cache_breakpoint():
     result = convert({"system": "be nice", **user("hi")})
     assert result.messages[0].custom_fields is None
 
 
-def test_user_message_cache_control_marks_message() -> None:
+def test_user_message_cache_control_marks_message():
     result = convert(
         user(
             [
@@ -768,7 +763,7 @@ def test_user_message_cache_control_marks_message() -> None:
     assert result.messages[0].custom_fields.cache_breakpoint is not None
 
 
-def test_assistant_message_cache_control_marks_message() -> None:
+def test_assistant_message_cache_control_marks_message():
     result = convert(
         {
             "messages": [
@@ -790,7 +785,7 @@ def test_assistant_message_cache_control_marks_message() -> None:
     assert result.messages[1].custom_fields.cache_breakpoint is not None
 
 
-def test_tool_result_turn_cache_control_marks_all_split_messages() -> None:
+def test_tool_result_turn_cache_control_marks_all_split_messages():
     result = convert(
         user(
             [
@@ -810,7 +805,7 @@ def test_tool_result_turn_cache_control_marks_all_split_messages() -> None:
     assert result.messages[1].custom_fields is not None
 
 
-def test_a_block_ttl_reaches_the_marker_as_an_absolute_instant() -> None:
+def test_a_block_ttl_reaches_the_marker_as_an_absolute_instant():
     result = convert(
         user(
             [
@@ -828,7 +823,7 @@ def test_a_block_ttl_reaches_the_marker_as_an_absolute_instant() -> None:
     assert custom_fields.cache_breakpoint.expire_at is not None
 
 
-def test_the_longest_ttl_of_the_merged_system_sources_wins() -> None:
+def test_the_longest_ttl_of_the_merged_system_sources_wins():
     result = convert(
         {
             "system": [
@@ -862,7 +857,7 @@ def test_the_longest_ttl_of_the_merged_system_sources_wins() -> None:
     assert remaining.total_seconds() == pytest.approx(3600, abs=5)
 
 
-def test_cache_control_nested_inside_a_tool_result_is_not_seen() -> None:
+def test_cache_control_nested_inside_a_tool_result_is_not_seen():
     result = convert(
         user(
             [
@@ -883,7 +878,7 @@ def test_cache_control_nested_inside_a_tool_result_is_not_seen() -> None:
     assert result.messages[0].custom_fields is None
 
 
-def test_tool_definition_cache_control_marks_tool() -> None:
+def test_tool_definition_cache_control_marks_tool():
     result = convert(
         {
             **user("hi"),
@@ -904,13 +899,13 @@ def test_tool_definition_cache_control_marks_tool() -> None:
     assert tool.custom_fields.cache_breakpoint is not None
 
 
-def test_temperature_and_top_p_pass_through() -> None:
+def test_temperature_and_top_p_pass_through():
     result = convert({**user("hi"), "temperature": 0.5, "top_p": 0.9})
     assert result.temperature == 0.5
     assert result.top_p == 0.9
 
 
-def test_top_k_and_thinking_history_are_dropped() -> None:
+def test_top_k_and_thinking_history_are_dropped():
     result = convert(
         {
             "messages": [
@@ -940,7 +935,7 @@ def test_top_k_and_thinking_history_are_dropped() -> None:
     assert result.messages[0].content == "answer"
 
 
-def test_fields_with_no_chat_completions_counterpart_are_dropped() -> None:
+def test_fields_with_no_chat_completions_counterpart_are_dropped():
     result = convert(
         {
             **user("hi"),
@@ -977,7 +972,7 @@ def test_fields_with_no_chat_completions_counterpart_are_dropped() -> None:
 
 
 @pytest.mark.parametrize("user_id", ["u1", "u" * 65])
-def test_user_id_is_forwarded_as_user(user_id: str) -> None:
+def test_user_id_is_forwarded_as_user(user_id: str):
     result = convert({**user("hi"), "metadata": {"user_id": user_id}})
     assert result.user == user_id
 
@@ -986,14 +981,12 @@ def test_user_id_is_forwarded_as_user(user_id: str) -> None:
     "tier, expected",
     [("auto", "auto"), ("standard_only", "default"), ("priority", None)],
 )
-def test_service_tier_is_a_closed_table(
-    tier: str, expected: str | None
-) -> None:
+def test_service_tier_is_a_closed_table(tier: str, expected: str | None):
     result = convert({**user("hi"), "service_tier": tier})
     assert result.service_tier == expected
 
 
-def test_output_config_format_json_schema_converts() -> None:
+def test_output_config_format_json_schema_converts():
     schema: dict[str, object] = {
         "type": "object",
         "properties": {"name": {"type": "string"}},
@@ -1016,7 +1009,7 @@ def test_output_config_format_json_schema_converts() -> None:
     assert result.response_format.json_schema.strict is True
 
 
-def test_empty_output_schema_is_dropped() -> None:
+def test_empty_output_schema_is_dropped():
     result = convert(
         {
             **user("hi"),
@@ -1026,7 +1019,7 @@ def test_empty_output_schema_is_dropped() -> None:
     assert result.response_format is None
 
 
-def test_citations_enabled_sets_custom_fields() -> None:
+def test_citations_enabled_sets_custom_fields():
     result = convert(
         user(
             [
@@ -1047,12 +1040,12 @@ def test_citations_enabled_sets_custom_fields() -> None:
 
 
 @pytest.mark.parametrize("stop", [["STOP"], []])
-def test_stop_sequences_map_to_stop_as_is(stop: list[str]) -> None:
+def test_stop_sequences_map_to_stop_as_is(stop: list[str]):
     result = convert({**user("hi"), "stop_sequences": stop})
     assert result.model_dump(mode="json", exclude_none=True)["stop"] == stop
 
 
-def test_absent_max_tokens_sends_no_cap_and_zero_is_sent() -> None:
+def test_absent_max_tokens_sends_no_cap_and_zero_is_sent():
     absent = to_chat_completions_request(
         cast(MessageCreateParams, {"model": DEPLOYMENT, **user("hi")}),
         DEPLOYMENT,
@@ -1062,13 +1055,12 @@ def test_absent_max_tokens_sends_no_cap_and_zero_is_sent() -> None:
     assert convert({**user("hi"), "max_tokens": 0}).max_completion_tokens == 0
 
 
-def test_an_unknown_role_is_rejected() -> None:
-    with pytest.raises(AnthropicHTTPError) as error:
+def test_an_unknown_role_is_rejected():
+    with pytest.raises(InvalidRequestError):
         convert({"messages": [{"role": "developer", "content": "hi"}]})
-    assert error.value.error_type == AnthropicErrorType.INVALID_REQUEST
 
 
-def test_a_system_turn_cleared_at_the_next_user_message() -> None:
+def test_a_system_turn_cleared_at_the_next_user_message():
     result = convert(
         {
             "messages": [
@@ -1092,7 +1084,7 @@ def test_a_system_turn_cleared_at_the_next_user_message() -> None:
     assert result.messages[0].content == "kept\n\nstill visible"
 
 
-def test_top_level_cache_control_becomes_the_request_breakpoint() -> None:
+def test_top_level_cache_control_becomes_the_request_breakpoint():
     result = convert(
         {
             "messages": [
@@ -1107,7 +1099,7 @@ def test_top_level_cache_control_becomes_the_request_breakpoint() -> None:
     assert result.custom_fields.cache_breakpoint == CacheBreakpoint()
 
 
-def test_top_level_cache_control_ttl_sets_the_request_expiry() -> None:
+def test_top_level_cache_control_ttl_sets_the_request_expiry():
     result = convert(
         {**user("hi"), "cache_control": {"type": "ephemeral", "ttl": "5m"}}
     )
@@ -1122,7 +1114,7 @@ def test_top_level_cache_control_ttl_sets_the_request_expiry() -> None:
     assert seconds == pytest.approx(300, abs=2)
 
 
-def test_null_block_cache_control_does_not_mark() -> None:
+def test_null_block_cache_control_does_not_mark():
     result = convert(
         user(
             [
@@ -1137,7 +1129,7 @@ def test_null_block_cache_control_does_not_mark() -> None:
     assert result.messages[0].custom_fields is None
 
 
-def test_tool_schema_keywords_are_preserved() -> None:
+def test_tool_schema_keywords_are_preserved():
     schema = {
         "type": "object",
         "properties": {"name": {"type": "string"}},

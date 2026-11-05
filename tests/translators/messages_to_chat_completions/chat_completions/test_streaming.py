@@ -36,7 +36,7 @@ async def translate(
     stream = FakeStream(chunks)
     collected = b""
     async for event_bytes in translate_stream(
-        stream,
+        stream.generator,
         model,
         translation_state or TranslationState(),
     ):
@@ -68,7 +68,7 @@ def text_of(events) -> str:
     )
 
 
-def assert_block_discipline(events) -> None:
+def assert_block_discipline(events):
     open_blocks: dict[int, str] = {}
     seen_indices: list[int] = []
     for position, (name, data) in enumerate(events):
@@ -93,7 +93,7 @@ def assert_block_discipline(events) -> None:
     assert seen_indices == list(range(len(seen_indices)))
 
 
-async def test_plain_text_stream() -> None:
+async def test_plain_text_stream():
     events = await translate(
         [
             chunk(ChoiceDelta(role="assistant", content="Hello")),
@@ -135,7 +135,7 @@ async def test_plain_text_stream() -> None:
     )
 
 
-async def test_tool_call_stream() -> None:
+async def test_tool_call_stream():
     events = await translate(
         [
             chunk(
@@ -197,7 +197,7 @@ async def test_tool_call_stream() -> None:
     assert events[-2][1]["delta"]["stop_reason"] == "tool_use"
 
 
-async def test_an_aliased_tool_name_is_restored() -> None:
+async def test_an_aliased_tool_name_is_restored():
     translation_state = TranslationState()
     alias = translation_state.to_upstream_tool_name(LONG_MCP_NAME)
     events = await translate(
@@ -223,7 +223,7 @@ async def test_an_aliased_tool_name_is_restored() -> None:
     assert start["content_block"]["name"] == LONG_MCP_NAME
 
 
-async def test_opening_a_tool_block_closes_the_open_text_block() -> None:
+async def test_opening_a_tool_block_closes_the_open_text_block():
     events = await translate(
         [
             chunk(ChoiceDelta(content="thinking about it")),
@@ -247,7 +247,7 @@ async def test_opening_a_tool_block_closes_the_open_text_block() -> None:
     assert [name for name, _ in events].count("content_block_start") == 2
 
 
-async def test_reasoning_stages_become_a_thinking_block() -> None:
+async def test_reasoning_stages_become_a_thinking_block():
     events = await translate(
         [
             chunk(
@@ -280,7 +280,7 @@ async def test_reasoning_stages_become_a_thinking_block() -> None:
     assert text_of(events) == "answer"
 
 
-async def test_a_non_reasoning_stage_is_ignored() -> None:
+async def test_a_non_reasoning_stage_is_ignored():
     events = await translate(
         [
             chunk(
@@ -309,7 +309,7 @@ async def test_a_non_reasoning_stage_is_ignored() -> None:
 )
 async def test_a_signature_closes_the_thinking_block(
     thinking: dict[str, str],
-) -> None:
+):
     events = await translate(
         [
             chunk(
@@ -408,7 +408,7 @@ def annotation(url: str, title: str = "T") -> dict[str, object]:
     }
 
 
-async def test_annotations_become_citation_blocks() -> None:
+async def test_annotations_become_citation_blocks():
     events = await translate(
         [
             chunk(ChoiceDelta(content="answer")),
@@ -426,7 +426,7 @@ async def test_annotations_become_citation_blocks() -> None:
     assert types == ["text", "server_tool_use", "web_search_tool_result"]
 
 
-async def test_a_resent_annotation_array_renders_each_citation_once() -> None:
+async def test_a_resent_annotation_array_renders_each_citation_once():
     events = await translate(
         [
             chunk(
@@ -459,7 +459,7 @@ async def test_a_resent_annotation_array_renders_each_citation_once() -> None:
     assert urls == [["https://a.com", "https://b.com"], ["https://c.com"]]
 
 
-async def test_usage_on_a_content_chunk_does_not_truncate() -> None:
+async def test_usage_on_a_content_chunk_does_not_truncate():
     events = await translate(
         [
             chunk(ChoiceDelta(role="assistant", content="Hel")),
@@ -481,7 +481,7 @@ async def test_usage_on_a_content_chunk_does_not_truncate() -> None:
     assert message_delta["usage"]["output_tokens"] == 2
 
 
-async def test_usage_split_across_chunks_is_merged() -> None:
+async def test_usage_split_across_chunks_is_merged():
     events = await translate(
         [
             chunk(
@@ -509,7 +509,7 @@ async def test_usage_split_across_chunks_is_merged() -> None:
     assert usage["output_tokens"] == 7
 
 
-async def test_stream_without_usage_chunk_still_finalizes() -> None:
+async def test_stream_without_usage_chunk_still_finalizes():
     events = await translate(
         [
             chunk(ChoiceDelta(role="assistant", content="hi")),
@@ -537,7 +537,7 @@ async def test_an_upstream_yielding_no_chunks_still_emits_message_start() -> (
     assert events[1][1]["content_block"] == {"type": "text", "text": ""}
 
 
-async def test_a_stream_with_no_content_gets_the_zero_block_guard() -> None:
+async def test_a_stream_with_no_content_gets_the_zero_block_guard():
     events = await translate(
         [chunk(ChoiceDelta(), finish_reason="stop"), usage_chunk()]
     )
@@ -547,7 +547,7 @@ async def test_a_stream_with_no_content_gets_the_zero_block_guard() -> None:
     assert starts[0]["content_block"]["text"] == ""
 
 
-async def test_cached_tokens_are_subtracted_in_streaming_too() -> None:
+async def test_cached_tokens_are_subtracted_in_streaming_too():
     events = await translate(
         [
             chunk(ChoiceDelta(content="hi"), finish_reason="stop"),
@@ -589,7 +589,7 @@ async def test_streaming_usage_accounts_for_cache_and_reasoning_tokens() -> (
     }
 
 
-async def test_refusal_stream() -> None:
+async def test_refusal_stream():
     events = await translate(
         [
             chunk(ChoiceDelta(role="assistant", refusal="I can't")),
@@ -601,7 +601,7 @@ async def test_refusal_stream() -> None:
     assert events[-2][1]["delta"]["stop_reason"] == "refusal"
 
 
-async def test_parallel_tool_fragments_keep_their_original_indices() -> None:
+async def test_parallel_tool_fragments_keep_their_original_indices():
     stream_events = await translate(
         [
             chunk(

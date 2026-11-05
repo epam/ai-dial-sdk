@@ -1,5 +1,5 @@
 import json
-from collections.abc import AsyncIterator, Iterable, Mapping
+from collections.abc import AsyncGenerator, Iterable, Mapping
 from typing import Generic, Literal, TypeVar, cast
 
 from anthropic.types.beta.message_create_params import MessageCreateParams
@@ -35,21 +35,25 @@ T = TypeVar("T")
 
 
 class FakeStream(Generic[T]):
+    """A generator of the items that records whether it is done: run out,
+    failed or closed."""
+
     def __init__(
         self, items: Iterable[T], raise_after: Exception | None = None
     ) -> None:
-        self._items = items
-        self._raise_after = raise_after
         self.closed = False
+        self.generator = self._generate(items, raise_after)
 
-    async def __aiter__(self) -> AsyncIterator[T]:
-        for item in self._items:
-            yield item
-        if self._raise_after is not None:
-            raise self._raise_after
-
-    async def close(self) -> None:
-        self.closed = True
+    async def _generate(
+        self, items: Iterable[T], raise_after: Exception | None
+    ) -> AsyncGenerator[T, None]:
+        try:
+            for item in items:
+                yield item
+            if raise_after is not None:
+                raise raise_after
+        finally:
+            self.closed = True
 
 
 DEPLOYMENT = "gpt-4o"

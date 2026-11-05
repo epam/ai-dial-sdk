@@ -1,14 +1,15 @@
+import json
 import uuid
 from collections.abc import (
+    AsyncGenerator,
     AsyncIterator,
     Callable,
     Hashable,
     Iterable,
     Iterator,
 )
-from typing import Literal, Protocol, TypeVar
+from typing import TypeVar
 
-import openai
 from anthropic.types import (
     Message,
     RawContentBlockDeltaEvent,
@@ -26,29 +27,12 @@ from anthropic.types.raw_content_block_start_event import (
     ContentBlock as AnthropicContentBlock,
 )
 from anthropic.types.raw_message_delta_event import Delta
-from pydantic import BaseModel
 
-from aidial_sdk.translators.messages_to_chat_completions.errors import (
-    INTERNAL_ERROR_MESSAGE,
-    AnthropicErrorType,
-    ErrorDetail,
-    anthropic_error_type_from_stream,
-)
+from aidial_sdk._errors import to_dial_exception
+from aidial_sdk.exceptions import HTTPException as DIALException
 from aidial_sdk.utils.logging import logger as log
 
 _T = TypeVar("_T")
-_T_co = TypeVar("_T_co", covariant=True)
-
-
-class ClosableAsyncStream(Protocol[_T_co]):
-    def __aiter__(self) -> AsyncIterator[_T_co]: ...
-
-    async def close(self) -> None: ...
-
-
-class _ErrorEvent(BaseModel):
-    type: Literal["error"]
-    error: ErrorDetail
 
 
 AnthropicSSEEvent = (
@@ -58,13 +42,15 @@ AnthropicSSEEvent = (
     | RawContentBlockStopEvent
     | RawMessageDeltaEvent
     | RawMessageStopEvent
-    | _ErrorEvent
 )
 
 
-def format_sse(event: AnthropicSSEEvent) -> bytes:
-    data = event.model_dump_json(exclude_unset=True)
-    return f"event: {event.type}\ndata: {data}\n\n".encode()
+def format_sse(event: AnthropicSSEEvent | dict) -> bytes:
+    if isinstance(event, dict):
+        name, data = event["type"], json.dumps(event, separators=(",", ":"))
+    else:
+        name, data = event.type, event.model_dump_json(exclude_unset=True)
+    return f"event: {name}\ndata: {data}\n\n".encode()
 
 
 class AnthropicStreamState:
@@ -164,27 +150,18 @@ class AnthropicStreamState:
         )
         yield format_sse(RawMessageStopEvent(type="message_stop"))
 
-    def emit_error(
-        self, error_type: AnthropicErrorType, message: str
-    ) -> Iterator[bytes]:
+    def emit_error(self, error: DIALException) -> Iterator[bytes]:
         if self.terminated:
             return
         self.terminated = True
-        yield format_sse(
-            _ErrorEvent(
-                type="error",
-                error={"type": error_type.code, "message": message},
-            )
-        )
+        yield format_sse(error.json_error("anthropic"))
 
 
 async def run_sse_stream(
-    stream: ClosableAsyncStream[_T],
+    stream: AsyncGenerator[_T, None],
     state: AnthropicStreamState,
     on_item: Callable[[_T], Iterable[bytes]],
     on_finalize: Callable[[], Iterable[bytes]] | None = None,
-    *,
-    log_context: str,
 ) -> AsyncIterator[bytes]:
     try:
         async for item in stream:
@@ -193,17 +170,8 @@ async def run_sse_stream(
         if on_finalize is not None:
             for chunk in on_finalize():
                 yield chunk
-    except openai.APIError as e:
-        log.warning(f"DIAL Core reported an error in the {log_context} stream")
-        for chunk in state.emit_error(
-            anthropic_error_type_from_stream(e), e.message
-        ):
-            yield chunk
-    except Exception:
-        log.exception(f"Error while translating the {log_context} SSE stream")
-        for chunk in state.emit_error(
-            AnthropicErrorType.API, INTERNAL_ERROR_MESSAGE
-        ):
+    except Exception as e:
+        for chunk in state.emit_error(to_dial_exception(e)):
             yield chunk
     finally:
-        await stream.close()
+        await stream.aclose()

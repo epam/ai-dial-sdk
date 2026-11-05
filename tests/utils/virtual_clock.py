@@ -11,7 +11,9 @@ Mark a test with `@pytest.mark.virtual_clock` to opt in; run with
 `TESTS_REAL_CLOCK=1` to put every such test back on the real clock.
 
 Only usable for loops that don't wait on real I/O: skipping ahead while a
-socket read is in flight would make the timer win a race it shouldn't.
+socket read is in flight would make the timer win a race it shouldn't. Work
+handed to a thread is the exception: the clock doesn't skip ahead until the
+thread is done.
 """
 
 import asyncio
@@ -21,9 +23,31 @@ from typing import Any
 
 class VirtualClockEventLoop(asyncio.SelectorEventLoop):
     _offset: float = 0.0
+    _thread_jobs: int = 0
 
     def time(self) -> float:
         return super().time() + self._offset
+
+    def run_in_executor(
+        self, executor: Any, func: Any, *args: Any
+    ) -> asyncio.Future[Any]:
+        future = super().run_in_executor(executor, func, *args)
+        self._thread_jobs += 1
+        future.add_done_callback(self._on_thread_job_done)
+        return future
+
+    def _on_thread_job_done(self, _future: asyncio.Future[Any]) -> None:
+        self._thread_jobs -= 1
+
+    async def shutdown_default_executor(
+        self, *args: Any, **kwargs: Any
+    ) -> None:
+        # Joins the executor's threads in a thread of its own
+        self._thread_jobs += 1
+        try:
+            await super().shutdown_default_executor(*args, **kwargs)
+        finally:
+            self._thread_jobs -= 1
 
     def _run_once(self) -> None:
         # Private asyncio internals, not described by the type stubs.
@@ -31,7 +55,7 @@ class VirtualClockEventLoop(asyncio.SelectorEventLoop):
 
         # Nothing to run right now, so instead of idling until the earliest
         # timer comes due, move the clock to it and let it fire immediately.
-        if not loop._ready and loop._scheduled:
+        if not loop._ready and loop._scheduled and not self._thread_jobs:
             self._offset += max(0.0, loop._scheduled[0]._when - self.time())
 
         super()._run_once()  # type: ignore[misc]
