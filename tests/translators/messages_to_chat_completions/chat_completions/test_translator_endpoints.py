@@ -513,8 +513,8 @@ async def test_debug_logging_emits_request_and_response_lines(
     messages = [
         r.getMessage() for r in caplog.records if r.name == "aidial_sdk"
     ]
-    assert any(m.startswith("request: ") for m in messages)
-    assert any(m.startswith("response: ") for m in messages)
+    assert sum(m.startswith("request: ") for m in messages) == 1
+    assert sum(m.startswith("response: ") for m in messages) == 1
 
 
 async def test_debug_logging_emits_stream_chunk_lines(
@@ -540,7 +540,8 @@ async def test_debug_logging_emits_stream_chunk_lines(
     messages = [
         r.getMessage() for r in caplog.records if r.name == "aidial_sdk"
     ]
-    assert any(m.startswith("response chunk: ") for m in messages)
+    chunks = [m for m in messages if m.startswith("response chunk: ")]
+    assert chunks and len(chunks) == len(set(chunks))
 
 
 async def test_missing_dial_url_returns_500(

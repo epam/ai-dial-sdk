@@ -10,9 +10,11 @@ from fastapi.responses import JSONResponse, Response, StreamingResponse
 from starlette.types import Receive, Scope, Send
 
 from aidial_sdk._errors import (
+    Handler,
     dial_exception_handler,
-    fastapi_exception_handler,
-    pydantic_validation_exception_handler,
+    error_handler,
+    invalid_request_error,
+    unhandled_exception_handler,
 )
 from aidial_sdk._pydantic import ValidationError
 from aidial_sdk._pydantic._compat import BaseModel
@@ -37,11 +39,11 @@ from aidial_sdk.header_propagator import HeaderPropagator
 from aidial_sdk.response_headers import NonForwardableHeadersMiddleware
 from aidial_sdk.telemetry.types import TelemetryConfig
 from aidial_sdk.utils._disconnect_middleware import DisconnectMiddleware
+from aidial_sdk.utils._logging_middleware import LoggingMiddleware
 from aidial_sdk.utils._reflection import get_method_implementation
 from aidial_sdk.utils.env import env_float, env_var_list
 from aidial_sdk.utils.log_config import configure_sdk_logger
 from aidial_sdk.utils.logging import (
-    log_debug,
     reset_log_context,
     set_log_deployment,
 )
@@ -55,8 +57,6 @@ from aidial_sdk.utils.streaming import (
 configure_sdk_logger()
 
 RequestType = TypeVar("RequestType", bound=FromRequestMixin)
-
-Handler = Callable[[Request], Coroutine[Any, Any, Response]]
 
 
 def _interpolate_deployment_id(deployment_id: str, path_params: dict) -> str:
@@ -151,14 +151,12 @@ class DIALApp(FastAPI):
 
         self.add_middleware(DisconnectMiddleware)
         self.add_middleware(NonForwardableHeadersMiddleware)
+        self.add_middleware(LoggingMiddleware)
 
-        self.add_exception_handler(
-            ValidationError, pydantic_validation_exception_handler
-        )
-
-        self.add_exception_handler(HTTPException, fastapi_exception_handler)
-
+        # The routes DIALApp adds have error_handler, these are for custom ones
+        self.add_exception_handler(HTTPException, dial_exception_handler)
         self.add_exception_handler(DIALException, dial_exception_handler)
+        self.add_exception_handler(Exception, unhandled_exception_handler)
 
     def configure_telemetry(self, config: TelemetryConfig | None):
         if config is None or config.is_noop():
@@ -190,7 +188,7 @@ class DIALApp(FastAPI):
     ) -> "DIALApp":
         self.add_api_route(
             f"/openai/deployments/{deployment_name}/embeddings",
-            self._embeddings(deployment_name, impl),
+            error_handler("openai")(self._embeddings(deployment_name, impl)),
             methods=["POST"],
         )
 
@@ -199,6 +197,7 @@ class DIALApp(FastAPI):
             "/openai/v1/embeddings",
             self._embeddings(None, impl),
             methods=["POST"],
+            handler_decorator=error_handler("openai"),
         )
 
         return self
@@ -215,7 +214,7 @@ class DIALApp(FastAPI):
         ):
             self.add_api_route(
                 f"/openai/deployments/{deployment_name}/{endpoint}",
-                handler,
+                error_handler("openai")(handler),
                 methods=methods,
             )
 
@@ -227,6 +226,7 @@ class DIALApp(FastAPI):
                 f"/openai/v1/{endpoint}",
                 handler,
                 methods=methods,
+                handler_decorator=error_handler("openai"),
             )
 
         return self
@@ -287,12 +287,13 @@ class DIALApp(FastAPI):
         handler: Handler,
         *,
         methods: list[str],
+        handler_decorator: Callable[[Handler], Handler],
     ) -> None:
         if endpoint not in self._generic_handlers:
             self._generic_handlers[endpoint] = {}
             self.add_api_route(
                 endpoint,
-                self._generic_dispatcher(endpoint),
+                handler_decorator(self._generic_dispatcher(endpoint)),
                 methods=methods,
             )
         self._generic_handlers[endpoint][deployment_name] = handler
@@ -325,7 +326,6 @@ class DIALApp(FastAPI):
             request = await self._parse_request(
                 request_type, original_request, deployment_id
             )
-            log_debug(f"request[{endpoint}]: {request}")
 
             response = await endpoint_impl(request)
 
@@ -337,8 +337,6 @@ class DIALApp(FastAPI):
                 raise ValueError(
                     f"Unexpected response type from {endpoint}: {type(response)}"
                 )
-
-            log_debug(f"response[{endpoint}]: {response_json}")
 
             return JSONResponse(content=response_json)
 
@@ -367,11 +365,14 @@ class DIALApp(FastAPI):
             )
             set_log_deployment(deployment_id)
 
-        ret = await request.from_request(
-            original_request, deployment_id, self._dial_url
-        )
-        if not self._allow_extra_request_fields:
-            model_validate_extra_fields(ret)
+        try:
+            ret = await request.from_request(
+                original_request, deployment_id, self._dial_url
+            )
+            if not self._allow_extra_request_fields:
+                model_validate_extra_fields(ret)
+        except ValidationError as e:
+            raise invalid_request_error(e) from e
         return ret
 
     def _chat_completion(
@@ -380,7 +381,7 @@ class DIALApp(FastAPI):
         impl: ChatCompletion,
         *,
         heartbeat_interval: float | None,
-    ):
+    ) -> Handler:
         heartbeat_interval = heartbeat_interval or env_float(
             "DIAL_SDK_SSE_HEARTBEAT_INTERVAL"
         )
@@ -391,7 +392,6 @@ class DIALApp(FastAPI):
             )
 
             response = ChatCompletionResponse(request)
-
             stream = response._generate_stream(impl.chat_completion)
 
             if request.stream:
@@ -399,7 +399,6 @@ class DIALApp(FastAPI):
                     stream = add_heartbeat(
                         stream,
                         heartbeat_interval=heartbeat_interval,
-                        heartbeat_callback=lambda: log_debug("heartbeat"),
                         heartbeat_object=": heartbeat\n\n",
                     )
 
@@ -409,7 +408,6 @@ class DIALApp(FastAPI):
                 )
             else:
                 response_json = await to_block_response(stream)
-                log_debug(f"response: {response_json}")
                 resp = JSONResponse(content=response_json)
 
             for key, value in response.headers:

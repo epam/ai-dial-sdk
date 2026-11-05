@@ -2,12 +2,9 @@ from anthropic.types.beta.message_create_params import MessageCreateParams
 from openai.types.shared import ReasoningEffort
 from pydantic import TypeAdapter, ValidationError
 
+from aidial_sdk.exceptions import InvalidRequestError
 from aidial_sdk.translators.messages_to_chat_completions.chat_completions.system_turns import (
     visible_messages,
-)
-from aidial_sdk.translators.messages_to_chat_completions.errors import (
-    AnthropicErrorType,
-    AnthropicHTTPError,
 )
 from aidial_sdk.utils.logging import logger as log
 
@@ -30,10 +27,9 @@ def resolve_effort(req: MessageCreateParams) -> ReasoningEffort:
     try:
         return _EFFORT.validate_python(effort)
     except ValidationError:
-        raise AnthropicHTTPError(
-            AnthropicErrorType.INVALID_REQUEST,
+        raise InvalidRequestError(
             f"Cannot convert Anthropic Messages API reasoning effort {effort} "
-            "to OpenAI Chat Completions API reasoning effort",
+            "to OpenAI Chat Completions API reasoning effort"
         ) from None
 
 

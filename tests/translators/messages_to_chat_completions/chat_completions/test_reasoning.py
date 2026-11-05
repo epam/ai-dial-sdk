@@ -3,12 +3,9 @@ from typing import cast
 import pytest
 from anthropic.types.beta.message_create_params import MessageCreateParams
 
+from aidial_sdk.exceptions import InvalidRequestError
 from aidial_sdk.translators.messages_to_chat_completions.chat_completions.reasoning import (
     resolve_effort,
-)
-from aidial_sdk.translators.messages_to_chat_completions.errors import (
-    AnthropicErrorType,
-    AnthropicHTTPError,
 )
 
 
@@ -146,6 +143,5 @@ def test_disabled_thinking_overrides_a_system_turn_effort() -> None:
     ],
 )
 def test_an_unknown_effort_is_rejected(body: dict[str, object]) -> None:
-    with pytest.raises(AnthropicHTTPError) as error:
+    with pytest.raises(InvalidRequestError):
         intent(body)
-    assert error.value.error_type == AnthropicErrorType.INVALID_REQUEST

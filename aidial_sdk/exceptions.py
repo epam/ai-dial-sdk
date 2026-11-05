@@ -1,11 +1,37 @@
 import functools
 import warnings
+from enum import Enum
 from http import HTTPStatus
+from typing import Literal, assert_never
 
 from fastapi import HTTPException as FastAPIException
 from fastapi.responses import JSONResponse
 
 from aidial_sdk.utils.json import remove_nones
+
+ExceptionType = Literal["openai", "anthropic"]
+
+
+class _AnthropicErrorType(Enum):
+    INVALID_REQUEST = "invalid_request_error", 400, 422
+    AUTHENTICATION = "authentication_error", 401
+    PERMISSION = "permission_error", 403
+    NOT_FOUND = "not_found_error", 404
+    REQUEST_TOO_LARGE = "request_too_large", 413
+    RATE_LIMIT = "rate_limit_error", 429
+    API = "api_error", 500, 502
+    OVERLOADED = "overloaded_error", 529, 503
+
+    def __init__(self, code: str, *status_codes: int) -> None:
+        self.code = code
+        self.status_codes = status_codes
+
+    @classmethod
+    def from_status_code(cls, status_code: int) -> "_AnthropicErrorType":
+        for error_type in cls:
+            if status_code in error_type.status_codes:
+                return error_type
+        return cls.API
 
 
 class HTTPException(Exception):
@@ -47,31 +73,47 @@ class HTTPException(Exception):
         args = ", ".join([f"{k}={v!r}" for k, v in error.items()])
         return f"{self.__class__.__name__}({args})"
 
-    def json_error(self) -> dict:
-        return {
-            "error": remove_nones(
-                {
-                    "message": self.message,
-                    "type": self.type,
-                    "param": self.param,
-                    "code": self.code,
-                    "display_message": self.display_message,
-                    **self.extra_fields,
+    def json_error(self, api: ExceptionType = "openai") -> dict:
+        match api:
+            case "openai":
+                return {
+                    "error": remove_nones(
+                        {
+                            "message": self.message,
+                            "type": self.type,
+                            "param": self.param,
+                            "code": self.code,
+                            "display_message": self.display_message,
+                            **self.extra_fields,
+                        }
+                    )
                 }
-            )
-        }
+            case "anthropic":
+                error_type = _AnthropicErrorType.from_status_code(
+                    self.status_code
+                )
+                return {
+                    "type": "error",
+                    "error": {"type": error_type.code, "message": self.message},
+                }
+            case _:
+                assert_never(api)
 
-    def to_fastapi_response(self) -> JSONResponse:
+    def to_fastapi_response(
+        self, api: ExceptionType = "openai"
+    ) -> JSONResponse:
         return JSONResponse(
             status_code=self.status_code,
-            content=self.json_error(),
+            content=self.json_error(api),
             headers=self.headers,
         )
 
-    def to_fastapi_exception(self) -> FastAPIException:
+    def to_fastapi_exception(
+        self, api: ExceptionType = "openai"
+    ) -> FastAPIException:
         return FastAPIException(
             status_code=self.status_code,
-            detail=self.json_error(),
+            detail=self.json_error(api),
             headers=self.headers,
         )
 

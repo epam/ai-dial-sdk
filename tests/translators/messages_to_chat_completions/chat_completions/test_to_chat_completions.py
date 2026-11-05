@@ -19,12 +19,9 @@ from aidial_sdk.chat_completion.request import (
 from aidial_sdk.chat_completion.request import (
     Tool as SdkTool,
 )
+from aidial_sdk.exceptions import InvalidRequestError
 from aidial_sdk.translators.messages_to_chat_completions.chat_completions.to_chat_completions import (
     to_chat_completions_request,
-)
-from aidial_sdk.translators.messages_to_chat_completions.errors import (
-    AnthropicErrorType,
-    AnthropicHTTPError,
 )
 from aidial_sdk.translators.messages_to_chat_completions.translation_state import (
     TranslationState,
@@ -300,9 +297,8 @@ def test_pdf_document_base64() -> None:
 def test_document_url_or_file_source_is_rejected(
     source: dict[str, object],
 ) -> None:
-    with pytest.raises(AnthropicHTTPError) as error:
+    with pytest.raises(InvalidRequestError):
         convert(user([{"type": "document", "source": source}]))
-    assert error.value.error_type == AnthropicErrorType.INVALID_REQUEST
 
 
 def test_document_content_source_becomes_its_text_and_image_parts() -> None:
@@ -412,13 +408,12 @@ def test_document_text_source_becomes_text_part() -> None:
 
 
 def test_image_file_source_is_rejected() -> None:
-    with pytest.raises(AnthropicHTTPError) as error:
+    with pytest.raises(InvalidRequestError):
         convert(
             user(
                 [{"type": "image", "source": {"type": "file", "file_id": "f1"}}]
             )
         )
-    assert error.value.error_type == AnthropicErrorType.INVALID_REQUEST
 
 
 def test_assistant_tool_use_and_text_combine_into_one_message() -> None:
@@ -1063,9 +1058,8 @@ def test_absent_max_tokens_sends_no_cap_and_zero_is_sent() -> None:
 
 
 def test_an_unknown_role_is_rejected() -> None:
-    with pytest.raises(AnthropicHTTPError) as error:
+    with pytest.raises(InvalidRequestError):
         convert({"messages": [{"role": "developer", "content": "hi"}]})
-    assert error.value.error_type == AnthropicErrorType.INVALID_REQUEST
 
 
 def test_a_system_turn_cleared_at_the_next_user_message() -> None:
