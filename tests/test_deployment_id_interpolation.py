@@ -1,9 +1,11 @@
 import pytest
+from starlette.testclient import TestClient
 
 from aidial_sdk import DIALApp
 from aidial_sdk.chat_completion import ChatCompletion
 from aidial_sdk.chat_completion import Request as ChatRequest
 from aidial_sdk.chat_completion import Response as ChatResponse
+from aidial_sdk.deployment._headers import DIAL_DEPLOYMENT_ID
 from aidial_sdk.embeddings import Embeddings
 from aidial_sdk.embeddings import Request as EmbeddingRequest
 from aidial_sdk.embeddings import Response as EmbeddingResponse
@@ -95,3 +97,40 @@ _TESTCASES: list[TestCase] = [
 @pytest.mark.parametrize("testcase", _TESTCASES)
 def test_deployment_id_interpolation(testcase: TestCase):
     run_endpoint_test(testcase)
+
+
+# The /openai/v1 endpoints take the deployment id from the headers instead
+# of the path, so the templates are matched against that id.
+_V1_TESTCASES: list[tuple[DIALApp, str, str, dict]] = [
+    (_CHAT_APP, "app-123", "chat/completions", {"messages": []}),
+    (_CHAT_APP_WITH_PARSER, "app-123", "chat/completions", {"messages": []}),
+    (_EMBEDDINGS_APP, "app-456", "embeddings", {"input": []}),
+    (_EMBEDDINGS_APP_WITH_PARSER, "app-456", "embeddings", {"input": []}),
+]
+
+
+@pytest.mark.parametrize("app, deployment, endpoint, body", _V1_TESTCASES)
+def test_v1_deployment_id_interpolation(
+    app: DIALApp, deployment: str, endpoint: str, body: dict
+):
+    response = TestClient(app).post(
+        f"/openai/v1/{endpoint}",
+        json=body,
+        headers={"Api-Key": "TEST_API_KEY", DIAL_DEPLOYMENT_ID: deployment},
+    )
+    assert response.status_code == 200
+
+
+@pytest.mark.parametrize(
+    "deployment", ["other-123", "app-", "app-123/sub", "app-abc"]
+)
+def test_v1_deployment_id_not_matching_template(deployment: str):
+    """A template is not a catch-all: ids it doesn't match are still 404."""
+
+    response = TestClient(_CHAT_APP_WITH_PARSER).post(
+        "/openai/v1/chat/completions",
+        json={"messages": []},
+        headers={"Api-Key": "TEST_API_KEY", DIAL_DEPLOYMENT_ID: deployment},
+    )
+    assert response.status_code == 404
+    assert response.json()["error"]["code"] == "DeploymentNotFound"
