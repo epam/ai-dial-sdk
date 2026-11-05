@@ -158,15 +158,16 @@ async def test_a_templated_deployment_receives_the_path_parameter(
         "foo{id}bar", foo, expose_as_anthropic_messages=True
     )
 
-    # FIXME: path parameters aren't supported for Anthropic API (issue #485)
     async with (
         AppClient(app).with_deployment("foo123bar").anthropic() as client
     ):
-        with pytest.raises(anthropic.NotFoundError) as exc:
-            await client.final_message(stream=stream)
+        message = await client.final_message(stream=stream)
 
-    assert exc.value.body == _NOT_FOUND
-    assert foo.requests == []
+    assert message.content == [TextBlock(type="text", text="Hi from foo")]
+    assert [
+        (request.deployment_id, request.original_request.path_params)
+        for request in foo.requests
+    ] == [("foo123bar", {"id": "123"})]
 
 
 @pytest.mark.parametrize("deployment", ["foobar", "foo123baz", "bar"])
