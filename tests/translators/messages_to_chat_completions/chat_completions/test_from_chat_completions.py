@@ -94,7 +94,7 @@ def tool_call(
     )
 
 
-def test_text_output():
+def test_text_output() -> None:
     msg = translate(response(message(content="hello")))
     assert msg.id == "chatcmpl_abc"
     assert msg.type == "message"
@@ -105,11 +105,11 @@ def test_text_output():
     assert msg.stop_sequence is None
 
 
-def test_model_falls_back_to_requested():
+def test_model_falls_back_to_requested() -> None:
     assert translate(response(model="")).model == "requested-model"
 
 
-def test_only_first_choice_translated():
+def test_only_first_choice_translated() -> None:
     completion = response(message(content="first"))
     completion.choices.append(
         Choice(
@@ -139,11 +139,11 @@ def test_only_first_choice_translated():
 )
 def test_an_empty_completion_yields_one_empty_text_block(
     completion: ChatCompletion,
-):
+) -> None:
     assert translate(completion).content == [TextBlock(type="text", text="")]
 
 
-def test_signed_thinking_from_state_leads_the_content():
+def test_signed_thinking_from_state_leads_the_content() -> None:
     msg = translate(
         response(
             message(
@@ -168,7 +168,7 @@ def test_signed_thinking_from_state_leads_the_content():
     assert msg.content[1] == TextBlock(type="text", text="the answer")
 
 
-def test_thinking_from_reasoning_stages_has_an_empty_signature():
+def test_thinking_from_reasoning_stages_has_an_empty_signature() -> None:
     msg = translate(
         response(
             message(
@@ -189,7 +189,18 @@ def test_thinking_from_reasoning_stages_has_an_empty_signature():
     )
 
 
-def test_state_thinking_is_preferred_over_stages():
+def test_reasoning_content_becomes_a_thinking_block() -> None:
+    msg = translate(
+        response(message(content="answer", reasoning_content="let me think"))
+    )
+
+    assert msg.content == [
+        ThinkingBlock(type="thinking", thinking="let me think", signature=""),
+        TextBlock(type="text", text="answer"),
+    ]
+
+
+def test_state_thinking_is_preferred_over_stages() -> None:
     msg = translate(
         response(
             message(
@@ -218,7 +229,7 @@ def test_state_thinking_is_preferred_over_stages():
 @pytest.mark.parametrize(
     "name", ["Thinking", "thought process", "Reasoning", "REASON", "Thoughts"]
 )
-def test_a_reasoning_stage_is_recognised_by_substring(name: str):
+def test_a_reasoning_stage_is_recognised_by_substring(name: str) -> None:
     msg = translate(
         response(
             message(
@@ -233,7 +244,7 @@ def test_a_reasoning_stage_is_recognised_by_substring(name: str):
     )
 
 
-def test_custom_content_without_reasoning_adds_no_thinking_block():
+def test_custom_content_without_reasoning_adds_no_thinking_block() -> None:
     msg = translate(
         response(
             message(
@@ -249,7 +260,7 @@ def test_custom_content_without_reasoning_adds_no_thinking_block():
     assert msg.content == [TextBlock(type="text", text="hi")]
 
 
-def test_malformed_custom_content_is_ignored():
+def test_malformed_custom_content_is_ignored() -> None:
     msg = translate(response(message(content="hi", custom_content="nonsense")))
     assert msg.content == [TextBlock(type="text", text="hi")]
 
@@ -258,7 +269,7 @@ def test_malformed_custom_content_is_ignored():
     "urls",
     [["https://example.com"], ["https://example.com", "https://second.com"]],
 )
-def test_url_citations_become_a_server_tool_use_pair(urls: list[str]):
+def test_url_citations_become_a_server_tool_use_pair(urls: list[str]) -> None:
     msg = translate(
         response(
             message(
@@ -291,7 +302,7 @@ def test_url_citations_become_a_server_tool_use_pair(urls: list[str]):
     assert text == TextBlock(type="text", text="answer")
 
 
-def test_tool_call_becomes_tool_use():
+def test_tool_call_becomes_tool_use() -> None:
     msg = translate(
         response(message(tool_calls=[tool_call()]), finish_reason="tool_calls")
     )
@@ -303,7 +314,7 @@ def test_tool_call_becomes_tool_use():
     assert msg.stop_reason == "tool_use"
 
 
-def test_an_aliased_tool_name_is_restored():
+def test_an_aliased_tool_name_is_restored() -> None:
     translation_state = TranslationState()
     alias = translation_state.to_upstream_tool_name(LONG_MCP_NAME)
     msg = translate(
@@ -320,14 +331,14 @@ def test_an_aliased_tool_name_is_restored():
 )
 def test_a_cut_off_or_filtered_finish_wins_over_tool_calls(
     finish_reason: FinishReason, expected: str
-):
+) -> None:
     msg = translate(
         response(message(tool_calls=[tool_call()]), finish_reason=finish_reason)
     )
     assert msg.stop_reason == expected
 
 
-def test_tool_calls_win_the_stop_reason_over_the_finish_reason():
+def test_tool_calls_win_the_stop_reason_over_the_finish_reason() -> None:
     msg = translate(
         response(message(tool_calls=[tool_call()]), finish_reason="stop")
     )
@@ -335,7 +346,7 @@ def test_tool_calls_win_the_stop_reason_over_the_finish_reason():
 
 
 @pytest.mark.parametrize("arguments", ["[1, 2, 3]", "{not json", ""])
-def test_unusable_tool_arguments_become_an_empty_input(arguments: str):
+def test_unusable_tool_arguments_become_an_empty_input(arguments: str) -> None:
     msg = translate(
         response(message(tool_calls=[tool_call(arguments=arguments)]))
     )
@@ -344,7 +355,7 @@ def test_unusable_tool_arguments_become_an_empty_input(arguments: str):
     assert block.input == {}
 
 
-def test_a_non_function_tool_call_is_skipped():
+def test_a_non_function_tool_call_is_skipped() -> None:
     msg = translate(
         response(
             message(
@@ -361,7 +372,7 @@ def test_a_non_function_tool_call_is_skipped():
     assert msg.stop_reason == "end_turn"
 
 
-def test_refusal_sets_stop_reason_refusal():
+def test_refusal_sets_stop_reason_refusal() -> None:
     msg = translate(response(message(refusal="no")))
     assert msg.content == [TextBlock(type="text", text="no")]
     assert msg.stop_reason == "refusal"
@@ -375,7 +386,9 @@ def test_refusal_sets_stop_reason_refusal():
         ("stop", "end_turn"),
     ],
 )
-def test_stop_reason_mapping(finish_reason: FinishReason, expected: str):
+def test_stop_reason_mapping(
+    finish_reason: FinishReason, expected: str
+) -> None:
     msg = translate(response(message(content="x"), finish_reason=finish_reason))
 
     assert msg.stop_reason == expected
@@ -384,7 +397,7 @@ def test_stop_reason_mapping(finish_reason: FinishReason, expected: str):
 @pytest.mark.parametrize("finish_reason", [None, "bogus"])
 def test_an_unrecognised_finish_reason_falls_back_to_end_turn(
     finish_reason: str | None,
-):
+) -> None:
     assert (
         to_anthropic_stop_reason(
             finish_reason, has_tool_call=False, is_refusal=False
@@ -393,7 +406,7 @@ def test_an_unrecognised_finish_reason_falls_back_to_end_turn(
     )
 
 
-def test_cached_tokens_are_subtracted_from_input_tokens():
+def test_cached_tokens_are_subtracted_from_input_tokens() -> None:
     msg = translate(
         response(
             usage=CompletionUsage(
@@ -410,7 +423,7 @@ def test_cached_tokens_are_subtracted_from_input_tokens():
     assert msg.usage.cache_creation_input_tokens == 0
 
 
-def test_usage_without_cache_details():
+def test_usage_without_cache_details() -> None:
     msg = translate(
         response(
             usage=CompletionUsage(
@@ -423,7 +436,7 @@ def test_usage_without_cache_details():
     assert msg.usage.cache_creation_input_tokens == 0
 
 
-def test_cache_counters_are_capped_at_prompt_tokens():
+def test_cache_counters_are_capped_at_prompt_tokens() -> None:
     msg = translate(
         response(
             usage=CompletionUsage(
@@ -441,7 +454,7 @@ def test_cache_counters_are_capped_at_prompt_tokens():
     assert msg.usage.cache_creation_input_tokens == 1
 
 
-def test_missing_usage_is_zeroed_not_an_error():
+def test_missing_usage_is_zeroed_not_an_error() -> None:
     completion = response()
     completion.usage = None
     usage = translate(completion).usage
@@ -449,7 +462,7 @@ def test_missing_usage_is_zeroed_not_an_error():
     assert usage.output_tokens == 0
 
 
-def test_cache_writes_are_recovered_and_subtracted():
+def test_cache_writes_are_recovered_and_subtracted() -> None:
     msg = translate(
         response(
             usage=CompletionUsage(
@@ -467,7 +480,7 @@ def test_cache_writes_are_recovered_and_subtracted():
     assert msg.usage.cache_creation_input_tokens == 25
 
 
-def test_reasoning_tokens_become_an_informational_breakdown():
+def test_reasoning_tokens_become_an_informational_breakdown() -> None:
     msg = translate(
         response(
             usage=CompletionUsage(
@@ -486,7 +499,7 @@ def test_reasoning_tokens_become_an_informational_breakdown():
     )
 
 
-def test_zero_reasoning_tokens_emit_a_zero_breakdown():
+def test_zero_reasoning_tokens_emit_a_zero_breakdown() -> None:
     msg = translate(
         response(
             usage=CompletionUsage(
@@ -504,7 +517,7 @@ def test_zero_reasoning_tokens_emit_a_zero_breakdown():
     )
 
 
-def test_full_block_order():
+def test_full_block_order() -> None:
     msg = translate(
         response(
             message(

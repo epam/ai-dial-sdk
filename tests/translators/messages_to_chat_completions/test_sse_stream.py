@@ -40,7 +40,7 @@ async def test_stream_dispatches_items_finalizes_and_closes(
     assert stream.closed
 
 
-async def test_run_sse_stream_turns_exception_into_error_event():
+async def test_run_sse_stream_turns_exception_into_error_event() -> None:
     stream = FakeStream(["a"], raise_after=RuntimeError("boom"))
     state = AnthropicStreamState("m")
     chunks = [
@@ -68,7 +68,7 @@ async def test_run_sse_stream_turns_exception_into_error_event():
     assert stream.closed is True
 
 
-async def test_a_stream_left_early_is_closed():
+async def test_a_stream_left_early_is_closed() -> None:
     stream = FakeStream(["a", "b"])
 
     def _fail(item: str) -> list[bytes]:
@@ -88,7 +88,7 @@ async def test_a_stream_left_early_is_closed():
 
 
 @pytest.mark.parametrize("failed", [False, True])
-def test_terminal_stream_emits_no_more_events(failed: bool):
+def test_terminal_stream_emits_no_more_events(failed: bool) -> None:
     state = AnthropicStreamState("m")
     if failed:
         list(state.emit_error(InternalServerError("Internal server error")))

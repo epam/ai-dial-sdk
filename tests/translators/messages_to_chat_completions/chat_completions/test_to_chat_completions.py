@@ -36,7 +36,7 @@ LONG_MCP_NAME = "mcp__" + "s" * 60 + "__do_the_thing"
 
 
 @pytest.mark.parametrize("max_tokens", [100, 999999])
-def test_minimal_request(max_tokens: int):
+def test_minimal_request(max_tokens: int) -> None:
     result = convert({**user("hello"), "max_tokens": max_tokens})
     assert result.model_dump(mode="json", exclude_none=True) == {
         "model": DEPLOYMENT,
@@ -46,13 +46,13 @@ def test_minimal_request(max_tokens: int):
     }
 
 
-def test_system_string():
+def test_system_string() -> None:
     result = convert({"system": "be nice", **user("hi")})
     assert result.messages[0].role == Role.SYSTEM
     assert result.messages[0].content == "be nice"
 
 
-def test_system_blocks_joined_and_cache_control_stripped():
+def test_system_blocks_joined_and_cache_control_stripped() -> None:
     result = convert(
         {
             "system": [
@@ -75,7 +75,7 @@ def test_system_blocks_joined_and_cache_control_stripped():
     assert result.messages[0].custom_fields.cache_breakpoint is not None
 
 
-def test_all_three_system_sources_merge_into_one_leading_message():
+def test_all_three_system_sources_merge_into_one_leading_message() -> None:
     result = convert(
         {
             "system": "be nice",
@@ -100,7 +100,7 @@ def test_all_three_system_sources_merge_into_one_leading_message():
     assert system_messages[0] is result.messages[0]
 
 
-def test_system_sources_merge_in_client_order_not_grouped_by_kind():
+def test_system_sources_merge_in_client_order_not_grouped_by_kind() -> None:
     result = convert(
         {
             "system": "TOP",
@@ -123,7 +123,7 @@ def test_system_sources_merge_in_client_order_not_grouped_by_kind():
     assert result.messages[0].content == "TOP\n\nA\n\nB\n\nC"
 
 
-def test_mid_conv_system_on_an_assistant_message_is_merged_not_warned():
+def test_mid_conv_system_on_an_assistant_message_is_merged_not_warned() -> None:
     result = convert(
         {
             "messages": [
@@ -151,7 +151,7 @@ def test_mid_conv_system_on_an_assistant_message_is_merged_not_warned():
     assert result.messages[2].content == "hello"
 
 
-def test_mid_conv_system_inside_a_system_role_message():
+def test_mid_conv_system_inside_a_system_role_message() -> None:
     result = convert(
         {
             "messages": [
@@ -172,7 +172,7 @@ def test_mid_conv_system_inside_a_system_role_message():
     assert result.messages[0].content == "outer\n\ninner"
 
 
-def test_mid_conv_system_cache_control_marks_the_merged_message():
+def test_mid_conv_system_cache_control_marks_the_merged_message() -> None:
     result = convert(
         {
             "messages": [
@@ -193,7 +193,7 @@ def test_mid_conv_system_cache_control_marks_the_merged_message():
     assert result.messages[0].custom_fields.cache_breakpoint is not None
 
 
-def test_unsupported_system_role_content_block_is_dropped():
+def test_unsupported_system_role_content_block_is_dropped() -> None:
     result = convert(
         {
             "messages": [
@@ -219,7 +219,7 @@ def test_unsupported_system_role_content_block_is_dropped():
     assert system_messages[0].content == "keep me"
 
 
-def test_base64_image():
+def test_base64_image() -> None:
     result = convert(
         user(
             [
@@ -242,7 +242,7 @@ def test_base64_image():
     )
 
 
-def test_url_image():
+def test_url_image() -> None:
     result = convert(
         user(
             [
@@ -260,7 +260,7 @@ def test_url_image():
     )
 
 
-def test_pdf_document_base64():
+def test_pdf_document_base64() -> None:
     result = convert(
         user(
             [
@@ -296,12 +296,12 @@ def test_pdf_document_base64():
 )
 def test_document_url_or_file_source_is_rejected(
     source: dict[str, object],
-):
+) -> None:
     with pytest.raises(InvalidRequestError):
         convert(user([{"type": "document", "source": source}]))
 
 
-def test_document_content_source_becomes_its_text_and_image_parts():
+def test_document_content_source_becomes_its_text_and_image_parts() -> None:
     result = convert(
         user(
             [
@@ -332,7 +332,7 @@ def test_document_content_source_becomes_its_text_and_image_parts():
     ]
 
 
-def test_search_result_becomes_a_text_part():
+def test_search_result_becomes_a_text_part() -> None:
     result = convert(
         user(
             [
@@ -356,7 +356,7 @@ def test_search_result_becomes_a_text_part():
     ]
 
 
-def test_replayed_compaction_becomes_its_summary_text():
+def test_replayed_compaction_becomes_its_summary_text() -> None:
     result = convert(
         {
             "messages": [
@@ -385,7 +385,7 @@ def test_replayed_compaction_becomes_its_summary_text():
     assert result.messages[1].content == "assistant summary\nok"
 
 
-def test_document_text_source_becomes_text_part():
+def test_document_text_source_becomes_text_part() -> None:
     result = convert(
         user(
             [
@@ -407,7 +407,7 @@ def test_document_text_source_becomes_text_part():
     )
 
 
-def test_image_file_source_is_rejected():
+def test_image_file_source_is_rejected() -> None:
     with pytest.raises(InvalidRequestError):
         convert(
             user(
@@ -416,7 +416,7 @@ def test_image_file_source_is_rejected():
         )
 
 
-def test_assistant_tool_use_and_text_combine_into_one_message():
+def test_assistant_tool_use_and_text_combine_into_one_message() -> None:
     result = convert(
         {
             "messages": [
@@ -467,7 +467,7 @@ def test_assistant_tool_use_and_text_combine_into_one_message():
     ]
 
 
-def test_tool_result_only_turn_emits_no_user_message():
+def test_tool_result_only_turn_emits_no_user_message() -> None:
     result = convert(
         user(
             [
@@ -485,7 +485,7 @@ def test_tool_result_only_turn_emits_no_user_message():
     assert result.messages[0].content == "ok"
 
 
-def test_tool_result_is_error_prefixes_output():
+def test_tool_result_is_error_prefixes_output() -> None:
     result = convert(
         user(
             [
@@ -501,7 +501,7 @@ def test_tool_result_is_error_prefixes_output():
     assert result.messages[0].content == "Error: boom"
 
 
-def test_tool_result_image_becomes_user_image_url():
+def test_tool_result_image_becomes_user_image_url() -> None:
     result = convert(
         user(
             [
@@ -533,7 +533,7 @@ def test_tool_result_image_becomes_user_image_url():
     ]
 
 
-def test_tool_result_document_moves_to_the_following_user_message():
+def test_tool_result_document_moves_to_the_following_user_message() -> None:
     result = convert(
         user(
             [
@@ -568,7 +568,7 @@ def test_tool_result_document_moves_to_the_following_user_message():
     ]
 
 
-def test_custom_tool_mapping():
+def test_custom_tool_mapping() -> None:
     result = convert(
         {
             **user("hi"),
@@ -594,7 +594,7 @@ def test_custom_tool_mapping():
     assert tool.custom_fields is None
 
 
-def test_custom_tool_strict_is_forwarded():
+def test_custom_tool_strict_is_forwarded() -> None:
     result = convert(
         {
             **user("hi"),
@@ -610,7 +610,7 @@ def test_custom_tool_strict_is_forwarded():
     assert result.model_dump(mode="json")["tools"][0]["function"]["strict"]
 
 
-def test_schema_key_is_stripped_from_tool_parameters():
+def test_schema_key_is_stripped_from_tool_parameters() -> None:
     result = convert(
         {
             **user("hi"),
@@ -636,7 +636,7 @@ def test_schema_key_is_stripped_from_tool_parameters():
     }
 
 
-def test_provider_tools_become_static_functions_as_sent():
+def test_provider_tools_become_static_functions_as_sent() -> None:
     provider_tools: list[dict[str, object]] = [
         {
             "type": "web_search_20250305",
@@ -683,12 +683,12 @@ def test_provider_tools_become_static_functions_as_sent():
 )
 def test_tool_choice_matrix(
     tool_choice: dict[str, object], expected: str | ToolChoice | None
-):
+) -> None:
     result = convert({**user("hi"), "tool_choice": tool_choice})
     assert result.tool_choice == expected
 
 
-def test_disable_parallel_tool_use_inverts():
+def test_disable_parallel_tool_use_inverts() -> None:
     result = convert(
         {
             **user("hi"),
@@ -699,7 +699,7 @@ def test_disable_parallel_tool_use_inverts():
     assert result.parallel_tool_calls is False
 
 
-def test_a_long_mcp_name_is_aliased_identically_at_all_three_sites():
+def test_a_long_mcp_name_is_aliased_identically_at_all_three_sites() -> None:
     translation_state = TranslationState()
     result = convert(
         {
@@ -742,12 +742,12 @@ def test_a_long_mcp_name_is_aliased_identically_at_all_three_sites():
     assert translation_state.to_client_tool_name(alias) == LONG_MCP_NAME
 
 
-def test_no_cache_control_omits_cache_breakpoint():
+def test_no_cache_control_omits_cache_breakpoint() -> None:
     result = convert({"system": "be nice", **user("hi")})
     assert result.messages[0].custom_fields is None
 
 
-def test_user_message_cache_control_marks_message():
+def test_user_message_cache_control_marks_message() -> None:
     result = convert(
         user(
             [
@@ -763,7 +763,7 @@ def test_user_message_cache_control_marks_message():
     assert result.messages[0].custom_fields.cache_breakpoint is not None
 
 
-def test_assistant_message_cache_control_marks_message():
+def test_assistant_message_cache_control_marks_message() -> None:
     result = convert(
         {
             "messages": [
@@ -785,7 +785,7 @@ def test_assistant_message_cache_control_marks_message():
     assert result.messages[1].custom_fields.cache_breakpoint is not None
 
 
-def test_tool_result_turn_cache_control_marks_all_split_messages():
+def test_tool_result_turn_cache_control_marks_all_split_messages() -> None:
     result = convert(
         user(
             [
@@ -805,7 +805,7 @@ def test_tool_result_turn_cache_control_marks_all_split_messages():
     assert result.messages[1].custom_fields is not None
 
 
-def test_a_block_ttl_reaches_the_marker_as_an_absolute_instant():
+def test_a_block_ttl_reaches_the_marker_as_an_absolute_instant() -> None:
     result = convert(
         user(
             [
@@ -823,7 +823,7 @@ def test_a_block_ttl_reaches_the_marker_as_an_absolute_instant():
     assert custom_fields.cache_breakpoint.expire_at is not None
 
 
-def test_the_longest_ttl_of_the_merged_system_sources_wins():
+def test_the_longest_ttl_of_the_merged_system_sources_wins() -> None:
     result = convert(
         {
             "system": [
@@ -857,7 +857,7 @@ def test_the_longest_ttl_of_the_merged_system_sources_wins():
     assert remaining.total_seconds() == pytest.approx(3600, abs=5)
 
 
-def test_cache_control_nested_inside_a_tool_result_is_not_seen():
+def test_cache_control_nested_inside_a_tool_result_is_not_seen() -> None:
     result = convert(
         user(
             [
@@ -878,7 +878,7 @@ def test_cache_control_nested_inside_a_tool_result_is_not_seen():
     assert result.messages[0].custom_fields is None
 
 
-def test_tool_definition_cache_control_marks_tool():
+def test_tool_definition_cache_control_marks_tool() -> None:
     result = convert(
         {
             **user("hi"),
@@ -899,13 +899,13 @@ def test_tool_definition_cache_control_marks_tool():
     assert tool.custom_fields.cache_breakpoint is not None
 
 
-def test_temperature_and_top_p_pass_through():
+def test_temperature_and_top_p_pass_through() -> None:
     result = convert({**user("hi"), "temperature": 0.5, "top_p": 0.9})
     assert result.temperature == 0.5
     assert result.top_p == 0.9
 
 
-def test_top_k_and_thinking_history_are_dropped():
+def test_top_k_and_thinking_history_are_dropped() -> None:
     result = convert(
         {
             "messages": [
@@ -935,7 +935,7 @@ def test_top_k_and_thinking_history_are_dropped():
     assert result.messages[0].content == "answer"
 
 
-def test_fields_with_no_chat_completions_counterpart_are_dropped():
+def test_fields_with_no_chat_completions_counterpart_are_dropped() -> None:
     result = convert(
         {
             **user("hi"),
@@ -972,7 +972,7 @@ def test_fields_with_no_chat_completions_counterpart_are_dropped():
 
 
 @pytest.mark.parametrize("user_id", ["u1", "u" * 65])
-def test_user_id_is_forwarded_as_user(user_id: str):
+def test_user_id_is_forwarded_as_user(user_id: str) -> None:
     result = convert({**user("hi"), "metadata": {"user_id": user_id}})
     assert result.user == user_id
 
@@ -981,12 +981,14 @@ def test_user_id_is_forwarded_as_user(user_id: str):
     "tier, expected",
     [("auto", "auto"), ("standard_only", "default"), ("priority", None)],
 )
-def test_service_tier_is_a_closed_table(tier: str, expected: str | None):
+def test_service_tier_is_a_closed_table(
+    tier: str, expected: str | None
+) -> None:
     result = convert({**user("hi"), "service_tier": tier})
     assert result.service_tier == expected
 
 
-def test_output_config_format_json_schema_converts():
+def test_output_config_format_json_schema_converts() -> None:
     schema: dict[str, object] = {
         "type": "object",
         "properties": {"name": {"type": "string"}},
@@ -1009,7 +1011,7 @@ def test_output_config_format_json_schema_converts():
     assert result.response_format.json_schema.strict is True
 
 
-def test_empty_output_schema_is_dropped():
+def test_empty_output_schema_is_dropped() -> None:
     result = convert(
         {
             **user("hi"),
@@ -1019,7 +1021,7 @@ def test_empty_output_schema_is_dropped():
     assert result.response_format is None
 
 
-def test_citations_enabled_sets_custom_fields():
+def test_citations_enabled_sets_custom_fields() -> None:
     result = convert(
         user(
             [
@@ -1040,12 +1042,12 @@ def test_citations_enabled_sets_custom_fields():
 
 
 @pytest.mark.parametrize("stop", [["STOP"], []])
-def test_stop_sequences_map_to_stop_as_is(stop: list[str]):
+def test_stop_sequences_map_to_stop_as_is(stop: list[str]) -> None:
     result = convert({**user("hi"), "stop_sequences": stop})
     assert result.model_dump(mode="json", exclude_none=True)["stop"] == stop
 
 
-def test_absent_max_tokens_sends_no_cap_and_zero_is_sent():
+def test_absent_max_tokens_sends_no_cap_and_zero_is_sent() -> None:
     absent = to_chat_completions_request(
         cast(MessageCreateParams, {"model": DEPLOYMENT, **user("hi")}),
         DEPLOYMENT,
@@ -1055,12 +1057,12 @@ def test_absent_max_tokens_sends_no_cap_and_zero_is_sent():
     assert convert({**user("hi"), "max_tokens": 0}).max_completion_tokens == 0
 
 
-def test_an_unknown_role_is_rejected():
+def test_an_unknown_role_is_rejected() -> None:
     with pytest.raises(InvalidRequestError):
         convert({"messages": [{"role": "developer", "content": "hi"}]})
 
 
-def test_a_system_turn_cleared_at_the_next_user_message():
+def test_a_system_turn_cleared_at_the_next_user_message() -> None:
     result = convert(
         {
             "messages": [
@@ -1084,7 +1086,7 @@ def test_a_system_turn_cleared_at_the_next_user_message():
     assert result.messages[0].content == "kept\n\nstill visible"
 
 
-def test_top_level_cache_control_becomes_the_request_breakpoint():
+def test_top_level_cache_control_becomes_the_request_breakpoint() -> None:
     result = convert(
         {
             "messages": [
@@ -1099,7 +1101,7 @@ def test_top_level_cache_control_becomes_the_request_breakpoint():
     assert result.custom_fields.cache_breakpoint == CacheBreakpoint()
 
 
-def test_top_level_cache_control_ttl_sets_the_request_expiry():
+def test_top_level_cache_control_ttl_sets_the_request_expiry() -> None:
     result = convert(
         {**user("hi"), "cache_control": {"type": "ephemeral", "ttl": "5m"}}
     )
@@ -1114,7 +1116,7 @@ def test_top_level_cache_control_ttl_sets_the_request_expiry():
     assert seconds == pytest.approx(300, abs=2)
 
 
-def test_null_block_cache_control_does_not_mark():
+def test_null_block_cache_control_does_not_mark() -> None:
     result = convert(
         user(
             [
@@ -1129,7 +1131,7 @@ def test_null_block_cache_control_does_not_mark():
     assert result.messages[0].custom_fields is None
 
 
-def test_tool_schema_keywords_are_preserved():
+def test_tool_schema_keywords_are_preserved() -> None:
     schema = {
         "type": "object",
         "properties": {"name": {"type": "string"}},

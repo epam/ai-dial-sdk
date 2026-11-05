@@ -100,7 +100,7 @@ def mock_core() -> Iterator[respx.MockRouter]:
 
 async def test_non_streaming_happy_path(
     client: httpx.AsyncClient, mock_core: respx.MockRouter
-):
+) -> None:
     mock_core.post(_CORE_PATH).respond(
         json=_RESPONSE_OBJECT, content_type="application/json"
     )
@@ -124,7 +124,7 @@ async def test_non_streaming_happy_path(
 
 async def test_mount_with_client_instance(
     monkeypatch: pytest.MonkeyPatch,
-):
+) -> None:
     monkeypatch.setenv("DIAL_URL", _CORE)
     core_client = httpx.AsyncClient(
         transport=httpx.MockTransport(
@@ -148,7 +148,7 @@ async def test_mount_with_client_instance(
 
 async def test_request_shape_and_headers_not_leaked(
     client: httpx.AsyncClient, mock_core: respx.MockRouter
-):
+) -> None:
     route = mock_core.post(_CORE_PATH).respond(
         json=_RESPONSE_OBJECT, content_type="application/json"
     )
@@ -177,7 +177,7 @@ async def test_request_shape_and_headers_not_leaked(
 
 async def test_cores_own_routing_headers_do_not_travel_on(
     client: httpx.AsyncClient, mock_core: respx.MockRouter
-):
+) -> None:
     route = mock_core.post(_CORE_PATH).respond(
         json=_RESPONSE_OBJECT, content_type="application/json"
     )
@@ -217,7 +217,7 @@ async def test_only_the_api_key_core_minted_travels_on(
     transport: ASGITransport,
     inbound: dict[str, str],
     forwarded: str | None,
-):
+) -> None:
     monkeypatch.setenv("DIAL_URL", _CORE)
 
     route = mock_core.post(_CORE_PATH).respond(
@@ -265,7 +265,7 @@ async def test_capabilities_do_not_filter_request_options(
     client: httpx.AsyncClient,
     mock_core: respx.MockRouter,
     headers: dict[str, str],
-):
+) -> None:
     route = mock_core.post(_CORE_PATH).respond(json=_RESPONSE_OBJECT)
     response = await client.post(
         _MESSAGES_URL,
@@ -290,7 +290,7 @@ async def test_capabilities_do_not_filter_request_options(
 
 async def test_a_long_mcp_tool_name_round_trips(
     client: httpx.AsyncClient, mock_core: respx.MockRouter
-):
+) -> None:
     long_name = "mcp__" + "s" * 60 + "__do_the_thing"
     route = mock_core.post(_CORE_PATH).mock(
         side_effect=lambda request: httpx.Response(
@@ -342,7 +342,7 @@ async def test_a_long_mcp_tool_name_round_trips(
 
 async def test_a_long_mcp_tool_name_round_trips_while_streaming(
     client: httpx.AsyncClient, mock_core: respx.MockRouter
-):
+) -> None:
     long_name = "mcp__" + "s" * 60 + "__do_the_thing"
 
     def echo_the_alias(request: httpx.Request) -> httpx.Response:
@@ -426,7 +426,7 @@ async def test_a_long_mcp_tool_name_round_trips_while_streaming(
 
 async def test_streaming_happy_path(
     client: httpx.AsyncClient, mock_core: respx.MockRouter
-):
+) -> None:
     upstream_sse = (
         b'data: {"id": "chatcmpl_1", "model": "gpt-5.5", "choices": '
         b'[{"index": 0, "delta": {"role": "assistant", "content": "Hello"}, '
@@ -460,7 +460,7 @@ async def test_streaming_happy_path(
 
 async def test_x_dial_deployment_id_header_overrides_body_model(
     client: httpx.AsyncClient, mock_core: respx.MockRouter
-):
+) -> None:
     route = mock_core.post(_CORE_PATH).respond(
         json=_RESPONSE_OBJECT, content_type="application/json"
     )
@@ -496,7 +496,7 @@ async def test_body_model_is_not_a_fallback_for_missing_deployment_id(
 
 async def test_connection_error_to_core_returns_502(
     client: httpx.AsyncClient, mock_core: respx.MockRouter
-):
+) -> None:
     mock_core.post(_CORE_PATH).mock(side_effect=httpx.ConnectError("refused"))
     response = await client.post(_MESSAGES_URL, json=_MESSAGES_BODY)
     assert response.status_code == 502
@@ -511,7 +511,7 @@ async def test_debug_logging_emits_request_and_response_lines(
     client: httpx.AsyncClient,
     mock_core: respx.MockRouter,
     caplog: pytest.LogCaptureFixture,
-):
+) -> None:
     mock_core.post(_CORE_PATH).respond(
         json=_RESPONSE_OBJECT, content_type="application/json"
     )
@@ -530,7 +530,7 @@ async def test_debug_logging_emits_stream_chunk_lines(
     client: httpx.AsyncClient,
     mock_core: respx.MockRouter,
     caplog: pytest.LogCaptureFixture,
-):
+) -> None:
     upstream_sse = (
         b'data: {"id": "chatcmpl_1", "model": "gpt-5.5", "choices": '
         b'[{"index": 0, "delta": {"role": "assistant", "content": "Hi"}, '
@@ -555,7 +555,7 @@ async def test_debug_logging_emits_stream_chunk_lines(
 
 async def test_missing_dial_url_returns_500(
     monkeypatch: pytest.MonkeyPatch, transport: ASGITransport
-):
+) -> None:
     monkeypatch.delenv("DIAL_URL", raising=False)
 
     async with (
@@ -588,7 +588,7 @@ async def test_upstream_error_status_mapping(
     mock_core: respx.MockRouter,
     status: int,
     expected_type: str,
-):
+) -> None:
     route = mock_core.post(_CORE_PATH).respond(
         status_code=status,
         json={"error": {"message": "upstream says no"}},
@@ -605,7 +605,7 @@ async def test_upstream_error_status_mapping(
 
 async def test_pre_stream_error_returns_json_not_sse(
     client: httpx.AsyncClient, mock_core: respx.MockRouter
-):
+) -> None:
     mock_core.post(_CORE_PATH).respond(
         status_code=401, json={"error": {"message": "bad key"}}
     )
@@ -642,7 +642,7 @@ async def test_untranslatable_requests_return_400_without_calling_core(
     client: httpx.AsyncClient,
     mock_core: respx.MockRouter,
     body: dict[str, object],
-):
+) -> None:
     route = mock_core.post(_CORE_PATH).respond(json=_RESPONSE_OBJECT)
     response = await client.post(_MESSAGES_URL, json={**_MESSAGES_BODY, **body})
     assert response.status_code == 400
@@ -655,7 +655,7 @@ async def test_untranslatable_requests_return_400_without_calling_core(
 )
 async def test_invalid_json_returns_400_without_calling_core(
     client: httpx.AsyncClient, mock_core: respx.MockRouter, content: bytes
-):
+) -> None:
     route = mock_core.post(_CORE_PATH).respond(json=_RESPONSE_OBJECT)
     response = await client.post(
         _MESSAGES_URL,
@@ -676,7 +676,7 @@ async def test_invalid_json_returns_400_without_calling_core(
 )
 async def test_a_valid_json_the_translator_cannot_read_is_not_a_client_error(
     client: httpx.AsyncClient, mock_core: respx.MockRouter, content: bytes
-):
+) -> None:
     route = mock_core.post(_CORE_PATH).respond(json=_RESPONSE_OBJECT)
     response = await client.post(
         _MESSAGES_URL,
@@ -705,7 +705,7 @@ async def test_an_error_core_writes_into_the_stream_keeps_its_kind(
     mock_core: respx.MockRouter,
     error: dict[str, object],
     expected_type: str,
-):
+) -> None:
     upstream_sse = (
         b'data: {"id": "chatcmpl_1", "model": "gpt-5.5", "choices": '
         b'[{"index": 0, "delta": {"content": "Hi"}, "finish_reason": null}]}'
@@ -730,7 +730,7 @@ async def test_stop_sequences_are_forwarded(
     client: httpx.AsyncClient,
     mock_core: respx.MockRouter,
     sequences: list[str],
-):
+) -> None:
     route = mock_core.post(_CORE_PATH).respond(json=_RESPONSE_OBJECT)
     response = await client.post(
         _MESSAGES_URL,
@@ -751,7 +751,7 @@ async def test_stop_sequences_are_forwarded(
 )
 async def test_unsupported_endpoint_returns_anthropic_404(
     client: httpx.AsyncClient, path: str
-):
+) -> None:
     response = await client.post("/openaiChatCompletions" + path, json={})
     assert response.status_code == 404
     assert response.json() == {
@@ -766,7 +766,7 @@ async def test_unsupported_endpoint_returns_anthropic_404(
 @pytest.mark.parametrize("streaming", [False, True])
 async def test_citation_configuration_is_sent_to_core(
     client: httpx.AsyncClient, mock_core: respx.MockRouter, streaming: bool
-):
+) -> None:
     request: dict[str, object] = {
         **_MESSAGES_BODY,
         "stream": streaming,
@@ -807,7 +807,7 @@ async def test_citation_configuration_is_sent_to_core(
 
 async def test_only_whitelisted_headers_are_forwarded(
     client: httpx.AsyncClient, mock_core: respx.MockRouter
-):
+) -> None:
     route = mock_core.post(_CORE_PATH).respond(json=_RESPONSE_OBJECT)
     await client.post(
         _MESSAGES_URL,
@@ -844,7 +844,7 @@ async def test_stop_forwarding_is_independent_of_deployment_name(
     mock_core: respx.MockRouter,
     deployment: str,
     streaming: bool,
-):
+) -> None:
     upstream = {
         **_RESPONSE_OBJECT,
         "choices": [
@@ -931,7 +931,7 @@ async def test_missing_and_null_upstream_usage_counters(
     streaming: bool,
     usage: dict[str, object],
     cache_write: int,
-):
+) -> None:
     upstream: dict[str, object] = {**_RESPONSE_OBJECT, "usage": usage}
     route = mock_core.post(_CORE_PATH)
     if streaming:
@@ -962,7 +962,7 @@ async def test_invalid_upstream_response_returns_generic_server_error(
     client: httpx.AsyncClient,
     mock_core: respx.MockRouter,
     caplog: pytest.LogCaptureFixture,
-):
+) -> None:
     mock_core.post(_CORE_PATH).respond(json={**_RESPONSE_OBJECT, "id": 42})
     with caplog.at_level(logging.ERROR, logger="aidial_sdk"):
         response = await client.post(_MESSAGES_URL, json=_MESSAGES_BODY)
@@ -976,7 +976,7 @@ async def test_invalid_upstream_response_returns_generic_server_error(
 
 async def test_dropped_request_options_are_not_schema_validated(
     client: httpx.AsyncClient, mock_core: respx.MockRouter
-):
+) -> None:
     route = mock_core.post(_CORE_PATH).respond(json=_RESPONSE_OBJECT)
     response = await client.post(
         _MESSAGES_URL,
@@ -1004,7 +1004,7 @@ async def test_legacy_endpoint_calls_the_deployment_path_of_core(
     mock_core: respx.MockRouter,
     monkeypatch: pytest.MonkeyPatch,
     streaming: bool,
-):
+) -> None:
     monkeypatch.setenv("DIAL_API_VERSION", "custom-version")
     route = mock_core.post(_LEGACY_CORE_PATH)
     if streaming:
@@ -1036,7 +1036,7 @@ async def test_legacy_endpoint_calls_the_deployment_path_of_core(
 
 async def test_legacy_endpoint_defaults_the_api_version(
     client: httpx.AsyncClient, mock_core: respx.MockRouter
-):
+) -> None:
     route = mock_core.post(_CORE_DEPLOYMENT_PATH).respond(json=_RESPONSE_OBJECT)
     response = await client.post(_LEGACY_MESSAGES_URL, json=_MESSAGES_BODY)
 
@@ -1048,7 +1048,7 @@ async def test_legacy_endpoint_defaults_the_api_version(
 
 async def test_legacy_endpoint_escapes_the_deployment_in_the_path(
     client: httpx.AsyncClient, mock_core: respx.MockRouter
-):
+) -> None:
     route = mock_core.post(
         url__regex=r"/openai/deployments/a%2Fb%3Fc/chat/completions"
     ).respond(json=_RESPONSE_OBJECT)
@@ -1064,7 +1064,7 @@ async def test_legacy_endpoint_escapes_the_deployment_in_the_path(
 
 async def test_the_v1_endpoint_sends_no_api_version(
     client: httpx.AsyncClient, mock_core: respx.MockRouter
-):
+) -> None:
     route = mock_core.post(_CORE_PATH).respond(json=_RESPONSE_OBJECT)
     await client.post(_MESSAGES_URL, json=_MESSAGES_BODY)
     assert "api-version" not in route.calls.last.request.url.params

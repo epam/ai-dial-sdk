@@ -23,11 +23,11 @@ def seconds_from_now(expire_at: str | None) -> float:
     ).total_seconds()
 
 
-def test_no_cache_control_means_no_marker():
+def test_no_cache_control_means_no_marker() -> None:
     assert marker() is None
 
 
-def test_a_cache_control_without_a_ttl_leaves_the_default_alone():
+def test_a_cache_control_without_a_ttl_leaves_the_default_alone() -> None:
     breakpoint = marker({"type": "ephemeral"})
     assert breakpoint is not None
     assert breakpoint.expire_at is None
@@ -56,13 +56,13 @@ def test_a_ttl_duration_becomes_an_absolute_instant(
 @pytest.mark.parametrize(
     "ttl", ["", "forever", "5", "m", "5 m", "-1h", "30s", "2d", "0m", 300, []]
 )
-def test_an_unreadable_ttl_never_costs_the_marker(ttl: object):
+def test_an_unreadable_ttl_never_costs_the_marker(ttl: object) -> None:
     breakpoint = marker({"type": "ephemeral", "ttl": ttl})
     assert breakpoint is not None
     assert breakpoint.expire_at is None
 
 
-def test_the_longest_ttl_wins_when_blocks_collapse_onto_one_object():
+def test_the_longest_ttl_wins_when_blocks_collapse_onto_one_object() -> None:
     breakpoint = marker(
         {"ttl": "nonsense"},
         {"ttl": "5m"},
@@ -75,7 +75,7 @@ def test_the_longest_ttl_wins_when_blocks_collapse_onto_one_object():
 
 
 @pytest.mark.parametrize("ttl", ["999999999999999999999h", "9999999999m"])
-def test_unrepresentable_expiry_keeps_default_marker(ttl: str):
+def test_unrepresentable_expiry_keeps_default_marker(ttl: str) -> None:
     breakpoint = marker({"ttl": ttl})
     assert breakpoint is not None
     assert breakpoint.expire_at is None

@@ -88,7 +88,7 @@ async def test_upstream_error_preserves_status_and_maps_type(
         ("", "Error code: 400"),
     ],
 )
-async def test_upstream_error_message(body: dict | str, expected: str):
+async def test_upstream_error_message(body: dict | str, expected: str) -> None:
     response = await _anthropic_error(await _core_error(400, body))
     assert response.status_code == 400
     assert json.loads(bytes(response.body)) == {
@@ -110,7 +110,7 @@ class _StrictIntModel(BaseModel):
     x: int
 
 
-async def test_internal_pydantic_validation_error_is_a_500():
+async def test_internal_pydantic_validation_error_is_a_500() -> None:
     with pytest.raises(ValidationError) as exc:
         _StrictIntModel.model_validate({"x": "not-an-int"})
 

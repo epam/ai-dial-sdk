@@ -31,7 +31,7 @@ def system_turn(effort: str | None, **fields: object) -> dict[str, object]:
 
 
 @pytest.mark.parametrize("effort", ["low", "medium", "high", "xhigh", "max"])
-def test_explicit_effort_is_preserved(effort: str):
+def test_explicit_effort_is_preserved(effort: str) -> None:
     assert (
         intent(
             {
@@ -43,7 +43,7 @@ def test_explicit_effort_is_preserved(effort: str):
     )
 
 
-def test_disabled_thinking_takes_precedence():
+def test_disabled_thinking_takes_precedence() -> None:
     assert (
         intent(
             {
@@ -55,16 +55,16 @@ def test_disabled_thinking_takes_precedence():
     )
 
 
-def test_omission_leaves_deployment_default():
+def test_omission_leaves_deployment_default() -> None:
     assert intent({}) is None
 
 
-def test_adaptive_thinking_leaves_deployment_default():
+def test_adaptive_thinking_leaves_deployment_default() -> None:
     assert intent({"thinking": {"type": "adaptive"}}) is None
 
 
 @pytest.mark.parametrize("budget", [1024, 8000, 8001, 24000, 24001, 999999])
-def test_budget_does_not_choose_effort(budget: int):
+def test_budget_does_not_choose_effort(budget: int) -> None:
     assert (
         intent({"thinking": {"type": "enabled", "budget_tokens": budget}})
         is None
@@ -80,7 +80,7 @@ def test_budget_does_not_choose_effort(budget: int):
     )
 
 
-def test_the_last_visible_system_turn_effort_wins_over_the_request():
+def test_the_last_visible_system_turn_effort_wins_over_the_request() -> None:
     assert (
         intent(
             {
@@ -96,7 +96,7 @@ def test_the_last_visible_system_turn_effort_wins_over_the_request():
     )
 
 
-def test_a_cleared_system_turn_effort_is_not_visible():
+def test_a_cleared_system_turn_effort_is_not_visible() -> None:
     assert (
         intent(
             {
@@ -111,7 +111,7 @@ def test_a_cleared_system_turn_effort_is_not_visible():
     )
 
 
-def test_a_system_turn_without_effort_falls_back_to_the_request():
+def test_a_system_turn_without_effort_falls_back_to_the_request() -> None:
     assert (
         intent(
             {
@@ -123,7 +123,7 @@ def test_a_system_turn_without_effort_falls_back_to_the_request():
     )
 
 
-def test_disabled_thinking_overrides_a_system_turn_effort():
+def test_disabled_thinking_overrides_a_system_turn_effort() -> None:
     assert (
         intent(
             {
@@ -142,6 +142,6 @@ def test_disabled_thinking_overrides_a_system_turn_effort():
         {"messages": [system_turn("extreme")]},
     ],
 )
-def test_an_unknown_effort_is_rejected(body: dict[str, object]):
+def test_an_unknown_effort_is_rejected(body: dict[str, object]) -> None:
     with pytest.raises(InvalidRequestError):
         intent(body)
