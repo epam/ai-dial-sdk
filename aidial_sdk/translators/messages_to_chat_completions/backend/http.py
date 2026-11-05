@@ -1,8 +1,10 @@
+from dataclasses import dataclass
 from urllib.parse import quote
 
 import httpx
 from fastapi import Request
-from openai import AsyncOpenAI, Omit, omit
+from openai import AsyncOpenAI, AsyncStream, Omit, omit
+from openai.types.chat import ChatCompletion, ChatCompletionChunk
 
 from aidial_sdk.translators.messages_to_chat_completions.settings import (
     get_dial_api_version,
@@ -62,3 +64,29 @@ def core_headers(request: Request) -> dict[str, str | Omit]:
         }
     )
     return headers
+
+
+@dataclass
+class ChatClientHttp:
+    client: AsyncOpenAI
+    core_headers: dict[str, str | Omit]
+
+    async def create_stream(
+        self, body: dict
+    ) -> AsyncStream[ChatCompletionChunk]:
+        return await self.client.post(
+            "/chat/completions",
+            cast_to=ChatCompletion,
+            body=body,
+            options={"headers": self.core_headers},
+            stream=True,
+            stream_cls=AsyncStream[ChatCompletionChunk],
+        )
+
+    async def create_block(self, body: dict) -> ChatCompletion:
+        return await self.client.post(
+            "/chat/completions",
+            cast_to=ChatCompletion,
+            body=body,
+            options={"headers": self.core_headers},
+        )

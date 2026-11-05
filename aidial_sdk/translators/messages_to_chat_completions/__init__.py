@@ -1,4 +1,3 @@
-import httpx
 from fastapi import FastAPI
 
 from aidial_sdk._pydantic import PYDANTIC_V2
@@ -9,10 +8,18 @@ if not PYDANTIC_V2:
         "install pydantic>=2 and set PYDANTIC_V2=True"
     )
 
-from aidial_sdk.translators.messages_to_chat_completions.chat_completions.app import (  # noqa: E402
-    ClientFactory,
-    create_anthropic_api_app,
-)
+try:
+    import httpx
+
+    from aidial_sdk.translators.messages_to_chat_completions.chat_completions.app import (
+        ClientFactory,
+        create_anthropic_api_app,
+    )
+except ModuleNotFoundError as e:
+    raise ImportError(
+        "The Anthropic Messages API translator requires the translators extra: "
+        'pip install "aidial-sdk[translators]"'
+    ) from e
 
 __all__ = ["ClientFactory", "create_anthropic_api_app", "mount_translator"]
 

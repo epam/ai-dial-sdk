@@ -265,6 +265,6 @@ def test_v1_unknown_deployment(endpoint: str, deployment: str):
     assert response.status_code == 404
     assert response.json()["error"] == {
         "code": "DeploymentNotFound",
-        "message": f"The deployment '{deployment}' doesn't provide the '{endpoint}' endpoint",
+        "message": f"The deployment '{deployment}' doesn't provide the '/openai/v1/{endpoint}' endpoint",
         "type": "runtime_error",
     }

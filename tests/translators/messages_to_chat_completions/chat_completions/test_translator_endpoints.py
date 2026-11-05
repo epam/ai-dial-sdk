@@ -22,6 +22,9 @@ _MESSAGES_URL = "/openaiChatCompletions/anthropic/v1/messages"
 _CORE = "http://dial-core"
 
 
+# Core always resolves the deployment and passes it in the header
+_DEPLOYMENT_HEADERS = {"x-dial-deployment-id": "gpt-5.5"}
+
 _CORE_PATH = "/openai/v1/chat/completions"
 _CORE_DEPLOYMENT_PATH = "/openai/deployments/gpt-5.5/chat/completions"
 
@@ -75,7 +78,7 @@ async def client(
     async with httpx.AsyncClient(
         transport=transport,
         base_url="http://test-app.com",
-        headers={"api-key": "dummy-key"},
+        headers={"api-key": "dummy-key", **_DEPLOYMENT_HEADERS},
     ) as c:
         yield c
 
@@ -123,7 +126,9 @@ async def test_mount_with_client_instance(
     async with (
         core_client,
         httpx.AsyncClient(
-            transport=_transport(core_client), base_url="http://test-app.com"
+            transport=_transport(core_client),
+            base_url="http://test-app.com",
+            headers=_DEPLOYMENT_HEADERS,
         ) as c,
     ):
         response = await c.post(_MESSAGES_URL, json=_MESSAGES_BODY)
@@ -214,6 +219,7 @@ async def test_only_the_api_key_core_minted_travels_on(
         httpx.AsyncClient(
             transport=transport,
             base_url="http://test-app.com",
+            headers=_DEPLOYMENT_HEADERS,
         ) as bare,
     ):
         await bare.post(_MESSAGES_URL, json=_MESSAGES_BODY, headers=inbound)
@@ -462,6 +468,23 @@ async def test_x_dial_deployment_id_header_overrides_body_model(
     assert sent_body["model"] == "actual-deployment"
 
 
+async def test_body_model_is_not_a_fallback_for_missing_deployment_id(
+    mock_core: respx.MockRouter,
+    monkeypatch: pytest.MonkeyPatch,
+    transport: ASGITransport,
+):
+    monkeypatch.setenv("DIAL_URL", _CORE)
+    route = mock_core.post(_CORE_PATH).respond(json=_RESPONSE_OBJECT)
+
+    async with httpx.AsyncClient(
+        transport=transport, base_url="http://test-app.com"
+    ) as bare:
+        response = await bare.post(_MESSAGES_URL, json=_MESSAGES_BODY)
+
+    assert response.status_code == 500
+    assert not route.called
+
+
 async def test_connection_error_to_core_returns_502(
     client: httpx.AsyncClient, mock_core: respx.MockRouter
 ) -> None:
@@ -529,6 +552,7 @@ async def test_missing_dial_url_returns_500(
         httpx.AsyncClient(
             transport=transport,
             base_url="http://test-app.com",
+            headers=_DEPLOYMENT_HEADERS,
         ) as c,
     ):
         response = await c.post(_MESSAGES_URL, json=_MESSAGES_BODY)
@@ -1000,7 +1024,7 @@ async def test_legacy_endpoint_calls_the_deployment_path_of_core(
         assert response.json()["content"][0]["text"] == "hi there"
 
 
-async def test_legacy_endpoint_defaults_the_api_version_and_the_body_model(
+async def test_legacy_endpoint_defaults_the_api_version(
     client: httpx.AsyncClient, mock_core: respx.MockRouter
 ) -> None:
     route = mock_core.post(_CORE_DEPLOYMENT_PATH).respond(json=_RESPONSE_OBJECT)
