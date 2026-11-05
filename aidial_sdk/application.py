@@ -37,6 +37,10 @@ from aidial_sdk.header_propagator import HeaderPropagator
 from aidial_sdk.response_headers import NonForwardableHeadersMiddleware
 from aidial_sdk.telemetry.types import TelemetryConfig
 from aidial_sdk.utils._disconnect_middleware import DisconnectMiddleware
+from aidial_sdk.utils._interpolation import (
+    interpolate_deployment_id,
+    match_deployment_id,
+)
 from aidial_sdk.utils._reflection import get_method_implementation
 from aidial_sdk.utils.env import env_float, env_var_list
 from aidial_sdk.utils.log_config import configure_sdk_logger
@@ -57,16 +61,6 @@ configure_sdk_logger()
 RequestType = TypeVar("RequestType", bound=FromRequestMixin)
 
 Handler = Callable[[Request], Coroutine[Any, Any, Response]]
-
-
-def _interpolate_deployment_id(deployment_id: str, path_params: dict) -> str:
-    result = deployment_id
-    for key, value in path_params.items():
-        # Replace {key} or {key:type} patterns with actual value
-        # Pattern matches {key} or {key:int}, {key:path}, etc.
-        pattern = r"\{" + re.escape(key) + r"(?::[^}]*)?\}"
-        result = re.sub(pattern, str(value), result)
-    return result
 
 
 class PathFilter(logging.Filter):
@@ -293,7 +287,9 @@ class DIALApp(FastAPI):
             )
             set_log_deployment(deployment_id)
 
-            handler = self._v1_handlers[endpoint].get(deployment_id)
+            handler = self._get_handler(
+                endpoint, deployment_id, original_request
+            )
             if handler is None:
                 raise DeploymentNotFoundError(
                     f"The deployment {deployment_id!r} doesn't provide the {endpoint!r} endpoint"
@@ -302,6 +298,22 @@ class DIALApp(FastAPI):
             return await handler(original_request)
 
         return _handler
+
+    def _get_handler(
+        self, endpoint: str, deployment_id: str, request: Request
+    ) -> Handler | None:
+        handlers = self._v1_handlers[endpoint]
+
+        if (handler := handlers.get(deployment_id)) is not None:
+            return handler
+
+        for name, handler in handlers.items():
+            params = match_deployment_id(name, deployment_id)
+            if params is not None:
+                request.scope["path_params"] = params
+                return handler
+
+        return None
 
     def _endpoint_factory(
         self,
@@ -351,7 +363,7 @@ class DIALApp(FastAPI):
         deployment_id: str | None,
     ) -> RequestType:
         if deployment_id is not None:
-            deployment_id = _interpolate_deployment_id(
+            deployment_id = interpolate_deployment_id(
                 deployment_id, original_request.path_params
             )
             set_log_deployment(deployment_id)
