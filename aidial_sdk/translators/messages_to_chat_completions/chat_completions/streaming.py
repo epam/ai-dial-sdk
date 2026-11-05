@@ -1,4 +1,4 @@
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncGenerator, AsyncIterator, Iterator
 
 from anthropic.types import (
     RawContentBlockDeltaEvent,
@@ -16,6 +16,9 @@ from openai.types.chat import ChatCompletionChunk
 from openai.types.chat.chat_completion_chunk import Choice, ChoiceDeltaToolCall
 from openai.types.completion_usage import CompletionUsage
 
+from aidial_sdk.translators.messages_to_chat_completions.backend.client import (
+    Heartbeat,
+)
 from aidial_sdk.translators.messages_to_chat_completions.chat_completions.dial_extensions import (
     CustomContent,
     is_reasoning_stage,
@@ -28,7 +31,6 @@ from aidial_sdk.translators.messages_to_chat_completions.chat_completions.from_c
 )
 from aidial_sdk.translators.messages_to_chat_completions.sse_stream import (
     AnthropicStreamState,
-    ClosableAsyncStream,
     format_sse,
     run_sse_stream,
 )
@@ -61,8 +63,12 @@ class ChatCompletionsToAnthropicStream(AnthropicStreamState):
         self._signed = False
         self._tools: dict[int, int] = {}
 
-    def handle(self, chunk: ChatCompletionChunk) -> Iterator[bytes]:
+    def handle(self, chunk: ChatCompletionChunk | Heartbeat) -> Iterator[bytes]:
         if self.terminated:
+            return
+
+        if isinstance(chunk, Heartbeat):
+            yield format_sse({"type": "ping"})
             return
 
         if not self.started:
@@ -229,7 +235,7 @@ def _merge_usage(
 
 
 async def translate_stream(
-    stream: ClosableAsyncStream[ChatCompletionChunk],
+    stream: AsyncGenerator[ChatCompletionChunk | Heartbeat, None],
     requested_model: str,
     translation_state: TranslationState,
 ) -> AsyncIterator[bytes]:
@@ -240,6 +246,5 @@ async def translate_stream(
         state,
         state.handle,
         on_finalize=state.finalize,
-        log_context="Chat Completions",
     ):
         yield chunk

@@ -77,7 +77,7 @@ def _to_anthropic_content_blocks(
     content: list[AnthropicContentBlock] = []
 
     extras = parse_extras(message.model_extra)
-    if thinking := to_anthropic_thinking_block(extras.custom_content):
+    if thinking := to_anthropic_thinking_block(message, extras.custom_content):
         content.append(thinking)
 
     content.extend(
@@ -100,6 +100,7 @@ def _text_block(text: str) -> TextBlock:
 
 
 def to_anthropic_thinking_block(
+    message: ChatCompletionMessage,
     custom_content: CustomContent | None,
 ) -> ThinkingBlock | None:
     if block := get_claude_thinking_block(custom_content):
@@ -108,8 +109,13 @@ def to_anthropic_thinking_block(
             thinking=block.thinking or "",
             signature=block.signature or "",
         )
+
+    if text := (message.model_extra or {}).get("reasoning_content"):
+        return ThinkingBlock(type="thinking", thinking=text, signature="")
+
     if text := get_dial_reasoning_content(custom_content):
         return ThinkingBlock(type="thinking", thinking=text, signature="")
+
     return None
 
 

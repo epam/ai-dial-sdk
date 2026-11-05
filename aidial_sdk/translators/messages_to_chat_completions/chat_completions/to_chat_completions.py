@@ -51,6 +51,7 @@ from aidial_sdk.chat_completion.request import Function as SdkFunction
 from aidial_sdk.chat_completion.request import Message as SdkMessage
 from aidial_sdk.chat_completion.request import Tool as SdkTool
 from aidial_sdk.chat_completion.request import ToolChoice as SdkToolChoice
+from aidial_sdk.exceptions import InvalidRequestError
 from aidial_sdk.translators.messages_to_chat_completions.chat_completions.cache_breakpoints import (
     to_dial_cache_breakpoint,
 )
@@ -59,10 +60,6 @@ from aidial_sdk.translators.messages_to_chat_completions.chat_completions.reason
 )
 from aidial_sdk.translators.messages_to_chat_completions.chat_completions.system_turns import (
     visible_messages,
-)
-from aidial_sdk.translators.messages_to_chat_completions.errors import (
-    AnthropicErrorType,
-    AnthropicHTTPError,
 )
 from aidial_sdk.translators.messages_to_chat_completions.translation_state import (
     TranslationState,
@@ -188,9 +185,8 @@ def _to_dial_messages(
             case "system":
                 continue
             case unsupported:
-                raise AnthropicHTTPError(
-                    AnthropicErrorType.INVALID_REQUEST,
-                    f"Unsupported message role: {unsupported}",
+                raise InvalidRequestError(
+                    f"Unsupported message role: {unsupported}"
                 )
 
         controls = _cache_controls(message["content"])
@@ -523,9 +519,7 @@ def _image_part(block: BetaImageBlockParam) -> MessageContentPart | None:
                 type="image_url", image_url=ImageURL(url=source["url"])
             )
         case "file":
-            raise AnthropicHTTPError(
-                AnthropicErrorType.INVALID_REQUEST, _FILES_API_UNSUPPORTED
-            )
+            raise InvalidRequestError(_FILES_API_UNSUPPORTED)
         case unsupported:
             log.warning(f"Dropping image block with source type: {unsupported}")
             return None
@@ -556,15 +550,12 @@ def _document_parts(
         case "content":
             return _document_content_parts(source["content"])
         case "url":
-            raise AnthropicHTTPError(
-                AnthropicErrorType.INVALID_REQUEST,
+            raise InvalidRequestError(
                 "Unsupported document source type 'url': "
-                "a Chat Completions file part has no URL field",
+                "a Chat Completions file part has no URL field"
             )
         case "file":
-            raise AnthropicHTTPError(
-                AnthropicErrorType.INVALID_REQUEST, _FILES_API_UNSUPPORTED
-            )
+            raise InvalidRequestError(_FILES_API_UNSUPPORTED)
         case unsupported:
             log.warning(
                 f"Dropping document block with source type: {unsupported}"
