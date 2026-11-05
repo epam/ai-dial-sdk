@@ -1,5 +1,6 @@
 import logging
 
+from starlette.datastructures import Headers
 from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from aidial_sdk.utils.logging import logger as log
@@ -44,14 +45,29 @@ class LoggingMiddleware:
                     log.debug(f"request: {_one_line(b''.join(request_chunks))}")
             return message
 
+        # A compressed body, e.g. relayed as is from an upstream, isn't text
+        encoding = "identity"
+
         async def send_wrapper(message: Message) -> None:
-            if message["type"] == "http.response.body" and (
+            nonlocal encoding
+            if message["type"] == "http.response.start":
+                headers = Headers(raw=message.get("headers", []))
+                encoding = headers.get("content-encoding", "identity")
+            elif message["type"] == "http.response.body" and (
                 body := message.get("body", b"")
             ):
-                if message.get("more_body", False):
-                    log.debug(f"response chunk: {_as_text(body).rstrip()}")
+                more_body = message.get("more_body", False)
+                if encoding != "identity":
+                    text = f"<{encoding}-encoded, {len(body)} bytes>"
+                elif more_body:
+                    text = _as_text(body).rstrip()
                 else:
-                    log.debug(f"response: {_one_line(body)}")
+                    text = _one_line(body)
+                log.debug(
+                    f"response chunk: {text}"
+                    if more_body
+                    else f"response: {text}"
+                )
             await send(message)
 
         await self.app(scope, receive_wrapper, send_wrapper)
