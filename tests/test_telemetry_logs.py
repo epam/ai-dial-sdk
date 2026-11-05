@@ -6,6 +6,10 @@ import sys
 
 _ANSI = re.compile(r"\x1b\[[0-9;]*m")
 
+# What openai does on import with OPENAI_LOG=debug: a root stderr handler in
+# its own format, "- app:NN -"
+_THIRD_PARTY_ROOT_HANDLER = 'logging.basicConfig(format="[%(asctime)s - %(name)s:%(lineno)d - %(levelname)s] %(message)s")'
+
 
 def run(
     logs: str,
@@ -226,10 +230,9 @@ def test_correlation_takes_over_third_party_handler():
     # must remove it so records render in OTel's format, not openai's "- app:NN -".
     lines = run(
         emit("hello"),
-        preamble="import openai  # grabs root stderr handler on import",
+        preamble=_THIRD_PARTY_ROOT_HANDLER,
         telemetry=_CORRELATION,
         env={
-            "OPENAI_LOG": "debug",
             "OTEL_PYTHON_LOG_FORMAT": "OTELFMT %(levelname)s trace=%(otelTraceID)s %(message)s",
         },
     )
@@ -354,9 +357,8 @@ def test_configure_root_logger_takes_over_third_party_handler():
     # SDK format instead of openai's "- app:NN -".
     lines = run(
         emit("hello", logger="app"),
-        preamble="import openai  # grabs root stderr handler on import",
+        preamble=_THIRD_PARTY_ROOT_HANDLER,
         root_logger=True,
-        env={"OPENAI_LOG": "debug"},
     )
     assert len(lines) == 1
     assert "| app |" in lines[0] and lines[0].endswith("| hello")

@@ -77,7 +77,20 @@ class PathFilter(logging.Filter):
 class DIALApp(FastAPI):
     _allow_extra_request_fields: bool
     _dial_url: str | None
-    _v1_handlers: dict[str, dict[str, Handler]]
+
+    _generic_handlers: dict[str, dict[str, Handler]]
+    """
+    Request handlers for endpoints that do not allow to distinguish deployments in the path.
+    A dictionary from such a deployment-id-less endpoint to the handlers for each deployment:
+
+    /openai/v1/chat/completions:
+        gpt-5.4: handler1
+        gpt-5.5: handler2
+    /openai/v1/embeddings:
+        ada-embeddings-2024-10-10: handler3
+    ...
+    """
+
     _reset_otel_context: Callable[[], AbstractContextManager[None]]
 
     def __init__(
@@ -104,7 +117,7 @@ class DIALApp(FastAPI):
 
         self._allow_extra_request_fields = allow_extra_request_fields
         self._dial_url = dial_url
-        self._v1_handlers = {}
+        self._generic_handlers = {}
         self._reset_otel_context = nullcontext
 
         self.configure_telemetry(telemetry_config)
@@ -175,9 +188,9 @@ class DIALApp(FastAPI):
             methods=["POST"],
         )
 
-        self._add_v1_route(
+        self._add_generic_route(
             deployment_name,
-            "embeddings",
+            "/openai/v1/embeddings",
             self._embeddings(None, impl),
             methods=["POST"],
         )
@@ -203,8 +216,11 @@ class DIALApp(FastAPI):
         for endpoint, handler, methods in self._chat_completion_handlers(
             None, impl, heartbeat_interval
         ):
-            self._add_v1_route(
-                deployment_name, endpoint, handler, methods=methods
+            self._add_generic_route(
+                deployment_name,
+                f"/openai/v1/{endpoint}",
+                handler,
+                methods=methods,
             )
 
         return self
@@ -258,7 +274,7 @@ class DIALApp(FastAPI):
                 ["GET"],
             )
 
-    def _add_v1_route(
+    def _add_generic_route(
         self,
         deployment_name: str,
         endpoint: str,
@@ -266,21 +282,16 @@ class DIALApp(FastAPI):
         *,
         methods: list[str],
     ) -> None:
-        """The /openai/v1 endpoints are shared by all the deployments of
-        the application, so they are dispatched by the deployment id
-        resolved from the request headers."""
-
-        if endpoint not in self._v1_handlers:
-            self._v1_handlers[endpoint] = {}
+        if endpoint not in self._generic_handlers:
+            self._generic_handlers[endpoint] = {}
             self.add_api_route(
-                f"/openai/v1/{endpoint}",
-                self._v1_dispatcher(endpoint),
+                endpoint,
+                self._generic_dispatcher(endpoint),
                 methods=methods,
             )
+        self._generic_handlers[endpoint][deployment_name] = handler
 
-        self._v1_handlers[endpoint][deployment_name] = handler
-
-    def _v1_dispatcher(self, endpoint: str) -> Handler:
+    def _generic_dispatcher(self, endpoint: str) -> Handler:
         async def _handler(original_request: Request) -> Response:
             deployment_id = get_upstream_deployment_id(
                 original_request.headers, None
@@ -302,7 +313,7 @@ class DIALApp(FastAPI):
     def _get_handler(
         self, endpoint: str, deployment_id: str, request: Request
     ) -> Handler | None:
-        handlers = self._v1_handlers[endpoint]
+        handlers = self._generic_handlers[endpoint]
 
         if (handler := handlers.get(deployment_id)) is not None:
             return handler

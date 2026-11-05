@@ -3,7 +3,11 @@ from enum import Enum
 import nox
 
 nox.options.reuse_existing_virtualenvs = True
-nox.options.sessions = ["test_all", "test_header_propagation"]
+nox.options.sessions = [
+    "test_without_translators",
+    "test_translators",
+    "test_header_propagation",
+]
 
 SRC = ["aidial_sdk", "tests", "noxfile.py", "examples"]
 
@@ -45,28 +49,70 @@ class UsePydanticV2(Enum):
 
 _python_matrix = nox.session(python=["3.11", "3.12", "3.13"])
 
-
-@_python_matrix
 # Testing against earliest and latest supported versions of the dependencies
-@nox.parametrize(
-    "pydantic",
-    [
-        ("1.10.17", UsePydanticV2.NO),
-        ("2.8.2", UsePydanticV2.NO),
-        ("2.8.2", UsePydanticV2.YES),
-        ("2.13.1", UsePydanticV2.NO),
-        ("2.13.1", UsePydanticV2.YES),
-    ],
-)
-@nox.parametrize("httpx", ["0.25.0", "0.27.0"])
-def test_all(
-    session: nox.Session, pydantic: tuple[str, UsePydanticV2], httpx: str
+_PYDANTIC_MATRIX = [
+    ("1.10.17", UsePydanticV2.NO),
+    ("2.8.2", UsePydanticV2.NO),
+    ("2.8.2", UsePydanticV2.YES),
+    ("2.13.1", UsePydanticV2.NO),
+    ("2.13.1", UsePydanticV2.YES),
+]
+_HTTPX_MATRIX = ["0.25.0", "0.27.0"]
+
+
+def _run_tests(
+    session: nox.Session,
+    pydantic: tuple[str, UsePydanticV2],
+    httpx: str,
+    *,
+    extras: list[str],
+    pytest_args: list[str],
 ) -> None:
-    session.run("poetry", "install", "--all-extras", external=True)
+    session.run(
+        "poetry", "install", *(f"--extras={e}" for e in extras), external=True
+    )
     session.install(f"pydantic=={pydantic[0]}", f"httpx=={httpx}")
     session.install(*_PYDANTIC_DEPS[pydantic[0]])
     session.run(
-        "pytest", *session.posargs, env={"PYDANTIC_V2": str(pydantic[1].value)}
+        "pytest",
+        *pytest_args,
+        *session.posargs,
+        env={"PYDANTIC_V2": str(pydantic[1].value)},
+    )
+
+
+@_python_matrix
+@nox.parametrize("pydantic", _PYDANTIC_MATRIX)
+@nox.parametrize("httpx", _HTTPX_MATRIX)
+def test_without_translators(
+    session: nox.Session, pydantic: tuple[str, UsePydanticV2], httpx: str
+) -> None:
+    """Runs all the tests but the translators', without the translators extra"""
+    _run_tests(
+        session,
+        pydantic,
+        httpx,
+        extras=["telemetry", "httpx"],
+        pytest_args=["--ignore=tests/translators"],
+    )
+
+
+@_python_matrix
+# The translators require Pydantic v2
+@nox.parametrize(
+    "pydantic", [p for p in _PYDANTIC_MATRIX if p[1] is UsePydanticV2.YES]
+)
+@nox.parametrize("httpx", _HTTPX_MATRIX)
+def test_translators(
+    session: nox.Session, pydantic: tuple[str, UsePydanticV2], httpx: str
+) -> None:
+    """Runs the translators' tests with the translators extra only"""
+    _run_tests(
+        session,
+        pydantic,
+        httpx,
+        extras=["translators"],
+        pytest_args=["tests/translators"],
     )
 
 
