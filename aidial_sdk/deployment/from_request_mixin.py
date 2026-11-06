@@ -44,14 +44,24 @@ def get_upstream_deployment_id(
     return (
         headers.get(DIAL_OVERRIDE_NAME)
         or deployment_id
-        or get_client_deployment_id(headers)
+        or _get_dial_deployment_id(headers)
     )
 
 
-def get_client_deployment_id(headers: Mapping[str, str]) -> str:
+def get_client_deployment_id(
+    headers: Mapping[str, str], deployment_id: str | None
+) -> str:
     """The client-facing deployment id that a DIAL application is expected
     to return as a model parameter in the response."""
 
+    # NOTE: Once https://github.com/epam/ai-dial-core/issues/2243 is fixed,
+    # this could be replaced with just _get_dial_deployment_id.
+    return headers.get(DIAL_DEPLOYMENT_ID) or get_upstream_deployment_id(
+        headers, deployment_id
+    )
+
+
+def _get_dial_deployment_id(headers: Mapping[str, str]) -> str:
     if (deployment_id := headers.get(DIAL_DEPLOYMENT_ID)) is None:
         raise InternalServerError(
             f"The request headers are missing {DIAL_DEPLOYMENT_ID} header."

@@ -101,13 +101,14 @@ _endpoints = pytest.mark.parametrize(
 )
 
 # (base path, extra headers, expected deployment_id)
-# DIAL Core always sends the deployment id header
 _CONDITIONS: list[tuple[str, dict[str, str], str]] = [
+    (_DEPLOYMENTS_PATH, {}, _DEPLOYMENT_NAME),
     (
         _DEPLOYMENTS_PATH,
         {DIAL_DEPLOYMENT_ID: _HEADER_DEPLOYMENT_ID},
         _DEPLOYMENT_NAME,
     ),
+    (_DEPLOYMENTS_PATH, {DIAL_OVERRIDE_NAME: _OVERRIDE_NAME}, _OVERRIDE_NAME),
     (
         _DEPLOYMENTS_PATH,
         {
@@ -121,6 +122,7 @@ _CONDITIONS: list[tuple[str, dict[str, str], str]] = [
         {DIAL_DEPLOYMENT_ID: _HEADER_DEPLOYMENT_ID},
         _HEADER_DEPLOYMENT_ID,
     ),
+    (_V1_PATH, {DIAL_OVERRIDE_NAME: _OVERRIDE_NAME}, _OVERRIDE_NAME),
     (
         _V1_PATH,
         {
@@ -135,9 +137,12 @@ _conditions = pytest.mark.parametrize(
     "base_path, headers, expected",
     _CONDITIONS,
     ids=[
+        "path",
         "path+deployment-id-header",
+        "path+override-name-header",
         "path+both-headers",
         "v1+deployment-id-header",
+        "v1+override-name-header",
         "v1+both-headers",
     ],
 )
