@@ -27,11 +27,11 @@ from openai.types.responses.response import IncompleteDetails
 from openai.types.responses.response_output_text import AnnotationURLCitation
 
 from aidial_sdk.exceptions import HTTPException as DIALException
-from aidial_sdk.translators.messages_to_chat_completions.chat_completions.from_chat_completions import (
-    to_anthropic_web_search_blocks,
-)
-from aidial_sdk.translators.messages_to_chat_completions.translation_state import (
+from aidial_sdk.translators._messages.translation_state import (
     TranslationState,
+)
+from aidial_sdk.translators._messages.web_search import (
+    to_anthropic_web_search_blocks,
 )
 from aidial_sdk.translators.messages_to_responses.reasoning import (
     to_anthropic_thinking_block,

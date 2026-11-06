@@ -4,7 +4,7 @@ from typing import Any, cast
 
 from anthropic.types.beta.message_create_params import MessageCreateParams
 
-from aidial_sdk.translators.messages_to_chat_completions.translation_state import (
+from aidial_sdk.translators._messages.translation_state import (
     TranslationState,
 )
 from aidial_sdk.translators.messages_to_responses.to_responses import (

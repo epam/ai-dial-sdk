@@ -5,7 +5,7 @@ import pytest
 from openai.types.responses import Response
 
 from aidial_sdk.exceptions import HTTPException as DIALException
-from aidial_sdk.translators.messages_to_chat_completions.translation_state import (
+from aidial_sdk.translators._messages.translation_state import (
     TranslationState,
 )
 from aidial_sdk.translators.messages_to_responses.from_responses import (

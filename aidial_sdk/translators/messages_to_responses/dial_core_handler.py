@@ -1,6 +1,5 @@
-from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
+from collections.abc import AsyncIterator, Iterator
 from contextlib import contextmanager
-from typing import TypeVar
 
 import httpx
 from fastapi import Request
@@ -9,16 +8,12 @@ from fastapi.responses import Response, StreamingResponse
 from aidial_sdk._errors import Handler
 from aidial_sdk.deployment.from_request_mixin import get_client_deployment_id
 from aidial_sdk.exceptions import HTTPException as DIALException
-from aidial_sdk.translators.messages_to_chat_completions.backend.http import (
+from aidial_sdk.translators._messages.dial_core import (
+    ClientFactory,
     forwarded_headers,
-)
-from aidial_sdk.translators.messages_to_chat_completions.settings import (
     get_dial_url,
 )
 from aidial_sdk.utils.logging import logger as log
-
-ClientT = TypeVar("ClientT")
-ClientFactory = Callable[[Request], Awaitable[ClientT]] | ClientT
 
 
 def dial_core_handler(get_client: ClientFactory[httpx.AsyncClient]) -> Handler:

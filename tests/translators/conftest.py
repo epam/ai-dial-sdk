@@ -6,7 +6,7 @@ from aidial_sdk._pydantic import PYDANTIC_V2
 collect_ignore = (
     []
     if PYDANTIC_V2
-    else ["messages_to_chat_completions", "messages_to_responses"]
+    else ["_messages", "messages_to_chat_completions", "messages_to_responses"]
 )
 
 

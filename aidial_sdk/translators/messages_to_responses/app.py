@@ -6,8 +6,8 @@ from fastapi.responses import Response
 
 from aidial_sdk._errors import Handler, error_handler
 from aidial_sdk.exceptions import ResourceNotFoundError
-from aidial_sdk.translators.messages_to_responses.dial_core import (
-    ClientFactory,
+from aidial_sdk.translators._messages.dial_core import ClientFactory
+from aidial_sdk.translators.messages_to_responses.dial_core_handler import (
     dial_core_handler,
 )
 from aidial_sdk.translators.messages_to_responses.messages_handler import (

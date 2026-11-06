@@ -3,7 +3,7 @@ import logging
 import pytest
 
 from aidial_sdk.exceptions import InvalidRequestError
-from aidial_sdk.translators.messages_to_chat_completions.translation_state import (
+from aidial_sdk.translators._messages.translation_state import (
     TranslationState,
 )
 from tests.translators.messages_to_responses.helpers import (
@@ -746,7 +746,7 @@ class TestReasoning:
             convert({"output_config": {"effort": "extreme"}, **user("Hi")})
         assert e.value.message == (
             "Cannot convert Anthropic Messages API reasoning effort extreme "
-            "to OpenAI Chat Completions API reasoning effort"
+            "to an OpenAI reasoning effort"
         )
 
 

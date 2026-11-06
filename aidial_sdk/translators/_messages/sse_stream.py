@@ -35,6 +35,13 @@ from aidial_sdk.utils.logging import logger as log
 _T = TypeVar("_T")
 
 
+class Heartbeat:
+    """Yielded by a stream for each heartbeat interval it was idle."""
+
+
+HEARTBEAT = Heartbeat()
+
+
 AnthropicSSEEvent = (
     RawMessageStartEvent
     | RawContentBlockStartEvent

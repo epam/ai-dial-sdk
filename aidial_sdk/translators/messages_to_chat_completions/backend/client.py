@@ -3,14 +3,9 @@ from typing import Protocol
 
 from openai.types.chat import ChatCompletion, ChatCompletionChunk
 
+from aidial_sdk.translators._messages.sse_stream import Heartbeat
+
 Headers = list[tuple[str, str]]
-
-
-class Heartbeat:
-    """Yielded by a chat stream for each heartbeat interval it was idle."""
-
-
-HEARTBEAT = Heartbeat()
 
 
 class ChatClient(Protocol):

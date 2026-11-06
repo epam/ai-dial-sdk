@@ -2,7 +2,7 @@ import pytest
 from anthropic.types import Usage
 
 from aidial_sdk.exceptions import InternalServerError
-from aidial_sdk.translators.messages_to_chat_completions.sse_stream import (
+from aidial_sdk.translators._messages.sse_stream import (
     AnthropicStreamState,
     run_sse_stream,
 )

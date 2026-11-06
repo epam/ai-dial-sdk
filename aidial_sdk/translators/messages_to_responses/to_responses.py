@@ -39,13 +39,13 @@ from openai.types.responses.response_input_message_content_list_param import (
 from openai.types.shared_params import Reasoning
 
 from aidial_sdk.exceptions import InvalidRequestError
-from aidial_sdk.translators.messages_to_chat_completions.chat_completions.reasoning import (
+from aidial_sdk.translators._messages.effort import (
     resolve_effort,
 )
-from aidial_sdk.translators.messages_to_chat_completions.chat_completions.system_turns import (
+from aidial_sdk.translators._messages.system_turns import (
     visible_messages,
 )
-from aidial_sdk.translators.messages_to_chat_completions.translation_state import (
+from aidial_sdk.translators._messages.translation_state import (
     TranslationState,
 )
 from aidial_sdk.translators.messages_to_responses.reasoning import (
