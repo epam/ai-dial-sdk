@@ -218,13 +218,12 @@ class _ResponsesToAnthropicStream(AnthropicStreamState):
     def _on_item_done(
         self, event: ResponseOutputItemDoneEvent
     ) -> Iterator[bytes]:
-        key: _ItemKey
         match event.item:
             case ResponseFunctionToolCall(type="function_call"):
-                key = ("function", event.output_index)
+                if not self.is_open(("function", event.output_index)):
+                    return
                 if (
-                    self.is_open(key)
-                    and event.output_index not in self._streamed_arguments
+                    event.output_index not in self._streamed_arguments
                     and event.item.arguments
                 ):
                     # The arguments an upstream sent without the deltas
@@ -234,11 +233,11 @@ class _ResponsesToAnthropicStream(AnthropicStreamState):
                             partial_json=event.item.arguments,
                         )
                     )
-                if self.is_open(key):
-                    yield from self.close_block()
+                yield from self.close_block()
             case ResponseReasoningItem(type="reasoning"):
-                key = ("reasoning", event.output_index)
-                yield from self._on_reasoning_done(key, event.item)
+                yield from self._on_reasoning_done(
+                    ("reasoning", event.output_index), event.item
+                )
             case ResponseOutputMessage(type="message"):
                 for block in to_anthropic_citation_blocks(
                     event.item, self._seen_urls
