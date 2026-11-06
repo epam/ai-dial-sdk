@@ -59,7 +59,7 @@ See the [mounting and DIAL Core configuration example](../README.md#anthropic-me
 | `DIAL_API_VERSION` | `2025-01-01-preview` | `api-version` sent to Core by the legacy endpoint only |
 | `DIAL_SDK_LOG` | `WARNING` | Level of the `aidial_sdk` logger the translator logs to (see [logging](logging.md)). `DEBUG` logs inbound request bodies and outgoing responses or SSE chunks |
 
-The deployment is taken from the `x-dial-deployment-id` header that DIAL Core sets, falling back to the body's `model`.
+The deployment is taken from the `x-dial-deployment-id` header that DIAL Core sets, falling back to the `x-dial-override-name` header.
 
 Only these inbound headers are forwarded to Core, the rest are not:
 
