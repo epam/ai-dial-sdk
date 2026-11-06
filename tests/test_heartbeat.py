@@ -25,6 +25,7 @@ So we resort here to testing purely the output of the application and check the 
 """
 
 import asyncio
+from collections.abc import AsyncIterator
 from contextlib import contextmanager
 from unittest.mock import patch
 
@@ -33,6 +34,7 @@ from pydantic import BaseModel
 
 from aidial_sdk.application import DIALApp
 from aidial_sdk.utils.streaming import add_heartbeat as original_add_heartbeat
+from aidial_sdk.utils.streaming import with_heartbeat
 from tests.applications.idle import IdleApplication
 from tests.utils.chunks import check_sse_stream, create_single_choice_chunk
 from tests.utils.client import create_test_client
@@ -58,7 +60,7 @@ def content(content: str):
 
 @contextmanager
 def mock_add_heartbeat(**extra_kwargs):
-    with patch("aidial_sdk.application.add_heartbeat") as mock:
+    with patch("aidial_sdk.utils.streaming.add_heartbeat") as mock:
 
         def _updated_add_heartbeat(*args, **kwargs):
             return original_add_heartbeat(*args, **{**kwargs, **extra_kwargs})
@@ -208,3 +210,16 @@ async def test_heartbeat(test_case: TestCase):
         if test_case.heartbeat_interval is not None:
             await asyncio.sleep(test_case.heartbeat_interval * 2)
             assert beats == expected_beats
+
+
+async def test_a_zero_heartbeat_interval_sends_no_heartbeats():
+    async def _idle_between_items() -> AsyncIterator[str]:
+        yield "item 1"
+        await asyncio.sleep(0.05)
+        yield "item 2"
+
+    stream = with_heartbeat(
+        _idle_between_items(), heartbeat_interval=0, heartbeat=BEAT
+    )
+
+    assert [item async for item in stream] == ["item 1", "item 2"]

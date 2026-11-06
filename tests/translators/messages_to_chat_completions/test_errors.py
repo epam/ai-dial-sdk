@@ -35,6 +35,7 @@ async def _core_error(status: int, body: dict | str) -> DIALException:
             client = ChatClientHttp(
                 core_v1_client("http://core", http_client),
                 core_headers={},
+                heartbeat_interval=None,
             )
             with pytest.raises(DIALException) as e:
                 await client.create_block({})

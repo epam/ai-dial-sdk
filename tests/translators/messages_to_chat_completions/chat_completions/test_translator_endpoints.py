@@ -1,3 +1,4 @@
+import asyncio
 import json
 import logging
 from collections.abc import AsyncIterator, Iterator
@@ -13,7 +14,15 @@ from aidial_sdk.translators.messages_to_chat_completions import (
     ClientFactory,
     mount_translator,
 )
+from aidial_sdk.translators.messages_to_chat_completions.backend.client import (
+    HEARTBEAT,
+)
+from aidial_sdk.translators.messages_to_chat_completions.backend.http import (
+    ChatClientHttp,
+    core_v1_client,
+)
 from tests.translators.messages_to_chat_completions.helpers import (
+    chunk,
     features_header,
     parse_anthropic_sse,
 )
@@ -1059,3 +1068,32 @@ async def test_the_v1_endpoint_sends_no_api_version(
     route = mock_core.post(_CORE_PATH).respond(json=_RESPONSE_OBJECT)
     await client.post(_MESSAGES_URL, json=_MESSAGES_BODY)
     assert "api-version" not in route.calls.last.request.url.params
+
+
+@pytest.mark.virtual_clock
+async def test_a_heartbeat_is_yielded_while_dial_core_is_idle(
+    core_client: httpx.AsyncClient, mock_core: respx.MockRouter
+):
+    # The standalone translator reads the interval from the env var at import
+    # time, so the backend is created directly
+    hello, there = chunk({"content": "Hello"}), chunk({"content": " there"})
+
+    class _IdleBetweenChunks(httpx.AsyncByteStream):
+        async def __aiter__(self) -> AsyncIterator[bytes]:
+            yield f"data: {hello.model_dump_json()}\n\n".encode()
+            await asyncio.sleep(2)
+            yield f"data: {there.model_dump_json()}\n\n".encode()
+            yield b"data: [DONE]\n\n"
+
+    mock_core.post(_CORE_PATH).respond(
+        stream=_IdleBetweenChunks(), content_type="text/event-stream"
+    )
+    backend = ChatClientHttp(
+        core_v1_client(_CORE, core_client),
+        core_headers={},
+        heartbeat_interval=1.5,
+    )
+
+    stream = await backend.create_stream({"stream": True})
+
+    assert [item async for item in stream] == [hello, HEARTBEAT, there]
