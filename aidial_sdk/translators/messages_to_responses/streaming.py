@@ -38,12 +38,12 @@ from aidial_sdk.translators._messages.translation_state import (
     TranslationState,
 )
 from aidial_sdk.translators.messages_to_responses.from_responses import (
-    ERROR_STATUS_CODES,
     from_response_error,
     has_refusal,
     to_anthropic_citation_blocks,
     to_anthropic_stop_reason,
     to_anthropic_usage,
+    to_dial_exception,
 )
 from aidial_sdk.translators.messages_to_responses.reasoning import (
     to_anthropic_thinking_block,
@@ -143,14 +143,9 @@ class ResponsesToAnthropicStream(AnthropicStreamState):
                     from_response_error(failed.response.error)
                 )
             case "error":
-                error_event = ResponseErrorEvent.model_construct(**event)
+                error = ResponseErrorEvent.model_construct(**event)
                 yield from self.emit_error(
-                    DIALException(
-                        error_event.message,
-                        status_code=ERROR_STATUS_CODES.get(
-                            error_event.code or "", 500
-                        ),
-                    )
+                    to_dial_exception(error.code, error.message)
                 )
             case _:
                 pass

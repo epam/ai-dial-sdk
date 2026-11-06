@@ -210,7 +210,8 @@ Every error is Anthropic-shaped: `{"type": "error", "error": {"type": "...", "me
 | An exception of the handler | What the app's exception handler for it answers, otherwise the status of a DIAL SDK `HTTPException`, otherwise 500 |
 | DIAL Core unreachable | 502 |
 | `DIAL_URL` unset for the mount | 500 |
-| `status: "failed"` with `rate_limit_exceeded`, `server_error`, `vector_store_timeout` | 429, 500, 504 |
-| `status: "failed"` with any other code: a fault of the prompt or an image | 400 |
+| `status: "failed"` or an `error` event with `rate_limit_exceeded`, `vector_store_timeout` | 429, 504 |
+| `status: "failed"` or an `error` event with `invalid_request_error`, `context_length_exceeded`, or a code blaming the prompt or an image (`invalid_prompt`, `bio_policy`, `invalid_image`, `image_too_large`, …) | 400 |
+| `status: "failed"` or an `error` event with any other code | 500 |
 
-Once a stream has started, a failure becomes a final `error` event. An `error` event of the stream keeps its kind by its `code`: `rate_limit_exceeded` becomes `rate_limit_error`, `invalid_request_error` stays `invalid_request_error`, and anything else is `api_error`.
+Once a stream has started, a failure becomes a final `error` event of the same type.

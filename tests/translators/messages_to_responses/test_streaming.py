@@ -1,6 +1,8 @@
 from typing import Any
 from unittest.mock import ANY
 
+import pytest
+
 from aidial_sdk.translators._messages.sse_stream import (
     HEARTBEAT,
     Heartbeat,
@@ -389,13 +391,25 @@ async def test_failed_response_is_an_error_event() -> None:
     )
 
 
-async def test_error_event_is_an_error_event() -> None:
+@pytest.mark.parametrize(
+    "code, error_type",
+    [
+        ("server_error", "api_error"),
+        ("invalid_prompt", "invalid_request_error"),
+        ("rate_limit_exceeded", "rate_limit_error"),
+        (None, "api_error"),
+    ],
+    ids=["server-error", "invalid-prompt", "rate-limit", "no-code"],
+)
+async def test_error_event_is_an_error_event(
+    code: str | None, error_type: str
+) -> None:
     events = await translate(
         [
             created(),
             {
                 "type": "error",
-                "code": "server_error",
+                "code": code,
                 "message": "Oops",
                 "sequence_number": 1,
             },
@@ -403,7 +417,7 @@ async def test_error_event_is_an_error_event() -> None:
     )
     assert events[-1] == (
         "error",
-        {"type": "error", "error": {"type": "api_error", "message": "Oops"}},
+        {"type": "error", "error": {"type": error_type, "message": "Oops"}},
     )
 
 

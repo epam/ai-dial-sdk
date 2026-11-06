@@ -3,6 +3,7 @@ import json
 import logging
 from collections.abc import AsyncGenerator
 from contextlib import aclosing
+from http import HTTPStatus
 
 from anthropic.types.beta.message_create_params import MessageCreateParams
 from fastapi import Request
@@ -89,10 +90,16 @@ async def _call(handler: Handler, request: Request) -> Response:
     try:
         return await handler(request)
     except Exception as e:
-        # Answered the way the app answers it on the handler's own route
+        # Answered the way the app answers it on the handler's own route,
+        # where the handler of `Exception` serves only the unhandled ones,
+        # which the error handler of this route logs and answers itself
         handlers = request.app.exception_handlers
         exception_handler = next(
-            (handlers[cls] for cls in type(e).__mro__ if cls in handlers),
+            (
+                handlers[cls]
+                for cls in type(e).__mro__
+                if cls in handlers and cls is not Exception
+            ),
             None,
         )
         if exception_handler is None:
@@ -119,10 +126,15 @@ class _ErrorBody(BaseModel):
 
 async def _to_dial_exception(response: Response) -> DIALException:
     body = await _read_body(response)
+    if response.background is not None:
+        await response.background()
     try:
         message = _ErrorBody.model_validate_json(body).error.message
     except ValidationError:
-        message = body.decode(errors="replace")
+        message = (
+            body.decode(errors="replace")
+            or HTTPStatus(response.status_code).phrase
+        )
     return DIALException(
         message,
         status_code=response.status_code,

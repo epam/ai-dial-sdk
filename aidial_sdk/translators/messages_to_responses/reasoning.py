@@ -11,6 +11,8 @@ from openai.types.responses import (
 )
 from pydantic import BaseModel, ConfigDict, ValidationError
 
+from aidial_sdk.utils.logging import logger as log
+
 
 class _EncryptedReasoning(BaseModel):
     model_config = ConfigDict(extra="forbid")
@@ -72,7 +74,11 @@ def to_reasoning_item(
             signature
         ).dial_translator_reasoning_wrapper
     except ValidationError:
-        # Not ours: a Claude signature, which another provider can't verify
+        # E.g. a Claude signature, which another provider can't verify
+        log.debug(
+            "Dropping a thinking block: its signature isn't a reasoning item "
+            "of the Responses API"
+        )
         return None
 
     return {

@@ -263,8 +263,9 @@ class TestUsage:
         ("server_error", 500),
         ("invalid_prompt", 400),
         ("image_too_large", 400),
+        ("brand_new_code", 500),
     ],
-    ids=["rate-limit", "server-error", "invalid-prompt", "image"],
+    ids=["rate-limit", "server-error", "invalid-prompt", "image", "unknown"],
 )
 def test_failed_response_is_an_error(code: str, status_code: int) -> None:
     with pytest.raises(DIALException) as e:

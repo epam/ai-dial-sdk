@@ -58,5 +58,5 @@ def _core_errors() -> Iterator[None]:
     try:
         yield
     except httpx.HTTPError as e:
-        log.error(f"Failed to reach DIAL Core: {e}")
+        log.error(f"Failed to reach DIAL Core: {e!r}")
         raise DIALException("Failed to reach DIAL Core", status_code=502) from e

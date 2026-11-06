@@ -38,13 +38,33 @@ from aidial_sdk.translators.messages_to_responses.reasoning import (
 )
 from aidial_sdk.utils.logging import logger as log
 
-# The status codes of the errors an error type or code names; every other
-# Responses API error code names a fault of the request: its prompt or image
-ERROR_STATUS_CODES = {
-    "invalid_request_error": 400,
+# The Responses API error codes, and the error types DIAL writes into a
+# stream, that blame the request
+_REQUEST_FAULTS = (
+    "invalid_request_error",
+    "context_length_exceeded",
+    "invalid_prompt",
+    "bio_policy",
+    "invalid_image",
+    "invalid_image_format",
+    "invalid_base64_image",
+    "invalid_image_url",
+    "invalid_image_mode",
+    "image_too_large",
+    "image_too_small",
+    "image_parse_error",
+    "image_content_policy_violation",
+    "image_file_too_large",
+    "image_file_not_found",
+    "unsupported_image_media_type",
+    "empty_image_file",
+    "failed_to_download_image",
+)
+
+_ERROR_STATUS_CODES: dict[str | None, int] = {
     "rate_limit_exceeded": 429,
-    "server_error": 500,
     "vector_store_timeout": 504,
+    **dict.fromkeys(_REQUEST_FAULTS, 400),
 }
 
 
@@ -90,12 +110,16 @@ def to_anthropic_message(
     )
 
 
+def to_dial_exception(code: str | None, message: str) -> DIALException:
+    return DIALException(
+        message, status_code=_ERROR_STATUS_CODES.get(code, 500)
+    )
+
+
 def from_response_error(error: ResponseError | None) -> DIALException:
     if error is None:
         return DIALException("The Responses API response has failed")
-    return DIALException(
-        error.message, status_code=ERROR_STATUS_CODES.get(error.code, 400)
-    )
+    return to_dial_exception(error.code, error.message)
 
 
 def has_refusal(item: ResponseOutputMessage) -> bool:

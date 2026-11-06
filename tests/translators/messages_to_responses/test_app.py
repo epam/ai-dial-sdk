@@ -7,7 +7,9 @@ import httpx
 import pytest
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
+from starlette.background import BackgroundTask
 
+from aidial_sdk import DIALApp
 from aidial_sdk.deployment._headers import DIAL_DEPLOYMENT_ID
 from aidial_sdk.exceptions import HTTPException as DIALException
 from aidial_sdk.translators.messages_to_responses import (
@@ -315,9 +317,16 @@ class TestHandlerErrors:
         }
         assert e.value.response.headers["retry-after"] == "5"
 
-    async def test_error_body_that_isnt_json_is_the_message(self) -> None:
+    @pytest.mark.parametrize(
+        "body, message",
+        [(b"Bad gateway", "Bad gateway"), (b"", "Bad Gateway")],
+        ids=["text", "empty"],
+    )
+    async def test_error_body_that_isnt_json(
+        self, body: bytes, message: str
+    ) -> None:
         def _reply(_: dict[str, Any]) -> Response:
-            return Response(b"Bad gateway", status_code=502)
+            return Response(body, status_code=502)
 
         app = create_app(ScriptedResponses(_reply))
 
@@ -326,8 +335,49 @@ class TestHandlerErrors:
 
         assert e.value.body == {
             "type": "error",
-            "error": {"type": "api_error", "message": "Bad gateway"},
+            "error": {"type": "api_error", "message": message},
         }
+
+    async def test_background_of_an_error_response_runs(self) -> None:
+        ran = False
+
+        async def _task() -> None:
+            nonlocal ran
+            ran = True
+
+        def _reply(_: dict[str, Any]) -> Response:
+            return JSONResponse(
+                {"error": {"message": "Slow down"}},
+                status_code=429,
+                background=BackgroundTask(_task),
+            )
+
+        app = create_app(ScriptedResponses(_reply))
+
+        with pytest.raises(anthropic.RateLimitError):
+            await anthropic_client(app).final_message(stream=False)
+
+        assert ran
+
+    async def test_unhandled_exception_isnt_taken_by_the_catch_all_handler(
+        self, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        def _reply(_: dict[str, Any]) -> Response:
+            raise RuntimeError("boom")
+
+        app = DIALApp()
+        expose_as_anthropic_messages(app)(
+            app.post("/openai/v1/responses")(ScriptedResponses(_reply))
+        )
+
+        with pytest.raises(anthropic.InternalServerError) as e:
+            await anthropic_client(app).final_message(stream=False)
+
+        assert e.value.body == {
+            "type": "error",
+            "error": {"type": "api_error", "message": "Internal server error"},
+        }
+        assert caplog.messages == ["Unexpected error in the request handler"]
 
     async def test_raised_exception_is_answered_by_the_app_handler(
         self,
