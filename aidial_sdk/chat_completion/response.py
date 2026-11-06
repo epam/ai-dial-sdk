@@ -70,7 +70,9 @@ class Response:
                 if self.request.stream
                 else "chat.completion"
             ),
-            model=get_client_deployment_id(request.headers),
+            model=get_client_deployment_id(
+                request.headers, request.deployment_id
+            ),
         )
 
         self._headers = []

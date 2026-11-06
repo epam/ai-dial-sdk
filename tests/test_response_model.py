@@ -1,4 +1,5 @@
 import pytest
+from starlette.testclient import TestClient
 
 from aidial_sdk import DIALApp
 from aidial_sdk.chat_completion import ChatCompletion, Request, Response
@@ -69,6 +70,21 @@ def test_the_model_of_a_block_response(model: str | None, expected_model: str):
 
     assert response.status_code == 200
     assert response.json()["model"] == expected_model
+
+
+def test_the_model_falls_back_to_the_deployment_id_without_the_header():
+    app = DIALApp().add_chat_completion(
+        _UPSTREAM_DEPLOYMENT, _ModelSetter(None)
+    )
+    client = TestClient(app, headers={"api-key": "TEST_API_KEY"})
+
+    response = client.post(
+        f"/openai/deployments/{_UPSTREAM_DEPLOYMENT}/chat/completions",
+        json={"messages": [{"role": "user", "content": "Hello"}]},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["model"] == _UPSTREAM_DEPLOYMENT
 
 
 @_MODELS
