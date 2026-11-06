@@ -26,9 +26,7 @@ def dial_core_handler(get_client: ClientFactory[httpx.AsyncClient]) -> Handler:
         body = await request.json()
         # DIAL Core routes the Responses API by the model, while the model of
         # a request DIAL Core forwards is the overrideName of the deployment
-        body["model"] = get_client_deployment_id(
-            request.headers, body.get("model")
-        )
+        body["model"] = get_client_deployment_id(request.headers, None)
         with _core_errors():
             response = await http_client.send(
                 http_client.build_request(

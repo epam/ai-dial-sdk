@@ -33,7 +33,7 @@ As with the [Chat Completions translator](messages-to-chat-translation.md#reques
 
 | Anthropic (`/v1/messages`) | Responses | Notes |
 | --- | --- | --- |
-| `model` | `model` | The handler gets it as is. DIAL Core gets the deployment from the `x-dial-deployment-id` header, falling back to the body |
+| `model` | `model` | The handler gets it as is. DIAL Core gets the deployment from the `x-dial-deployment-id` header, falling back to the `x-dial-override-name` header |
 | `messages` | `input` | See the messages section below |
 | `system` | `instructions` | Text blocks are joined with `\n\n`; other blocks are dropped with a warning. An empty system sends nothing |
 | `max_tokens` | `max_output_tokens` | A positive budget below 16, the Responses API minimum, is raised to 16 (e.g. the one-token probes of Claude Code) |
