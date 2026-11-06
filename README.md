@@ -24,6 +24,7 @@
     - [Check](#check)
   - [Endpoints](#endpoints)
   - [Anthropic Messages to Chat Completions translator](#anthropic-messages-to-chat-completions-translator)
+  - [Anthropic Messages to Responses translator](#anthropic-messages-to-responses-translator)
 - [Development](#development)
   - [Development Environment](#development-environment)
   - [Setup](#setup)
@@ -231,6 +232,86 @@ To expose a Chat Completions model under `/anthropic/v1/messages`, add an `anthr
 </details>
 
 See the [translation guide](docs/messages-to-chat-translation.md) for how request parameters, content blocks, tools, caching, usage, and errors are translated, and for the translator's limitations.
+
+---
+
+### Anthropic Messages to Responses translator
+
+The translator lets an Anthropic-native client (e.g. Claude Code) talk to a model that only speaks the [Responses API](https://platform.openai.com/docs/api-reference/responses). It converts an Anthropic Messages request into a Responses request, and converts the response, streaming or not, back into the Anthropic Messages shape. Like the [Chat Completions translator](#anthropic-messages-to-chat-completions-translator), it requires the `translators` extra and `PYDANTIC_V2=True`.
+
+The Responses request is served either by a Responses API handler of the application itself, or by DIAL Core.
+
+#### Serving by a handler of the application
+
+`expose_as_anthropic_messages` makes a Responses API handler serve `/anthropic/v1/messages` too. The handler is called in-process with the translated request and the headers of the Messages request:
+
+```python
+from fastapi import FastAPI, Request, Response
+
+from aidial_sdk.translators.messages_to_responses import expose_as_anthropic_messages
+
+app = FastAPI()
+
+
+@expose_as_anthropic_messages(app)
+@app.post("/openai/v1/responses")
+async def responses(request: Request) -> Response: ...
+```
+
+The first argument is the `FastAPI` app or `APIRouter` to add the route to, and the `path` keyword argument (`/anthropic/v1/messages` by default) configures the route. The handler must take the `Request` as its only argument. An exception it raises is answered by the app's exception handler for it, as on the handler's own route, and translated.
+
+#### Serving by DIAL Core
+
+`mount_translator` mounts a translator that calls DIAL Core back at `DIAL_URL`:
+
+```python
+import httpx
+from fastapi import FastAPI
+
+from aidial_sdk.translators.messages_to_responses import mount_translator
+
+app = FastAPI()
+mount_translator(app, httpx.AsyncClient())
+```
+
+The arguments are those of the [Chat Completions translator](#anthropic-messages-to-chat-completions-translator), with `/openaiResponses` as the default `path`.
+
+|Endpoint|Calls on DIAL Core|
+|---|---|
+|`POST /openaiResponses/anthropic/v1/messages`|`POST {DIAL_URL}/openai/v1/responses`|
+
+`DIAL_URL` must be set, otherwise the endpoint answers `500`. To expose a Responses API model under `/anthropic/v1/messages`, point the `base_url` of its `anthropicMessages` interface at the mount path:
+
+<details>
+<summary>DIAL Core config example</summary>
+
+```json
+{
+  "models": {
+    "gpt-5.5": {
+      "type": "chat",
+      "interfaces": {
+        "openaiResponses": {
+          "base_url": "${OPENAI_ADAPTER_ORIGIN}"
+        },
+        "anthropicMessages": {
+          "base_url": "${TRANSLATOR_ORIGIN}/openaiResponses"
+        }
+      },
+      "upstreams": [
+        {
+          "responsesEndpoint": "https://api.openai.com/v1/responses",
+          "key": "..."
+        }
+      ]
+    }
+  }
+}
+```
+
+</details>
+
+See the [translation guide](docs/messages-to-responses-translation.md) for how request parameters, content blocks, tools, reasoning, usage, and errors are translated, and for the translator's limitations.
 
 ---
 
