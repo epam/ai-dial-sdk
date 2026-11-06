@@ -58,7 +58,6 @@ def test_text() -> None:
             "cache_read_input_tokens": 4,
             "cache_creation_input_tokens": 0,
             "output_tokens_details": {"thinking_tokens": 2},
-            "server_tool_use": None,
         },
     }
 
@@ -227,7 +226,6 @@ class TestUsage:
             "cache_read_input_tokens": 8,
             "cache_creation_input_tokens": 2,
             "output_tokens_details": {"thinking_tokens": 0},
-            "server_tool_use": None,
         }
 
     def test_web_search_calls_are_counted(self) -> None:
@@ -244,6 +242,13 @@ class TestUsage:
                 web_search("search"),
                 web_search("search"),
                 web_search("open_page"),
+                web_search("find_in_page"),
+                # An older shape of the item, which carries no action
+                {
+                    "type": "web_search_call",
+                    "id": "ws_2",
+                    "status": "completed",
+                },
             ]
         )
         assert message["usage"] == {

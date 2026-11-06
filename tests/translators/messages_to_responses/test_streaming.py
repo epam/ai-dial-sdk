@@ -444,3 +444,17 @@ async def test_exception_in_the_stream_is_an_error_event() -> None:
             "error": {"type": "api_error", "message": "Internal server error"},
         },
     )
+
+
+async def test_web_search_calls_are_counted_in_the_usage() -> None:
+    web_search = {
+        "type": "web_search_call",
+        "id": "ws_1",
+        "status": "completed",
+        "action": {"type": "search", "query": "x"},
+    }
+    events = await translate([created(), completed([web_search])])
+    assert events[-2][1]["usage"]["server_tool_use"] == {
+        "web_search_requests": 1,
+        "web_fetch_requests": 0,
+    }

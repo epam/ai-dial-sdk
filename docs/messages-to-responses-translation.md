@@ -143,7 +143,7 @@ Output items are converted in order.
 | Responses field | Anthropic response field | Notes |
 | --- | --- | --- |
 | `id` | `id` | |
-| — | `model` | The `x-dial-deployment-id` header, falling back to the request's `model`: the upstream's `model` is not exposed |
+| — | `model` | The `x-dial-deployment-id` header, falling back to the `x-dial-override-name` header, then to the request's `model`: the upstream's `model` is not exposed |
 | `reasoning` item with text and `encrypted_content` | `{"type": "thinking", "thinking": "...", "signature": "<the reasoning item>"}` | The summary and content texts are joined with `\n\n` |
 | `reasoning` item with `encrypted_content` only | `{"type": "redacted_thinking", "data": "<the reasoning item>"}` | |
 | `reasoning` item with text only | `{"type": "thinking", "thinking": "...", "signature": ""}` | Not replayable |

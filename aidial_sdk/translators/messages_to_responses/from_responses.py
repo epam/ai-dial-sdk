@@ -24,6 +24,10 @@ from openai.types.responses import (
     ResponseUsage,
 )
 from openai.types.responses.response import IncompleteDetails
+from openai.types.responses.response_function_web_search import (
+    ActionOpenPage,
+    ActionSearch,
+)
 from openai.types.responses.response_output_text import AnnotationURLCitation
 
 from aidial_sdk.exceptions import HTTPException as DIALException
@@ -90,7 +94,7 @@ def to_anthropic_message(
             case ResponseFunctionToolCall(type="function_call"):
                 has_tool_call = True
                 content.append(
-                    to_anthropic_tool_use_block(item, translation_state)
+                    _to_anthropic_tool_use_block(item, translation_state)
                 )
             case _:
                 log.debug(f"Dropping Responses API output item: {item.type}")
@@ -110,7 +114,7 @@ def to_anthropic_message(
     )
 
 
-def to_dial_exception(code: str | None, message: str) -> DIALException:
+def from_error_code(code: str | None, message: str) -> DIALException:
     return DIALException(
         message, status_code=_ERROR_STATUS_CODES.get(code, 500)
     )
@@ -119,7 +123,7 @@ def to_dial_exception(code: str | None, message: str) -> DIALException:
 def from_response_error(error: ResponseError | None) -> DIALException:
     if error is None:
         return DIALException("The Responses API response has failed")
-    return to_dial_exception(error.code, error.message)
+    return from_error_code(error.code, error.message)
 
 
 def has_refusal(item: ResponseOutputMessage) -> bool:
@@ -166,7 +170,7 @@ def _new_citations(
     return citations
 
 
-def to_anthropic_tool_use_block(
+def _to_anthropic_tool_use_block(
     item: ResponseFunctionToolCall, translation_state: TranslationState
 ) -> ToolUseBlock:
     return ToolUseBlock(
@@ -209,27 +213,28 @@ def to_anthropic_stop_reason(
 def to_anthropic_usage(
     usage: ResponseUsage | None, output: Iterable[ResponseOutputItem]
 ) -> Usage:
+    anthropic_usage = _to_anthropic_token_usage(usage)
+
     searches = fetches = 0
     for item in output:
         match item:
             case ResponseFunctionWebSearch(type="web_search_call"):
-                match item.action.type:
-                    case "search":
+                match item.action:
+                    case ActionSearch(type="search"):
                         searches += 1
-                    case "open_page":
+                    case ActionOpenPage(type="open_page"):
                         fetches += 1
-    server_tool_use = (
-        ServerToolUsage(
+    if searches or fetches:
+        anthropic_usage.server_tool_use = ServerToolUsage(
             web_search_requests=searches, web_fetch_requests=fetches
         )
-        if searches or fetches
-        else None
-    )
 
+    return anthropic_usage
+
+
+def _to_anthropic_token_usage(usage: ResponseUsage | None) -> Usage:
     if usage is None:
-        return Usage(
-            input_tokens=0, output_tokens=0, server_tool_use=server_tool_use
-        )
+        return Usage(input_tokens=0, output_tokens=0)
 
     input_tokens = usage.input_tokens or 0
     input_details = usage.input_tokens_details
@@ -253,5 +258,4 @@ def to_anthropic_usage(
         cache_read_input_tokens=cache_read,
         cache_creation_input_tokens=cache_write,
         output_tokens_details=OutputTokensDetails(thinking_tokens=thinking),
-        server_tool_use=server_tool_use,
     )

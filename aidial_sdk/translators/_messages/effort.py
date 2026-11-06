@@ -16,9 +16,7 @@ def resolve_effort(req: MessageCreateParams) -> ReasoningEffort:
     if thinking and thinking["type"] == "disabled":
         return "none"
     if thinking and thinking["type"] == "enabled":
-        log.debug(
-            "Dropping thinking.budget_tokens: no Chat Completions equivalent"
-        )
+        log.debug("Dropping thinking.budget_tokens: no OpenAI equivalent")
     # Token budgets and qualitative effort levels have no protocol-defined
     # conversion. Leave the target's default unless effort is explicit.
     effort = _system_turn_effort(req) or (req.get("output_config") or {}).get(

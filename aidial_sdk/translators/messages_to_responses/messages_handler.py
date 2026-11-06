@@ -3,7 +3,6 @@ import json
 import logging
 from collections.abc import AsyncGenerator
 from contextlib import aclosing
-from http import HTTPStatus
 
 from anthropic.types.beta.message_create_params import MessageCreateParams
 from fastapi import Request
@@ -57,7 +56,7 @@ def to_messages_handler(responses_handler: Handler) -> Handler:
         model = get_client_deployment_id(request.headers, req.get("model"))
         response = await _call(responses_handler, with_json_body(request, body))
         if response.status_code >= 400:
-            raise await _to_dial_exception(response)
+            raise await _from_error_response(response)
 
         headers = _without_body_headers(response)
         if body["stream"]:
@@ -124,7 +123,7 @@ class _ErrorBody(BaseModel):
     error: _Error
 
 
-async def _to_dial_exception(response: Response) -> DIALException:
+async def _from_error_response(response: Response) -> DIALException:
     body = await _read_body(response)
     if response.background is not None:
         await response.background()
@@ -133,7 +132,7 @@ async def _to_dial_exception(response: Response) -> DIALException:
     except ValidationError:
         message = (
             body.decode(errors="replace")
-            or HTTPStatus(response.status_code).phrase
+            or f"The Responses API handler answered {response.status_code}"
         )
     return DIALException(
         message,

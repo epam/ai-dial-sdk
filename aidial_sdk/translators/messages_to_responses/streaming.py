@@ -38,12 +38,12 @@ from aidial_sdk.translators._messages.translation_state import (
     TranslationState,
 )
 from aidial_sdk.translators.messages_to_responses.from_responses import (
+    from_error_code,
     from_response_error,
     has_refusal,
     to_anthropic_citation_blocks,
     to_anthropic_stop_reason,
     to_anthropic_usage,
-    to_dial_exception,
 )
 from aidial_sdk.translators.messages_to_responses.reasoning import (
     to_anthropic_thinking_block,
@@ -59,7 +59,7 @@ _TextKey = tuple[str, int, int]
 _ItemKey = tuple[str, int]
 
 
-class ResponsesToAnthropicStream(AnthropicStreamState):
+class _ResponsesToAnthropicStream(AnthropicStreamState):
     def __init__(self, model: str, translation_state: TranslationState) -> None:
         super().__init__(model)
         self.started = False
@@ -145,7 +145,7 @@ class ResponsesToAnthropicStream(AnthropicStreamState):
             case "error":
                 error = ResponseErrorEvent.model_construct(**event)
                 yield from self.emit_error(
-                    to_dial_exception(error.code, error.message)
+                    from_error_code(error.code, error.message)
                 )
             case _:
                 pass
@@ -295,7 +295,7 @@ async def translate_stream(
     model: str,
     translation_state: TranslationState,
 ) -> AsyncIterator[bytes]:
-    state = ResponsesToAnthropicStream(model, translation_state)
+    state = _ResponsesToAnthropicStream(model, translation_state)
     async for chunk in run_sse_stream(
         stream, state, state.handle, on_finalize=state.finalize
     ):

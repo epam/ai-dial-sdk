@@ -319,14 +319,17 @@ class TestHandlerErrors:
 
     @pytest.mark.parametrize(
         "body, message",
-        [(b"Bad gateway", "Bad gateway"), (b"", "Bad Gateway")],
+        [
+            (b"Bad gateway", "Bad gateway"),
+            (b"", "The Responses API handler answered 529"),
+        ],
         ids=["text", "empty"],
     )
     async def test_error_body_that_isnt_json(
         self, body: bytes, message: str
     ) -> None:
         def _reply(_: dict[str, Any]) -> Response:
-            return Response(body, status_code=502)
+            return Response(body, status_code=529)
 
         app = create_app(ScriptedResponses(_reply))
 
@@ -335,7 +338,7 @@ class TestHandlerErrors:
 
         assert e.value.body == {
             "type": "error",
-            "error": {"type": "api_error", "message": message},
+            "error": {"type": "overloaded_error", "message": message},
         }
 
     async def test_background_of_an_error_response_runs(self) -> None:
