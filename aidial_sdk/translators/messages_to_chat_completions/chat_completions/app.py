@@ -47,7 +47,7 @@ async def _not_found(request: Request) -> Response:
 async def handle_anthropic_messages(
     request: Request, client: ChatClientHttp
 ) -> Response:
-    deployment = get_client_deployment_id(request.headers)
+    deployment = get_client_deployment_id(request.headers, None)
 
     try:
         req: MessageCreateParams = await request.json()
@@ -89,7 +89,7 @@ def create_anthropic_api_app(
         )
         dial_url = get_dial_url()
         if legacy:
-            deployment_id = get_client_deployment_id(request.headers)
+            deployment_id = get_client_deployment_id(request.headers, None)
             client = core_legacy_client(dial_url, deployment_id, http_client)
         else:
             client = core_v1_client(dial_url, http_client)
