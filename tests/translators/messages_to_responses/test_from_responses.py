@@ -272,3 +272,12 @@ def test_failed_response_is_an_error(code: str, status_code: int) -> None:
             [], status="failed", error={"code": code, "message": "It failed"}
         )
     assert (e.value.message, e.value.status_code) == ("It failed", status_code)
+
+
+def test_failed_response_without_an_error_is_an_internal_error() -> None:
+    with pytest.raises(DIALException) as e:
+        translate([], status="failed")
+    assert (e.value.message, e.value.status_code) == (
+        "The Responses API response has failed",
+        500,
+    )

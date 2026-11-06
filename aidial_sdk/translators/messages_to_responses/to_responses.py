@@ -160,8 +160,8 @@ def to_responses_request(
         request["temperature"] = temperature
     if (top_p := req.get("top_p")) is not None:
         request["top_p"] = top_p
-    if (tier := _SERVICE_TIERS.get(req.get("service_tier") or "")) is not None:
-        request["service_tier"] = tier
+    if (tier := req.get("service_tier")) in _SERVICE_TIERS:
+        request["service_tier"] = _SERVICE_TIERS[tier]
     if user := _to_user(req):
         request["user"] = user
 

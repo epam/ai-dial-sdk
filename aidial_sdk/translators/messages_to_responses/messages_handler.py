@@ -53,11 +53,11 @@ def to_messages_handler(responses_handler: Handler) -> Handler:
         if log.isEnabledFor(logging.DEBUG):
             log.debug(f"responses request: {json.dumps(body)}")
 
+        model = get_client_deployment_id(request.headers, req.get("model"))
         response = await _call(responses_handler, with_json_body(request, body))
         if response.status_code >= 400:
             raise await _to_dial_exception(response)
 
-        model = get_client_deployment_id(request.headers, req.get("model"))
         headers = _without_body_headers(response)
         if body["stream"]:
             return StreamingResponse(

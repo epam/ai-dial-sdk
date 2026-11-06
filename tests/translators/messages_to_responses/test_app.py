@@ -242,6 +242,28 @@ async def test_handler_body_is_closed_when_the_translation_fails() -> None:
     assert closed
 
 
+async def test_request_naming_no_deployment_doesnt_reach_the_handler() -> None:
+    handler = ScriptedResponses(replying("Hello"))
+
+    response = await _http_client(create_app(handler)).post(
+        "/anthropic/v1/messages",
+        json={
+            "max_tokens": 100,
+            "messages": [{"role": "user", "content": "Hi"}],
+        },
+    )
+
+    assert response.status_code == 500
+    assert response.json() == {
+        "type": "error",
+        "error": {
+            "type": "api_error",
+            "message": "The request headers are missing X-DIAL-DEPLOYMENT-ID header.",
+        },
+    }
+    assert handler.requests == []
+
+
 async def test_invalid_json_is_rejected() -> None:
     app = create_app(ScriptedResponses(replying("Hello")))
 

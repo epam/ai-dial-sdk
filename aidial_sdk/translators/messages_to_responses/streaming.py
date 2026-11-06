@@ -1,8 +1,11 @@
-from collections.abc import AsyncGenerator, AsyncIterator, Iterator
+from collections.abc import AsyncGenerator, AsyncIterator, Hashable, Iterator
 from typing import Any
 
 from anthropic.types import TextBlock, ThinkingBlock, ToolUseBlock
 from anthropic.types.input_json_delta import InputJSONDelta
+from anthropic.types.raw_content_block_start_event import (
+    ContentBlock as AnthropicContentBlock,
+)
 from anthropic.types.signature_delta import SignatureDelta
 from anthropic.types.text_delta import TextDelta
 from anthropic.types.thinking_delta import ThinkingDelta
@@ -136,11 +139,8 @@ class ResponsesToAnthropicStream(AnthropicStreamState):
                 yield from self._finish(incomplete)
             case "response.failed":
                 failed = ResponseFailedEvent.model_construct(**event)
-                error = failed.response.error
                 yield from self.emit_error(
-                    from_response_error(error)
-                    if error is not None
-                    else DIALException("The Responses API response has failed")
+                    from_response_error(failed.response.error)
                 )
             case "error":
                 error_event = ResponseErrorEvent.model_construct(**event)
@@ -160,9 +160,14 @@ class ResponsesToAnthropicStream(AnthropicStreamState):
             self.started = True
             yield from self.message_start_events()
 
+    def open_block(
+        self, key: Hashable, content_block: AnthropicContentBlock
+    ) -> Iterator[bytes]:
+        yield from self._start()
+        yield from super().open_block(key, content_block)
+
     def _text_delta(self, key: _TextKey, text: str) -> Iterator[bytes]:
         if not self.is_open(key):
-            yield from self._start()
             yield from self.open_block(key, TextBlock(type="text", text=""))
         yield from self.delta(TextDelta(type="text_delta", text=text))
 
@@ -173,7 +178,6 @@ class ResponsesToAnthropicStream(AnthropicStreamState):
             return
         key: _ItemKey = ("reasoning", output_index)
         if not self.is_open(key):
-            yield from self._start()
             yield from self.open_block(
                 key, ThinkingBlock(type="thinking", thinking="", signature="")
             )
@@ -191,7 +195,6 @@ class ResponsesToAnthropicStream(AnthropicStreamState):
         match event.item:
             case ResponseFunctionToolCall(type="function_call"):
                 self._has_tool_call = True
-                yield from self._start()
                 yield from self.open_block(
                     ("function", event.output_index),
                     ToolUseBlock(
@@ -245,7 +248,6 @@ class ResponsesToAnthropicStream(AnthropicStreamState):
                 for block in to_anthropic_citation_blocks(
                     event.item, self._seen_urls
                 ):
-                    yield from self._start()
                     yield from self.open_block("citation", block)
                     yield from self.close_block()
                 self._is_refusal = self._is_refusal or has_refusal(event.item)
@@ -263,7 +265,6 @@ class ResponsesToAnthropicStream(AnthropicStreamState):
                 )
             yield from self.close_block()
         elif block := to_anthropic_thinking_block(item):
-            yield from self._start()
             yield from self.open_block(key, block)
             yield from self.close_block()
 

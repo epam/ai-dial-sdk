@@ -51,7 +51,7 @@ ERROR_STATUS_CODES = {
 def to_anthropic_message(
     response: Response, model: str, translation_state: TranslationState
 ) -> Message:
-    if response.status == "failed" and response.error is not None:
+    if response.status == "failed":
         raise from_response_error(response.error)
 
     content: list[AnthropicContentBlock] = []
@@ -90,7 +90,9 @@ def to_anthropic_message(
     )
 
 
-def from_response_error(error: ResponseError) -> DIALException:
+def from_response_error(error: ResponseError | None) -> DIALException:
+    if error is None:
+        return DIALException("The Responses API response has failed")
     return DIALException(
         error.message, status_code=ERROR_STATUS_CODES.get(error.code, 400)
     )
