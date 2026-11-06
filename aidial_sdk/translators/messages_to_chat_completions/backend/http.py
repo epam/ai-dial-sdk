@@ -64,17 +64,17 @@ def core_legacy_client(
     )
 
 
+def forwarded_headers(request: Request) -> dict[str, str]:
+    return {
+        name: value
+        for name, value in request.headers.items()
+        if name.lower() in _FORWARDED_HEADERS
+    }
+
+
 def core_headers(request: Request) -> dict[str, str | Omit]:
     # Without the override the SDK sends `Authorization: Bearer -`
-    headers: dict[str, str | Omit] = {"Authorization": omit}
-    headers.update(
-        {
-            name: value
-            for name, value in request.headers.items()
-            if name.lower() in _FORWARDED_HEADERS
-        }
-    )
-    return headers
+    return {"Authorization": omit, **forwarded_headers(request)}
 
 
 # An error event in a stream has no status code, only a type or a code
