@@ -11,7 +11,6 @@ from typing import (
 from aidial_sdk.chat_completion.chunks import BaseChunkWithDefaults
 from aidial_sdk.exceptions import HTTPException as DIALException
 from aidial_sdk.utils._cancel_scope import CancelScope
-from aidial_sdk.utils.logging import log_debug
 from aidial_sdk.utils.merge_chunks import cleanup_indices, merge
 
 _DONE_MARKER = "[DONE]"
@@ -35,7 +34,6 @@ def _format_chunk(data: dict | str) -> str:
         if isinstance(data, dict)
         else data
     )
-    log_debug(data)
     return f"{data}\n\n"
 
 

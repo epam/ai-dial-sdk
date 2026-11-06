@@ -36,7 +36,7 @@ async def translate(
     stream = FakeStream(chunks)
     collected = b""
     async for event_bytes in translate_stream(
-        stream,
+        stream.generator,
         model,
         translation_state or TranslationState(),
     ):
