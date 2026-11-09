@@ -15,7 +15,7 @@ class ClosingStreamingResponse(StreamingResponse):
     def __init__(
         self,
         content: ContentStream,
-        close: Callable[[], Awaitable[object]],
+        close: Callable[[], Awaitable[None]],
         **kwargs: Any,
     ) -> None:
         super().__init__(content, **kwargs)
