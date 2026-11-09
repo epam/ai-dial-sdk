@@ -59,7 +59,7 @@ See the [mounting and DIAL Core configuration example](../README.md#anthropic-me
 | `DIAL_API_VERSION` | `2025-01-01-preview` | `api-version` sent to Core by the legacy endpoint only |
 | `DIAL_SDK_LOG` | `WARNING` | Level of the `aidial_sdk` logger the translator logs to (see [logging](logging.md)). `DEBUG` logs inbound request bodies and outgoing responses or SSE chunks |
 
-The deployment is taken from the `x-dial-deployment-id` header that DIAL Core sets, falling back to the body's `model`.
+The deployment is taken from the `x-dial-deployment-id` header that DIAL Core sets, falling back to the `x-dial-override-name` header.
 
 Only these inbound headers are forwarded to Core, the rest are not:
 
@@ -262,7 +262,9 @@ Every error is Anthropic-shaped: `{"type": "error", "error": {"type": "...", "me
 | Failure | HTTP status | `error.type` |
 | --- | --- | --- |
 | Invalid JSON, unknown role, bad effort, `image` with a `file` source, `document` with a `url` or `file` source | 400 | `invalid_request_error` |
-| Upstream 400/422, 401, 403, 404, 413, 429 | Same | `invalid_request_error`, `authentication_error`, `permission_error`, `not_found_error`, `request_too_large`, `rate_limit_error` |
+| Upstream 401, 402, 403, 404, 409, 413, 429 | Same | `authentication_error`, `billing_error`, `permission_error`, `not_found_error`, `conflict_error`, `request_too_large`, `rate_limit_error` |
+| Other upstream 4xx | Same | `invalid_request_error` |
+| Upstream 504 | Same | `timeout_error` |
 | Upstream 503 or 529 | Same | `overloaded_error` |
 | Other upstream errors | Same | `api_error` |
 | Core unreachable | 502 | `api_error` |

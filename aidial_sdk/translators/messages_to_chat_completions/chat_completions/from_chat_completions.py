@@ -1,20 +1,16 @@
 import json
-import uuid
 from typing import assert_never
 
 from anthropic.types import (
     Message,
-    ServerToolUseBlock,
     StopReason,
     TextBlock,
     ThinkingBlock,
     ToolUseBlock,
     Usage,
-    WebSearchToolResultBlock,
 )
 from anthropic.types.content_block import ContentBlock as AnthropicContentBlock
 from anthropic.types.output_tokens_details import OutputTokensDetails
-from anthropic.types.web_search_result_block import WebSearchResultBlock
 from openai.types.chat import ChatCompletion
 from openai.types.chat.chat_completion_message import (
     Annotation,
@@ -25,14 +21,17 @@ from openai.types.chat.chat_completion_message_tool_call import (
 )
 from openai.types.completion_usage import CompletionUsage, PromptTokensDetails
 
+from aidial_sdk.translators._messages.translation_state import (
+    TranslationState,
+)
+from aidial_sdk.translators._messages.web_search import (
+    to_anthropic_web_search_blocks,
+)
 from aidial_sdk.translators.messages_to_chat_completions.chat_completions.dial_extensions import (
     CustomContent,
     get_claude_thinking_block,
     get_dial_reasoning_content,
     parse_extras,
-)
-from aidial_sdk.translators.messages_to_chat_completions.translation_state import (
-    TranslationState,
 )
 from aidial_sdk.utils.logging import logger as log
 
@@ -123,35 +122,6 @@ def _citations(annotations: list[Annotation] | None) -> list[tuple[str, str]]:
     return [
         (annotation.url_citation.url, annotation.url_citation.title)
         for annotation in annotations or []
-    ]
-
-
-def to_anthropic_web_search_blocks(
-    citations: list[tuple[str, str]],
-) -> list[AnthropicContentBlock]:
-    if not citations:
-        return []
-    tool_use_id = f"srvtoolu_{uuid.uuid4().hex}"
-    return [
-        ServerToolUseBlock(
-            type="server_tool_use",
-            id=tool_use_id,
-            name="web_search",
-            input={"query": ""},
-        ),
-        WebSearchToolResultBlock(
-            type="web_search_tool_result",
-            tool_use_id=tool_use_id,
-            content=[
-                WebSearchResultBlock(
-                    type="web_search_result",
-                    url=url,
-                    title=title,
-                    encrypted_content="",
-                )
-                for url, title in citations
-            ],
-        ),
     ]
 
 

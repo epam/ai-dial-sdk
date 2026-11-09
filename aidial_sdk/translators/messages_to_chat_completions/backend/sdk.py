@@ -10,10 +10,9 @@ from aidial_sdk.chat_completion.response import (
     Response as ChatCompletionResponse,
 )
 from aidial_sdk.exceptions import HTTPException as DIALException
+from aidial_sdk.translators._messages.sse_stream import HEARTBEAT, Heartbeat
 from aidial_sdk.translators.messages_to_chat_completions.backend.client import (
-    HEARTBEAT,
     Headers,
-    Heartbeat,
 )
 from aidial_sdk.utils.streaming import (
     ResponseStream,

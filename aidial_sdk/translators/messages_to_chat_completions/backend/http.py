@@ -10,27 +10,16 @@ from openai import AsyncOpenAI, AsyncStream, Omit, omit
 from openai.types.chat import ChatCompletion, ChatCompletionChunk
 
 from aidial_sdk.exceptions import HTTPException as DIALException
+from aidial_sdk.translators._messages.dial_core import forwarded_headers
+from aidial_sdk.translators._messages.sse_stream import HEARTBEAT, Heartbeat
 from aidial_sdk.translators.messages_to_chat_completions.backend.client import (
-    HEARTBEAT,
     Headers,
-    Heartbeat,
 )
 from aidial_sdk.translators.messages_to_chat_completions.settings import (
     get_dial_api_version,
 )
 from aidial_sdk.utils.logging import logger as log
 from aidial_sdk.utils.streaming import with_heartbeat
-
-# The headers of the inbound request that DIAL Core reads when the translator
-# calls it back. Any other header is not forwarded.
-_FORWARDED_HEADERS = {
-    # Core's per-request key
-    "api-key",
-    # Prompt caching policy of the request
-    "x-dial-cache-policy",
-    # Pins the request to the same upstream
-    "x-upstream-id",
-}
 
 
 def _client(
@@ -66,15 +55,7 @@ def core_legacy_client(
 
 def core_headers(request: Request) -> dict[str, str | Omit]:
     # Without the override the SDK sends `Authorization: Bearer -`
-    headers: dict[str, str | Omit] = {"Authorization": omit}
-    headers.update(
-        {
-            name: value
-            for name, value in request.headers.items()
-            if name.lower() in _FORWARDED_HEADERS
-        }
-    )
-    return headers
+    return {"Authorization": omit, **forwarded_headers(request)}
 
 
 # An error event in a stream has no status code, only a type or a code

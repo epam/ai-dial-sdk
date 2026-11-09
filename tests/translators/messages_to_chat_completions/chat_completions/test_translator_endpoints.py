@@ -10,12 +10,12 @@ from fastapi import Request
 from httpx import ASGITransport
 
 from aidial_sdk import DIALApp
+from aidial_sdk.translators._messages.sse_stream import (
+    HEARTBEAT,
+)
 from aidial_sdk.translators.messages_to_chat_completions import (
     ClientFactory,
     mount_translator,
-)
-from aidial_sdk.translators.messages_to_chat_completions.backend.client import (
-    HEARTBEAT,
 )
 from aidial_sdk.translators.messages_to_chat_completions.backend.http import (
     ChatClientHttp,
@@ -580,7 +580,7 @@ async def test_missing_dial_url_returns_500(
         (422, "invalid_request_error"),
         (429, "rate_limit_error"),
         (529, "overloaded_error"),
-        (418, "api_error"),
+        (418, "invalid_request_error"),
     ],
 )
 async def test_upstream_error_status_mapping(

@@ -48,16 +48,21 @@ async def _core_error(status: int, body: dict | str) -> DIALException:
         (400, "invalid_request_error"),
         (422, "invalid_request_error"),
         (401, "authentication_error"),
+        (402, "billing_error"),
         (403, "permission_error"),
         (404, "not_found_error"),
+        (409, "conflict_error"),
         (413, "request_too_large"),
         (429, "rate_limit_error"),
         (500, "api_error"),
         (502, "api_error"),
         (503, "overloaded_error"),
+        (504, "timeout_error"),
         (529, "overloaded_error"),
-        (418, "api_error"),
+        (418, "invalid_request_error"),
+        (501, "api_error"),
     ],
+    ids=lambda value: str(value),
 )
 async def test_upstream_error_preserves_status_and_maps_type(
     status: int, expected: str

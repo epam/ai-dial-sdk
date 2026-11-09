@@ -2,7 +2,7 @@ import re
 
 import pytest
 
-from aidial_sdk.translators.messages_to_chat_completions.translation_state import (
+from aidial_sdk.translators._messages.translation_state import (
     TranslationState,
 )
 

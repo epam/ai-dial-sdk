@@ -16,8 +16,17 @@ from openai.types.chat import ChatCompletionChunk
 from openai.types.chat.chat_completion_chunk import Choice, ChoiceDeltaToolCall
 from openai.types.completion_usage import CompletionUsage
 
-from aidial_sdk.translators.messages_to_chat_completions.backend.client import (
+from aidial_sdk.translators._messages.sse_stream import (
+    AnthropicStreamState,
     Heartbeat,
+    format_sse,
+    run_sse_stream,
+)
+from aidial_sdk.translators._messages.translation_state import (
+    TranslationState,
+)
+from aidial_sdk.translators._messages.web_search import (
+    to_anthropic_web_search_blocks,
 )
 from aidial_sdk.translators.messages_to_chat_completions.chat_completions.dial_extensions import (
     CustomContent,
@@ -27,15 +36,6 @@ from aidial_sdk.translators.messages_to_chat_completions.chat_completions.dial_e
 from aidial_sdk.translators.messages_to_chat_completions.chat_completions.from_chat_completions import (
     to_anthropic_stop_reason,
     to_anthropic_usage,
-    to_anthropic_web_search_blocks,
-)
-from aidial_sdk.translators.messages_to_chat_completions.sse_stream import (
-    AnthropicStreamState,
-    format_sse,
-    run_sse_stream,
-)
-from aidial_sdk.translators.messages_to_chat_completions.translation_state import (
-    TranslationState,
 )
 from aidial_sdk.utils.logging import logger as log
 from aidial_sdk.utils.merge_chunks import merge

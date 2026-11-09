@@ -3,7 +3,7 @@ from openai.types.shared import ReasoningEffort
 from pydantic import TypeAdapter, ValidationError
 
 from aidial_sdk.exceptions import InvalidRequestError
-from aidial_sdk.translators.messages_to_chat_completions.chat_completions.system_turns import (
+from aidial_sdk.translators._messages.system_turns import (
     visible_messages,
 )
 from aidial_sdk.utils.logging import logger as log
@@ -16,9 +16,7 @@ def resolve_effort(req: MessageCreateParams) -> ReasoningEffort:
     if thinking and thinking["type"] == "disabled":
         return "none"
     if thinking and thinking["type"] == "enabled":
-        log.debug(
-            "Dropping thinking.budget_tokens: no Chat Completions equivalent"
-        )
+        log.debug("Dropping thinking.budget_tokens: no OpenAI equivalent")
     # Token budgets and qualitative effort levels have no protocol-defined
     # conversion. Leave the target's default unless effort is explicit.
     effort = _system_turn_effort(req) or (req.get("output_config") or {}).get(
@@ -29,7 +27,7 @@ def resolve_effort(req: MessageCreateParams) -> ReasoningEffort:
     except ValidationError:
         raise InvalidRequestError(
             f"Cannot convert Anthropic Messages API reasoning effort {effort} "
-            "to OpenAI Chat Completions API reasoning effort"
+            "to an OpenAI reasoning effort"
         ) from None
 
 

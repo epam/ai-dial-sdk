@@ -52,17 +52,17 @@ from aidial_sdk.chat_completion.request import Message as SdkMessage
 from aidial_sdk.chat_completion.request import Tool as SdkTool
 from aidial_sdk.chat_completion.request import ToolChoice as SdkToolChoice
 from aidial_sdk.exceptions import InvalidRequestError
-from aidial_sdk.translators.messages_to_chat_completions.chat_completions.cache_breakpoints import (
-    to_dial_cache_breakpoint,
-)
-from aidial_sdk.translators.messages_to_chat_completions.chat_completions.reasoning import (
+from aidial_sdk.translators._messages.effort import (
     resolve_effort,
 )
-from aidial_sdk.translators.messages_to_chat_completions.chat_completions.system_turns import (
+from aidial_sdk.translators._messages.system_turns import (
     visible_messages,
 )
-from aidial_sdk.translators.messages_to_chat_completions.translation_state import (
+from aidial_sdk.translators._messages.translation_state import (
     TranslationState,
+)
+from aidial_sdk.translators.messages_to_chat_completions.chat_completions.cache_breakpoints import (
+    to_dial_cache_breakpoint,
 )
 from aidial_sdk.utils.logging import logger as log
 
