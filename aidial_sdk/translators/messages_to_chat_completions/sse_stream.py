@@ -1,4 +1,3 @@
-import asyncio
 import uuid
 from collections.abc import (
     AsyncIterator,
@@ -7,7 +6,7 @@ from collections.abc import (
     Iterable,
     Iterator,
 )
-from typing import Any, Literal, Protocol, TypeVar
+from typing import Literal, Protocol, TypeVar
 
 import openai
 from anthropic.types import (
@@ -27,9 +26,7 @@ from anthropic.types.raw_content_block_start_event import (
     ContentBlock as AnthropicContentBlock,
 )
 from anthropic.types.raw_message_delta_event import Delta
-from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
-from starlette.types import Receive, Scope, Send
 
 from aidial_sdk.translators.messages_to_chat_completions.errors import (
     INTERNAL_ERROR_MESSAGE,
@@ -47,30 +44,6 @@ class ClosableAsyncStream(Protocol[_T_co]):
     def __aiter__(self) -> AsyncIterator[_T_co]: ...
 
     async def close(self) -> None: ...
-
-
-class ClosingStreamingResponse(StreamingResponse):
-    """Closes `stream` however the response ends: when the client leaves,
-    Starlette leaves the content suspended, and with it the connection of
-    `stream`, until the garbage collector finalizes it."""
-
-    def __init__(
-        self,
-        content: AsyncIterator[bytes],
-        stream: ClosableAsyncStream[object],
-        **kwargs: Any,
-    ) -> None:
-        super().__init__(content, **kwargs)
-        self._stream = stream
-
-    async def __call__(
-        self, scope: Scope, receive: Receive, send: Send
-    ) -> None:
-        try:
-            await super().__call__(scope, receive, send)
-        finally:
-            # Shielded: the task may be the one cancelled
-            await asyncio.shield(self._stream.close())
 
 
 class _ErrorEvent(BaseModel):

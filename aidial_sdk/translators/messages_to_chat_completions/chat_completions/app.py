@@ -36,12 +36,10 @@ from aidial_sdk.translators.messages_to_chat_completions.errors import (
 from aidial_sdk.translators.messages_to_chat_completions.settings import (
     get_dial_url,
 )
-from aidial_sdk.translators.messages_to_chat_completions.sse_stream import (
-    ClosingStreamingResponse,
-)
 from aidial_sdk.translators.messages_to_chat_completions.translation_state import (
     TranslationState,
 )
+from aidial_sdk.utils._fastapi import ClosingStreamingResponse
 from aidial_sdk.utils.logging import logger as log
 
 ClientT = TypeVar("ClientT")
@@ -74,7 +72,7 @@ async def handle_anthropic_messages(
         events = await client.create_stream(body)
         return ClosingStreamingResponse(
             translate_stream(events, deployment, translation_state),
-            events,
+            events.close,
             media_type="text/event-stream",
         )
 
