@@ -1,7 +1,8 @@
+import asyncio
 import logging
 import re
 import warnings
-from collections.abc import Callable, Coroutine, Iterator
+from collections.abc import AsyncGenerator, Callable, Coroutine, Iterator
 from contextlib import AbstractContextManager, nullcontext
 from typing import Any, Literal, TypeVar
 
@@ -61,6 +62,27 @@ configure_sdk_logger()
 RequestType = TypeVar("RequestType", bound=FromRequestMixin)
 
 Handler = Callable[[Request], Coroutine[Any, Any, Response]]
+
+
+class _ClosingStreamingResponse(StreamingResponse):
+    """Closes its content however the response ends: when the client leaves,
+    Starlette leaves the content suspended, and with it the impl running,
+    until the garbage collector finalizes it."""
+
+    def __init__(
+        self, content: AsyncGenerator[str, None], **kwargs: Any
+    ) -> None:
+        super().__init__(content, **kwargs)
+        self._content = content
+
+    async def __call__(
+        self, scope: Scope, receive: Receive, send: Send
+    ) -> None:
+        try:
+            await super().__call__(scope, receive, send)
+        finally:
+            # Shielded: the task may be the one cancelled
+            await asyncio.shield(self._content.aclose())
 
 
 class PathFilter(logging.Filter):
@@ -415,7 +437,7 @@ class DIALApp(FastAPI):
                         heartbeat_object=": heartbeat\n\n",
                     )
 
-                resp = StreamingResponse(
+                resp = _ClosingStreamingResponse(
                     await to_streaming_response(stream),
                     media_type="text/event-stream",
                 )
