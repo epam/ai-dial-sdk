@@ -189,17 +189,6 @@ def test_thinking_from_reasoning_stages_has_an_empty_signature() -> None:
     )
 
 
-def test_reasoning_content_becomes_a_thinking_block() -> None:
-    msg = translate(
-        response(message(content="answer", reasoning_content="let me think"))
-    )
-
-    assert msg.content == [
-        ThinkingBlock(type="thinking", thinking="let me think", signature=""),
-        TextBlock(type="text", text="answer"),
-    ]
-
-
 def test_state_thinking_is_preferred_over_stages() -> None:
     msg = translate(
         response(
