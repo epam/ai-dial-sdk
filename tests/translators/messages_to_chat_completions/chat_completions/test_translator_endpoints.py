@@ -1083,7 +1083,9 @@ _CHUNK = {
 }
 
 
+@pytest.mark.parametrize("chunks", [0, 1], ids=["before-start", "mid-stream"])
 async def test_core_stream_is_closed_when_the_client_leaves(
+    chunks: int,
     monkeypatch: pytest.MonkeyPatch,
     core_client: httpx.AsyncClient,
     mock_core: respx.MockRouter,
@@ -1101,6 +1103,7 @@ async def test_core_stream_is_closed_when_the_client_leaves(
         _MESSAGES_URL,
         {**_MESSAGES_BODY, "stream": True},
         {"api-key": "dummy-key", **_DEPLOYMENT_HEADERS},
+        chunks=chunks,
     )
 
     assert core_stream.closed

@@ -109,8 +109,9 @@ class EndlessApp(ChatCompletion):
 @pytest.mark.parametrize(
     "heartbeat_interval", [None, 60], ids=["no-heartbeat", "heartbeat"]
 )
-async def test_impl_stops_when_the_client_leaves_mid_stream(
-    heartbeat_interval: float | None,
+@pytest.mark.parametrize("chunks", [0, 1], ids=["before-start", "mid-stream"])
+async def test_impl_stops_when_the_client_leaves(
+    heartbeat_interval: float | None, chunks: int
 ) -> None:
     impl = EndlessApp()
     app = DIALApp().add_chat_completion(
@@ -122,6 +123,7 @@ async def test_impl_stops_when_the_client_leaves_mid_stream(
         "/openai/deployments/app/chat/completions",
         {"messages": [{"role": "user", "content": "hello"}], "stream": True},
         {"api-key": "dummy-key"},
+        chunks=chunks,
     )
 
     assert impl.finished

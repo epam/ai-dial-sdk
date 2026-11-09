@@ -7,14 +7,20 @@ from starlette.types import ASGIApp, Message
 
 
 async def serve_to_a_leaving_client(
-    app: ASGIApp, path: str, body: dict, headers: dict[str, str]
+    app: ASGIApp,
+    path: str,
+    body: dict,
+    headers: dict[str, str],
+    *,
+    chunks: int,
 ) -> None:
-    """Serves a POST request to a client that leaves after the first chunk
-    of the response body: the next `send` fails, the way it does on a closed
-    connection under the ASGI spec 2.4."""
+    """Serves a POST request to a client that leaves once it has received
+    `chunks` chunks of the response body: the next `send` fails (with 0, the
+    one of the response start), the way it does on a closed connection under
+    the ASGI spec 2.4."""
 
     received = False
-    sent_chunk = False
+    received_chunks = 0
 
     async def receive() -> Message:
         nonlocal received
@@ -29,11 +35,14 @@ async def serve_to_a_leaving_client(
         }
 
     async def send(message: Message) -> None:
-        nonlocal sent_chunk
-        if message["type"] == "http.response.body" and message.get("body"):
-            if sent_chunk:
+        nonlocal received_chunks
+        is_chunk = message["type"] == "http.response.body" and message.get(
+            "body"
+        )
+        if is_chunk or message["type"] == "http.response.start":
+            if received_chunks == chunks:
                 raise OSError("The client has left")
-            sent_chunk = True
+            received_chunks += bool(is_chunk)
 
     scope = {
         "type": "http",
