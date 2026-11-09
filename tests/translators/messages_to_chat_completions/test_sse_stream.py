@@ -1,9 +1,7 @@
 import pytest
 from anthropic.types import Usage
 
-from aidial_sdk.translators.messages_to_chat_completions.errors import (
-    AnthropicErrorType,
-)
+from aidial_sdk.exceptions import InternalServerError
 from aidial_sdk.translators.messages_to_chat_completions.sse_stream import (
     AnthropicStreamState,
     run_sse_stream,
@@ -32,11 +30,10 @@ async def test_stream_dispatches_items_finalizes_and_closes(
     chunks = [
         chunk
         async for chunk in run_sse_stream(
-            stream,
+            stream.generator,
             state,
             lambda item: [item.encode()],
             on_finalize=(lambda: [b"done"]) if finalize else None,
-            log_context="Test",
         )
     ]
     assert chunks == ([b"a", b"b", b"done"] if finalize else [b"a", b"b"])
@@ -49,11 +46,10 @@ async def test_run_sse_stream_turns_exception_into_error_event() -> None:
     chunks = [
         chunk
         async for chunk in run_sse_stream(
-            stream,
+            stream.generator,
             state,
             lambda item: [item.encode()],
             on_finalize=lambda: [b"unexpected success"],
-            log_context="Test",
         )
     ]
     assert chunks[0] == b"a"
@@ -72,12 +68,31 @@ async def test_run_sse_stream_turns_exception_into_error_event() -> None:
     assert stream.closed is True
 
 
+async def test_a_stream_left_early_is_closed() -> None:
+    stream = FakeStream(["a", "b"])
+
+    def _fail(item: str) -> list[bytes]:
+        raise RuntimeError("boom")
+
+    chunks = [
+        chunk
+        async for chunk in run_sse_stream(
+            stream.generator, AnthropicStreamState("m"), _fail
+        )
+    ]
+
+    assert [name for name, _ in parse_anthropic_sse(b"".join(chunks))] == [
+        "error"
+    ]
+    assert stream.closed
+
+
 @pytest.mark.parametrize("failed", [False, True])
 def test_terminal_stream_emits_no_more_events(failed: bool) -> None:
     state = AnthropicStreamState("m")
     if failed:
-        list(state.emit_error(AnthropicErrorType.API, "Internal server error"))
+        list(state.emit_error(InternalServerError("Internal server error")))
     else:
         list(state.final_events("end_turn", _usage()))
     assert list(state.final_events("end_turn", _usage())) == []
-    assert list(state.emit_error(AnthropicErrorType.API, "another error")) == []
+    assert list(state.emit_error(InternalServerError("another error"))) == []

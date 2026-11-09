@@ -1,14 +1,19 @@
+from collections.abc import AsyncGenerator, Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
 from urllib.parse import quote
 
 import httpx
+import openai
 from fastapi import Request
 from openai import AsyncOpenAI, AsyncStream, Omit, omit
 from openai.types.chat import ChatCompletion, ChatCompletionChunk
 
+from aidial_sdk.exceptions import HTTPException as DIALException
 from aidial_sdk.translators.messages_to_chat_completions.settings import (
     get_dial_api_version,
 )
+from aidial_sdk.utils.logging import logger as log
 
 # The headers of the inbound request that DIAL Core reads when the translator
 # calls it back. Any other header is not forwarded.
@@ -66,6 +71,66 @@ def core_headers(request: Request) -> dict[str, str | Omit]:
     return headers
 
 
+# An error event in a stream has no status code, only a type or a code
+_STREAM_ERROR_STATUS_CODES: dict[str | None, int] = {
+    "invalid_request_error": 400,
+    "rate_limit_exceeded": 429,
+}
+
+
+def _extract_error_message(e: openai.APIStatusError) -> str:
+    body = e.body
+    if isinstance(body, dict):
+        error = body.get("error")
+        if isinstance(error, dict) and isinstance(error.get("message"), str):
+            return error["message"]
+        if isinstance(error, str) and error:
+            return error
+        if isinstance(body.get("message"), str):
+            return body["message"]
+
+    if isinstance(body, str) and body.strip():
+        return body.strip()
+
+    return e.message
+
+
+def _from_core_error(e: openai.APIError) -> DIALException:
+    match e:
+        case openai.APIStatusError():
+            return DIALException(
+                _extract_error_message(e), status_code=e.status_code
+            )
+        case openai.APIConnectionError():
+            log.error(f"Failed to reach DIAL Core: {e}")
+            return DIALException("Failed to reach DIAL Core", status_code=502)
+        case _:
+            log.error(f"DIAL Core reported an error in the stream: {e}")
+            status_code = (
+                _STREAM_ERROR_STATUS_CODES.get(e.type)
+                or _STREAM_ERROR_STATUS_CODES.get(e.code)
+                or 500
+            )
+            return DIALException(e.message, status_code=status_code)
+
+
+@contextmanager
+def _core_errors() -> Iterator[None]:
+    try:
+        yield
+    except openai.APIError as e:
+        raise _from_core_error(e) from e
+
+
+async def _chunks(
+    stream: AsyncStream[ChatCompletionChunk],
+) -> AsyncGenerator[ChatCompletionChunk, None]:
+    with _core_errors():
+        async with stream:
+            async for item in stream:
+                yield item
+
+
 @dataclass
 class ChatClientHttp:
     client: AsyncOpenAI
@@ -73,20 +138,24 @@ class ChatClientHttp:
 
     async def create_stream(
         self, body: dict
-    ) -> AsyncStream[ChatCompletionChunk]:
-        return await self.client.post(
-            "/chat/completions",
-            cast_to=ChatCompletion,
-            body=body,
-            options={"headers": self.core_headers},
-            stream=True,
-            stream_cls=AsyncStream[ChatCompletionChunk],
-        )
+    ) -> AsyncGenerator[ChatCompletionChunk, None]:
+        with _core_errors():
+            stream = await self.client.post(
+                "/chat/completions",
+                cast_to=ChatCompletion,
+                body=body,
+                options={"headers": self.core_headers},
+                stream=True,
+                stream_cls=AsyncStream[ChatCompletionChunk],
+            )
+        return _chunks(stream)
 
     async def create_block(self, body: dict) -> ChatCompletion:
-        return await self.client.post(
-            "/chat/completions",
-            cast_to=ChatCompletion,
-            body=body,
-            options={"headers": self.core_headers},
-        )
+        with _core_errors():
+            response = await self.client.post(
+                "/chat/completions",
+                cast_to=ChatCompletion,
+                body=body,
+                options={"headers": self.core_headers},
+            )
+        return response
