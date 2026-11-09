@@ -2,7 +2,10 @@ import dataclasses
 from typing import Any
 
 import pytest
+from starlette.testclient import TestClient
 
+from aidial_sdk import DIALApp
+from aidial_sdk.deployment.configuration import ConfigurationRequest
 from aidial_sdk.exceptions import HTTPException
 from tests.applications.broken import (
     ImmediatelyBrokenApplication,
@@ -11,6 +14,7 @@ from tests.applications.broken import (
 from tests.applications.noop import NoopApplication
 from tests.utils.chunks import check_sse_stream, create_single_choice_chunk
 from tests.utils.client import create_app_client
+from tests.utils.constants import DEPLOYMENT_NAME
 
 DEFAULT_RUNTIME_ERROR = {
     "error": {
@@ -171,11 +175,20 @@ def test_runtime_streaming_error(test_case: ErrorTestCase):
     )
 
 
-def test_no_api_key():
-    client = create_app_client(NoopApplication(), headers={})
+@pytest.mark.parametrize(
+    "deployment, query",
+    [
+        (DEPLOYMENT_NAME, ""),
+        ("claude-anthropic", ""),
+        (DEPLOYMENT_NAME, "?source=anthropic"),
+    ],
+    ids=["plain", "anthropic-in-deployment", "anthropic-in-query"],
+)
+def test_no_api_key(deployment: str, query: str):
+    client = create_app_client(NoopApplication(), name=deployment, headers={})
 
     response = client.post(
-        "chat/completions",
+        f"chat/completions{query}",
         json={
             "messages": [{"role": "user", "content": "test"}],
             "stream": False,
@@ -201,3 +214,136 @@ def test_error_repr():
         )
         == "HTTPException(message='a', status_code=404, type='c', param='d', code='e', display_message='f', g='h')"
     )
+
+
+_OPENAI_BUSY = {
+    "error": {"message": "Busy", "type": "runtime_error", "code": "503"}
+}
+_ANTHROPIC_BUSY = {
+    "type": "error",
+    "error": {"type": "overloaded_error", "message": "Busy"},
+}
+
+
+def _custom_route_client(path: str, error: Exception) -> TestClient:
+    app = DIALApp()
+
+    @app.post(path)
+    async def _route() -> None:
+        raise error
+
+    return TestClient(app, raise_server_exceptions=False)
+
+
+@pytest.mark.parametrize(
+    "path, error, status_code, body",
+    [
+        (
+            "/openai/models",
+            HTTPException("Busy", status_code=503),
+            503,
+            _OPENAI_BUSY,
+        ),
+        (
+            "/anthropic/v1/models",
+            HTTPException("Busy", status_code=503),
+            503,
+            _ANTHROPIC_BUSY,
+        ),
+        (
+            "/openai/models",
+            HTTPException("Busy", status_code=503).to_fastapi_exception(),
+            503,
+            _OPENAI_BUSY,
+        ),
+        (
+            "/anthropic/v1/models",
+            HTTPException("Busy", status_code=503).to_fastapi_exception(
+                "anthropic"
+            ),
+            503,
+            _ANTHROPIC_BUSY,
+        ),
+        (
+            "/openai/models",
+            RuntimeError("boom"),
+            500,
+            {
+                "error": {
+                    "message": "Unhandled SDK exception: Internal server error",
+                    "type": "internal_server_error",
+                    "code": "500",
+                }
+            },
+        ),
+        (
+            "/anthropic/v1/models",
+            RuntimeError("boom"),
+            500,
+            {
+                "type": "error",
+                "error": {
+                    "type": "api_error",
+                    "message": "Unhandled SDK exception: Internal server error",
+                },
+            },
+        ),
+    ],
+    ids=[
+        "openai-dial",
+        "anthropic-dial",
+        "openai-fastapi",
+        "anthropic-fastapi",
+        "openai-unhandled",
+        "anthropic-unhandled",
+    ],
+)
+def test_an_error_in_a_custom_route_is_rendered_in_the_format_of_its_path(
+    path: str, error: Exception, status_code: int, body: dict
+):
+    response = _custom_route_client(path, error).post(path)
+
+    assert response.status_code == status_code
+    assert response.json() == body
+
+
+class _BrokenConfigurationApplication(NoopApplication):
+    def __init__(self, error: Exception) -> None:
+        self.error = error
+
+    async def configuration(self, request: ConfigurationRequest) -> dict:
+        raise self.error
+
+
+@pytest.mark.parametrize(
+    "error, status_code, body",
+    [
+        (HTTPException("Busy", status_code=503), 503, _OPENAI_BUSY),
+        (
+            HTTPException("Busy", status_code=503).to_fastapi_exception(),
+            503,
+            _OPENAI_BUSY,
+        ),
+        (
+            RuntimeError("boom"),
+            500,
+            {
+                "error": {
+                    "message": "Internal server error",
+                    "type": "internal_server_error",
+                    "code": "500",
+                }
+            },
+        ),
+    ],
+    ids=["dial", "fastapi", "unexpected"],
+)
+def test_an_error_in_a_dial_route_is_rendered_by_its_error_handler(
+    error: Exception, status_code: int, body: dict
+):
+    client = create_app_client(_BrokenConfigurationApplication(error))
+
+    response = client.get("configuration")
+
+    assert response.status_code == status_code
+    assert response.json() == body

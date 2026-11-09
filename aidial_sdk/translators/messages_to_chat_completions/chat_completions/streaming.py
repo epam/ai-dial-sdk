@@ -1,4 +1,4 @@
-from collections.abc import AsyncIterator, Iterator
+from collections.abc import AsyncGenerator, AsyncIterator, Iterator
 
 from anthropic.types import (
     RawContentBlockDeltaEvent,
@@ -28,7 +28,6 @@ from aidial_sdk.translators.messages_to_chat_completions.chat_completions.from_c
 )
 from aidial_sdk.translators.messages_to_chat_completions.sse_stream import (
     AnthropicStreamState,
-    ClosableAsyncStream,
     format_sse,
     run_sse_stream,
 )
@@ -229,7 +228,7 @@ def _merge_usage(
 
 
 async def translate_stream(
-    stream: ClosableAsyncStream[ChatCompletionChunk],
+    stream: AsyncGenerator[ChatCompletionChunk, None],
     requested_model: str,
     translation_state: TranslationState,
 ) -> AsyncIterator[bytes]:
@@ -240,6 +239,5 @@ async def translate_stream(
         state,
         state.handle,
         on_finalize=state.finalize,
-        log_context="Chat Completions",
     ):
         yield chunk
