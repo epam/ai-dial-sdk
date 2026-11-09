@@ -280,6 +280,80 @@ async def test_reasoning_stages_become_a_thinking_block() -> None:
     assert text_of(events) == "answer"
 
 
+def thinking_deltas(events) -> list[str]:
+    return [
+        data["delta"]["thinking"]
+        for name, data in events
+        if name == "content_block_delta"
+        and data["delta"]["type"] == "thinking_delta"
+    ]
+
+
+async def test_reasoning_content_becomes_a_thinking_block() -> None:
+    events = await translate(
+        [
+            chunk({"reasoning_content": "let "}),
+            chunk({"reasoning_content": "me"}),
+            chunk(ChoiceDelta(content="answer"), finish_reason="stop"),
+            usage_chunk(),
+        ]
+    )
+    assert_block_discipline(events)
+    assert thinking_deltas(events) == ["let ", "me"]
+    assert text_of(events) == "answer"
+
+
+async def test_reasoning_shared_by_several_sources_is_not_repeated() -> None:
+    events = await translate(
+        [
+            chunk(
+                {
+                    "reasoning_content": "let me",
+                    "custom_content": {
+                        "stages": [
+                            {"index": 0, "name": "Thinking", "content": "let "}
+                        ]
+                    },
+                }
+            ),
+            chunk(
+                {
+                    "custom_content": {
+                        "stages": [{"index": 0, "content": "me think"}]
+                    }
+                }
+            ),
+            chunk({"reasoning_content": " think"}),
+            chunk(
+                {
+                    "custom_content": {
+                        "state": {
+                            "claude_message_content": [
+                                {
+                                    "type": "thinking",
+                                    "thinking": "let me think",
+                                    "signature": "sig",
+                                }
+                            ]
+                        }
+                    }
+                }
+            ),
+            chunk(ChoiceDelta(content="answer"), finish_reason="stop"),
+            usage_chunk(),
+        ]
+    )
+    assert_block_discipline(events)
+    assert thinking_deltas(events) == ["let me", " think"]
+    assert [
+        data["delta"]["signature"]
+        for name, data in events
+        if name == "content_block_delta"
+        and data["delta"]["type"] == "signature_delta"
+    ] == ["sig"]
+    assert text_of(events) == "answer"
+
+
 async def test_a_non_reasoning_stage_is_ignored() -> None:
     events = await translate(
         [
