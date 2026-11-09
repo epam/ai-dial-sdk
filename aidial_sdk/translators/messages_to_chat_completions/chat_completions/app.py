@@ -6,7 +6,7 @@ from typing import TypeVar
 import httpx
 from anthropic.types.beta.message_create_params import MessageCreateParams
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse, Response, StreamingResponse
+from fastapi.responses import JSONResponse, Response
 
 from aidial_sdk.deployment.from_request_mixin import get_client_deployment_id
 from aidial_sdk.translators.messages_to_chat_completions.backend.http import (
@@ -35,6 +35,9 @@ from aidial_sdk.translators.messages_to_chat_completions.errors import (
 )
 from aidial_sdk.translators.messages_to_chat_completions.settings import (
     get_dial_url,
+)
+from aidial_sdk.translators.messages_to_chat_completions.sse_stream import (
+    ClosingStreamingResponse,
 )
 from aidial_sdk.translators.messages_to_chat_completions.translation_state import (
     TranslationState,
@@ -69,8 +72,9 @@ async def handle_anthropic_messages(
 
     if chat_request.stream:
         events = await client.create_stream(body)
-        return StreamingResponse(
+        return ClosingStreamingResponse(
             translate_stream(events, deployment, translation_state),
+            events,
             media_type="text/event-stream",
         )
 
