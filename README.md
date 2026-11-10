@@ -22,6 +22,9 @@
   - [Echo application example](#echo-application-example)
     - [Run](#run)
     - [Check](#check)
+  - [Responses API](#responses-api)
+    - [Echo Responses example](#echo-responses-example)
+    - [Builders](#builders)
   - [Endpoints](#endpoints)
   - [Anthropic Messages to Chat Completions translator](#anthropic-messages-to-chat-completions-translator)
 - [Development](#development)
@@ -140,6 +143,109 @@ You will see the JSON response as:
 
 ---
 
+### Responses API
+
+`aidial_sdk.responses` serves the [OpenAI Responses API](https://platform.openai.com/docs/api-reference/responses). It speaks the vanilla protocol: any client that speaks the Responses API, `openai`'s own included, works against it unmodified.
+
+It carries **no DIAL extensions**: no stages, attachments, `state`, forms, `custom_content`, `statistics` or `display_message`.
+
+#### Echo Responses example
+
+```python
+# Save this as app.py
+import uvicorn
+
+from aidial_sdk import DIALApp
+from aidial_sdk.responses import Request, Response, ResponsesApplication
+
+
+# ResponsesApplication is an abstract class for Responses API applications
+class EchoApplication(ResponsesApplication):
+    async def create_response(self, request: Request, response: Response) -> None:
+        # Generate a single output message with the last input message's text
+        with response.create_message() as message:
+            message.append_text(request.messages[-1].text())
+
+
+app = DIALApp()
+app.add_responses("echo", EchoApplication())
+
+# Run built app
+if __name__ == "__main__":
+    uvicorn.run(app, port=5000)
+```
+
+Run it with `python3 app.py` and send the next request:
+
+```sh
+curl http://127.0.0.1:5000/openai/deployments/echo/responses \
+  -H "Content-Type: application/json" \
+  -H "Api-Key: DIAL_API_KEY" \
+  -d '{"input": "Repeat me!"}'
+```
+
+The JSON response is a `response` object whose `output` holds the echoed message (abridged):
+
+```json
+{
+    "id": "resp_ebf5f2e4fb284b7c83fb6d0ac77dfa7a",
+    "object": "response",
+    "created_at": 1792147167,
+    "model": "echo",
+    "status": "completed",
+    "output": [
+        {
+            "type": "message",
+            "id": "msg_951b0e7253e6449caa82fcba408486f0",
+            "role": "assistant",
+            "status": "completed",
+            "content": [
+                {
+                    "type": "output_text",
+                    "text": "Repeat me!",
+                    "annotations": [],
+                    "logprobs": []
+                }
+            ],
+            "phase": null
+        }
+    ],
+    "error": null,
+    "usage": null,
+    ...
+}
+```
+
+With `"stream": true` the same response arrives as Server-Sent Events, from `response.created` to `response.completed`. See [examples/echo_responses](examples/echo_responses) for the full body and an `openai` client call, and [examples/travel_responses](examples/travel_responses) for an agent-like application: reasoning, parallel tool calls, web search with citations and image generation.
+
+`request` holds the request body as sent. The DIAL side of the request is kept apart in `request.deployment`: `request.deployment.api_key`, `.headers`, `.deployment_id`, and so on. A chat completion `Request` exposes these at the top level.
+
+#### Builders
+
+`response` is the only handle a handler needs. Each `create_*` call opens an output item and emits its opening events. Leaving the `with` block, or calling `.close()`, emits the closing ones. The SDK fills in `sequence_number`, the `*_index` fields, item ids and statuses, and the response snapshot that the lifecycle events replay.
+
+```
+Response
+├─ create_message()               -> Message
+│  ├─ create_text()               -> TextPart
+│  └─ create_refusal()            -> RefusalPart
+├─ create_reasoning()             -> Reasoning
+│  ├─ create_summary()            -> SummaryPart
+│  └─ create_text()               -> ReasoningTextPart
+├─ create_function_call(name)     -> FunctionCall
+├─ create_custom_tool_call(name)  -> CustomToolCall
+├─ create_web_search()            -> WebSearch
+├─ create_image_generation()      -> ImageGeneration
+├─ append_text / set_usage / set_incomplete / error / fail
+└─ unsafe_emit(event)
+```
+
+If the handler raises once streaming has started, the stream ends with `error` and `response.failed`. If it raises before the first event, the client gets a regular HTTP error and no stream is opened.
+
+Other item types, such as audio, `file_search_call`, `code_interpreter_call` and the MCP items, have no builder yet. They are reachable only through `response.unsafe_emit(event)`, which writes a raw event to the stream with only `sequence_number` filled in. Those items don't appear in the final response snapshot.
+
+---
+
 ### Endpoints
 
 Every deployment is exposed under two base paths:
@@ -157,6 +263,7 @@ The following endpoints are served under each of them:
 - `POST <base path>/truncate_prompt`
 - `GET <base path>/configuration`
 - `POST <base path>/embeddings`
+- `POST <base path>/responses`
 
 `request.deployment_id` is resolved from the first of the following sources that is set:
 

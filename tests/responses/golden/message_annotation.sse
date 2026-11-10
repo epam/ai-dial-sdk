@@ -1,0 +1,30 @@
+event: response.output_item.added
+data: {"type":"response.output_item.added","sequence_number":0,"output_index":0,"item":{"type":"message","id":"msg_1","role":"assistant","status":"in_progress","content":[],"phase":null}}
+
+event: response.content_part.added
+data: {"type":"response.content_part.added","sequence_number":1,"item_id":"msg_1","output_index":0,"content_index":0,"part":{"type":"output_text","text":"","annotations":[],"logprobs":[]}}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","sequence_number":2,"item_id":"msg_1","output_index":0,"content_index":0,"delta":"See the docs","logprobs":[]}
+
+event: response.output_text.annotation.added
+data: {"type":"response.output_text.annotation.added","sequence_number":3,"item_id":"msg_1","output_index":0,"content_index":0,"annotation_index":0,"annotation":{"type":"url_citation","url":"https://example.com","title":"","start_index":0,"end_index":12}}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","sequence_number":4,"item_id":"msg_1","output_index":0,"content_index":0,"delta":" and the file.","logprobs":[]}
+
+event: response.output_text.annotation.added
+data: {"type":"response.output_text.annotation.added","sequence_number":5,"item_id":"msg_1","output_index":0,"content_index":0,"annotation_index":1,"annotation":{"type":"file_citation","file_id":"file_1","filename":"a.txt","index":26}}
+
+event: response.output_text.annotation.added
+data: {"type":"response.output_text.annotation.added","sequence_number":6,"item_id":"msg_1","output_index":0,"content_index":0,"annotation_index":2,"annotation":{"type":"url_citation","url":"https://example.org","title":"Example","start_index":4,"end_index":12}}
+
+event: response.output_text.done
+data: {"type":"response.output_text.done","sequence_number":7,"item_id":"msg_1","output_index":0,"content_index":0,"text":"See the docs and the file.","logprobs":[]}
+
+event: response.content_part.done
+data: {"type":"response.content_part.done","sequence_number":8,"item_id":"msg_1","output_index":0,"content_index":0,"part":{"type":"output_text","text":"See the docs and the file.","annotations":[{"type":"url_citation","url":"https://example.com","title":"","start_index":0,"end_index":12},{"type":"file_citation","file_id":"file_1","filename":"a.txt","index":26},{"type":"url_citation","url":"https://example.org","title":"Example","start_index":4,"end_index":12}],"logprobs":[]}}
+
+event: response.output_item.done
+data: {"type":"response.output_item.done","sequence_number":9,"output_index":0,"item":{"type":"message","id":"msg_1","role":"assistant","status":"completed","content":[{"type":"output_text","text":"See the docs and the file.","annotations":[{"type":"url_citation","url":"https://example.com","title":"","start_index":0,"end_index":12},{"type":"file_citation","file_id":"file_1","filename":"a.txt","index":26},{"type":"url_citation","url":"https://example.org","title":"Example","start_index":4,"end_index":12}],"logprobs":[]}],"phase":null}}
+

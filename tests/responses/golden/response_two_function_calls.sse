@@ -1,0 +1,39 @@
+event: response.created
+data: {"type":"response.created","sequence_number":0,"response":{"id":"resp_1","object":"response","created_at":1700000000,"model":"m","status":"in_progress","output":[],"error":null,"incomplete_details":null,"usage":null,"tools":[],"tool_choice":"auto","parallel_tool_calls":true,"instructions":null,"max_output_tokens":null,"max_tool_calls":null,"metadata":null,"prompt_cache_key":null,"reasoning":null,"safety_identifier":null,"temperature":null,"text":null,"top_logprobs":null,"top_p":null,"truncation":null,"user":null}}
+
+event: response.in_progress
+data: {"type":"response.in_progress","sequence_number":1,"response":{"id":"resp_1","object":"response","created_at":1700000000,"model":"m","status":"in_progress","output":[],"error":null,"incomplete_details":null,"usage":null,"tools":[],"tool_choice":"auto","parallel_tool_calls":true,"instructions":null,"max_output_tokens":null,"max_tool_calls":null,"metadata":null,"prompt_cache_key":null,"reasoning":null,"safety_identifier":null,"temperature":null,"text":null,"top_logprobs":null,"top_p":null,"truncation":null,"user":null}}
+
+event: response.output_item.added
+data: {"type":"response.output_item.added","sequence_number":2,"output_index":0,"item":{"type":"function_call","id":"fc_1","status":"in_progress","call_id":"call_1","name":"get_weather","arguments":""}}
+
+event: response.output_item.added
+data: {"type":"response.output_item.added","sequence_number":3,"output_index":1,"item":{"type":"function_call","id":"fc_2","status":"in_progress","call_id":"call_t","name":"get_time","arguments":""}}
+
+event: response.function_call_arguments.delta
+data: {"type":"response.function_call_arguments.delta","sequence_number":4,"item_id":"fc_1","output_index":0,"delta":"{\"city\":"}
+
+event: response.function_call_arguments.delta
+data: {"type":"response.function_call_arguments.delta","sequence_number":5,"item_id":"fc_2","output_index":1,"delta":"{\"tz\":"}
+
+event: response.function_call_arguments.delta
+data: {"type":"response.function_call_arguments.delta","sequence_number":6,"item_id":"fc_1","output_index":0,"delta":" \"Paris\"}"}
+
+event: response.function_call_arguments.delta
+data: {"type":"response.function_call_arguments.delta","sequence_number":7,"item_id":"fc_2","output_index":1,"delta":" \"CET\"}"}
+
+event: response.function_call_arguments.done
+data: {"type":"response.function_call_arguments.done","sequence_number":8,"item_id":"fc_1","output_index":0,"name":"get_weather","arguments":"{\"city\": \"Paris\"}"}
+
+event: response.output_item.done
+data: {"type":"response.output_item.done","sequence_number":9,"output_index":0,"item":{"type":"function_call","id":"fc_1","status":"completed","call_id":"call_1","name":"get_weather","arguments":"{\"city\": \"Paris\"}"}}
+
+event: response.function_call_arguments.done
+data: {"type":"response.function_call_arguments.done","sequence_number":10,"item_id":"fc_2","output_index":1,"name":"get_time","arguments":"{\"tz\": \"CET\"}"}
+
+event: response.output_item.done
+data: {"type":"response.output_item.done","sequence_number":11,"output_index":1,"item":{"type":"function_call","id":"fc_2","status":"completed","call_id":"call_t","name":"get_time","arguments":"{\"tz\": \"CET\"}"}}
+
+event: response.completed
+data: {"type":"response.completed","sequence_number":12,"response":{"id":"resp_1","object":"response","created_at":1700000000,"model":"m","status":"completed","output":[{"type":"function_call","id":"fc_1","status":"completed","call_id":"call_1","name":"get_weather","arguments":"{\"city\": \"Paris\"}"},{"type":"function_call","id":"fc_2","status":"completed","call_id":"call_t","name":"get_time","arguments":"{\"tz\": \"CET\"}"}],"error":null,"incomplete_details":null,"usage":null,"tools":[],"tool_choice":"auto","parallel_tool_calls":true,"instructions":null,"max_output_tokens":null,"max_tool_calls":null,"metadata":null,"prompt_cache_key":null,"reasoning":null,"safety_identifier":null,"temperature":null,"text":null,"top_logprobs":null,"top_p":null,"truncation":null,"user":null}}
+

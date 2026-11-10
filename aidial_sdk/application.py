@@ -38,6 +38,13 @@ from aidial_sdk.exceptions import DeploymentNotFoundError
 from aidial_sdk.exceptions import HTTPException as DIALException
 from aidial_sdk.header_propagator import HeaderPropagator
 from aidial_sdk.response_headers import NonForwardableHeadersMiddleware
+from aidial_sdk.responses.base import ResponsesApplication
+from aidial_sdk.responses.events import (
+    hold_back_preamble,
+    to_sse_response,
+)
+from aidial_sdk.responses.request import Request as ResponsesRequest
+from aidial_sdk.responses.response import Response as ResponsesResponse
 from aidial_sdk.telemetry.types import TelemetryConfig
 from aidial_sdk.utils._disconnect_middleware import DisconnectMiddleware
 from aidial_sdk.utils._interpolation import (
@@ -57,6 +64,7 @@ from aidial_sdk.utils.streaming import (
     start_streaming,
     to_block_response,
     to_streaming_response,
+    with_heartbeat,
 )
 
 configure_sdk_logger()
@@ -227,6 +235,37 @@ class DIALApp(FastAPI):
                 methods=methods,
                 handler_decorator=error_handler("openai"),
             )
+
+        return self
+
+    def add_responses(
+        self,
+        deployment_name: str,
+        impl: ResponsesApplication,
+        *,
+        heartbeat_interval: float | None = None,
+    ) -> "DIALApp":
+        heartbeat_interval = (
+            heartbeat_interval or DIAL_SDK_SSE_HEARTBEAT_INTERVAL
+        )
+
+        self.add_api_route(
+            f"/openai/deployments/{deployment_name}/responses",
+            error_handler("openai")(
+                self._responses(
+                    deployment_name, impl, heartbeat_interval=heartbeat_interval
+                )
+            ),
+            methods=["POST"],
+        )
+
+        self._add_generic_route(
+            deployment_name,
+            "/openai/v1/responses",
+            self._responses(None, impl, heartbeat_interval=heartbeat_interval),
+            methods=["POST"],
+            handler_decorator=error_handler("openai"),
+        )
 
         return self
 
@@ -422,6 +461,44 @@ class DIALApp(FastAPI):
                 resp = JSONResponse(content=response_json)
 
             for key, value in response.headers:
+                resp.headers.append(key, value)
+
+            return resp
+
+        return _handler
+
+    def _responses(
+        self,
+        deployment_id: str | None,
+        impl: ResponsesApplication,
+        *,
+        heartbeat_interval: float | None,
+    ):
+        async def _handler(original_request: Request) -> Response:
+            request = await self._parse_request(
+                ResponsesRequest, original_request, deployment_id
+            )
+
+            response = ResponsesResponse(request)
+
+            if request.stream:
+                stream = with_heartbeat(
+                    response._generate_stream(impl.create_response),
+                    heartbeat_interval=heartbeat_interval,
+                    heartbeat=": heartbeat\n\n",
+                )
+
+                resp = StreamingResponse(
+                    to_sse_response(await hold_back_preamble(stream)),
+                    media_type="text/event-stream",
+                )
+            else:
+                response_json = await response._generate_block(
+                    impl.create_response
+                )
+                resp = JSONResponse(content=response_json)
+
+            for key, value in response._headers:
                 resp.headers.append(key, value)
 
             return resp
