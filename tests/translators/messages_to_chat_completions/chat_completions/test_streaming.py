@@ -13,6 +13,10 @@ from openai.types.completion_usage import (
     PromptTokensDetails,
 )
 
+from aidial_sdk.translators.messages_to_chat_completions.backend.client import (
+    HEARTBEAT,
+    Heartbeat,
+)
 from aidial_sdk.translators.messages_to_chat_completions.chat_completions.streaming import (
     translate_stream,
 )
@@ -29,7 +33,7 @@ LONG_MCP_NAME = "mcp__" + "s" * 60 + "__do_the_thing"
 
 
 async def translate(
-    chunks: list[ChatCompletionChunk],
+    chunks: list[ChatCompletionChunk | Heartbeat],
     model: str = "gpt-5.5",
     translation_state: TranslationState | None = None,
 ):
@@ -133,6 +137,27 @@ async def test_plain_text_stream() -> None:
             "cache_read_input_tokens": 0,
         }.items()
     )
+
+
+async def test_a_heartbeat_becomes_a_ping_event() -> None:
+    events = await translate(
+        [
+            chunk(ChoiceDelta(role="assistant", content="Hello")),
+            HEARTBEAT,
+            chunk(ChoiceDelta(content=" world"), finish_reason="stop"),
+        ]
+    )
+    assert [name for name, _ in events] == [
+        "message_start",
+        "content_block_start",
+        "content_block_delta",
+        "ping",
+        "content_block_delta",
+        "content_block_stop",
+        "message_delta",
+        "message_stop",
+    ]
+    assert events[3] == ("ping", {"type": "ping"})
 
 
 async def test_tool_call_stream() -> None:

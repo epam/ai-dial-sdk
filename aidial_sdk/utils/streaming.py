@@ -151,3 +151,46 @@ async def add_heartbeat(
 
                 if heartbeat_callback is not None:
                     await _call_heartbeat_callback(heartbeat_callback)
+
+
+def with_heartbeat(
+    stream: AsyncIterator[_T],
+    *,
+    heartbeat_interval: float | None,
+    heartbeat: _T,
+) -> AsyncIterator[_T]:
+    if not heartbeat_interval:
+        return stream
+    return add_heartbeat(
+        stream,
+        heartbeat_interval=heartbeat_interval,
+        heartbeat_object=heartbeat,
+    )
+
+
+async def start_streaming(
+    stream: AsyncIterator[_T],
+    *,
+    heartbeat_interval: float | None,
+    heartbeat: _T,
+) -> AsyncIterator[_T]:
+    """
+    Waits for the first item of the stream or, while it is idle, the first
+    heartbeat. A DIALException as the first item is raised, so that it becomes
+    an HTTP error, while a later one is left in the stream.
+    """
+
+    stream = with_heartbeat(
+        stream, heartbeat_interval=heartbeat_interval, heartbeat=heartbeat
+    )
+
+    first_item = await anext(stream)
+    if isinstance(first_item, DIALException):
+        raise first_item
+
+    async def _stream() -> AsyncIterator[_T]:
+        yield first_item
+        async for item in stream:
+            yield item
+
+    return _stream()
