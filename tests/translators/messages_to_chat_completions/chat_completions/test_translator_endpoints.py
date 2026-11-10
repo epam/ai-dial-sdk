@@ -580,7 +580,7 @@ async def test_missing_dial_url_returns_500(
         (422, "invalid_request_error"),
         (429, "rate_limit_error"),
         (529, "overloaded_error"),
-        (418, "api_error"),
+        (418, "invalid_request_error"),
     ],
 )
 async def test_upstream_error_status_mapping(
