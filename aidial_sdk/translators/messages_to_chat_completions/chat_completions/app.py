@@ -6,13 +6,14 @@ from typing import TypeVar
 import httpx
 from anthropic.types.beta.message_create_params import MessageCreateParams
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse, Response, StreamingResponse
+from fastapi.responses import JSONResponse, Response
 
 from aidial_sdk._errors import error_handler
 from aidial_sdk.deployment.from_request_mixin import get_client_deployment_id
 from aidial_sdk.exceptions import InvalidRequestError, ResourceNotFoundError
 from aidial_sdk.translators.messages_to_chat_completions.backend.http import (
     ChatClientHttp,
+    core_chunks,
     core_headers,
     core_legacy_client,
     core_v1_client,
@@ -32,6 +33,7 @@ from aidial_sdk.translators.messages_to_chat_completions.settings import (
 from aidial_sdk.translators.messages_to_chat_completions.translation_state import (
     TranslationState,
 )
+from aidial_sdk.utils._fastapi import ClosingStreamingResponse
 from aidial_sdk.utils._logging_middleware import LoggingMiddleware
 from aidial_sdk.utils.logging import logger as log
 
@@ -64,9 +66,13 @@ async def handle_anthropic_messages(
         log.debug(f"chat request: {json.dumps(body)}")
 
     if chat_request.stream:
-        events = await client.create_stream(body)
-        return StreamingResponse(
-            translate_stream(events, deployment, translation_state),
+        stream = await client.create_stream(body)
+        return ClosingStreamingResponse(
+            translate_stream(
+                core_chunks(stream), deployment, translation_state
+            ),
+            # Closes the stream even if `core_chunks` never starts
+            stream.close,
             media_type="text/event-stream",
         )
 

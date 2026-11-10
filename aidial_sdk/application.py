@@ -6,7 +6,7 @@ from contextlib import AbstractContextManager, nullcontext
 from typing import Any, Literal, TypeVar
 
 from fastapi import FastAPI, HTTPException, Request
-from fastapi.responses import JSONResponse, Response, StreamingResponse
+from fastapi.responses import JSONResponse, Response
 from starlette.types import Receive, Scope, Send
 
 from aidial_sdk._errors import (
@@ -39,6 +39,7 @@ from aidial_sdk.header_propagator import HeaderPropagator
 from aidial_sdk.response_headers import NonForwardableHeadersMiddleware
 from aidial_sdk.telemetry.types import TelemetryConfig
 from aidial_sdk.utils._disconnect_middleware import DisconnectMiddleware
+from aidial_sdk.utils._fastapi import ClosingStreamingResponse
 from aidial_sdk.utils._interpolation import (
     interpolate_deployment_id,
     match_deployment_id,
@@ -414,9 +415,9 @@ class DIALApp(FastAPI):
                         heartbeat_object=": heartbeat\n\n",
                     )
 
-                resp = StreamingResponse(
-                    await to_streaming_response(stream),
-                    media_type="text/event-stream",
+                content = await to_streaming_response(stream)
+                resp = ClosingStreamingResponse(
+                    content, content.aclose, media_type="text/event-stream"
                 )
             else:
                 response_json = await to_block_response(stream)

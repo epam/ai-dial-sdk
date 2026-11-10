@@ -1,6 +1,6 @@
 import asyncio
 import json
-from collections.abc import AsyncIterator, Awaitable, Callable
+from collections.abc import AsyncGenerator, AsyncIterator, Awaitable, Callable
 from typing import (
     Any,
     TypeVar,
@@ -67,7 +67,7 @@ async def to_block_response(stream: ResponseStream) -> dict:
 
 async def to_streaming_response(
     stream: ResponseStreamWithStr,
-) -> AsyncIterator[str]:
+) -> AsyncGenerator[str, None]:
     first_chunk = await stream.__anext__()
 
     if isinstance(first_chunk, DIALException):
@@ -85,7 +85,7 @@ async def to_streaming_response(
         else:
             assert_never(chunk)
 
-    async def _generator() -> AsyncIterator[str]:
+    async def _generator() -> AsyncGenerator[str, None]:
         yield _chunk_to_str(first_chunk)
 
         async for chunk in stream:

@@ -17,6 +17,7 @@ from tests.translators.messages_to_chat_completions.helpers import (
     features_header,
     parse_anthropic_sse,
 )
+from tests.utils.leaving_client import serve_to_a_leaving_client
 
 _MESSAGES_URL = "/openaiChatCompletions/anthropic/v1/messages"
 _CORE = "http://dial-core"
@@ -1059,3 +1060,50 @@ async def test_the_v1_endpoint_sends_no_api_version(
     route = mock_core.post(_CORE_PATH).respond(json=_RESPONSE_OBJECT)
     await client.post(_MESSAGES_URL, json=_MESSAGES_BODY)
     assert "api-version" not in route.calls.last.request.url.params
+
+
+class _EndlessCoreStream(httpx.AsyncByteStream):
+    def __init__(self) -> None:
+        self.closed = False
+
+    async def __aiter__(self) -> AsyncIterator[bytes]:
+        delta = {"choices": [{"index": 0, "delta": {"content": "x"}}]}
+        while True:
+            yield f"data: {json.dumps({**_CHUNK, **delta})}\n\n".encode()
+
+    async def aclose(self) -> None:
+        self.closed = True
+
+
+_CHUNK = {
+    "id": "chatcmpl_1",
+    "object": "chat.completion.chunk",
+    "created": 0,
+    "model": "gpt-5.5",
+}
+
+
+@pytest.mark.parametrize("chunks", [0, 1], ids=["before-start", "mid-stream"])
+async def test_core_stream_is_closed_when_the_client_leaves(
+    chunks: int,
+    monkeypatch: pytest.MonkeyPatch,
+    core_client: httpx.AsyncClient,
+    mock_core: respx.MockRouter,
+) -> None:
+    monkeypatch.setenv("DIAL_URL", _CORE)
+    core_stream = _EndlessCoreStream()
+    mock_core.post(_CORE_PATH).respond(
+        stream=core_stream, content_type="text/event-stream"
+    )
+    app = DIALApp()
+    mount_translator(app, core_client)
+
+    await serve_to_a_leaving_client(
+        app,
+        _MESSAGES_URL,
+        {**_MESSAGES_BODY, "stream": True},
+        {"api-key": "dummy-key", **_DEPLOYMENT_HEADERS},
+        chunks=chunks,
+    )
+
+    assert core_stream.closed

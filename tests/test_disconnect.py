@@ -5,7 +5,9 @@ import threading
 import httpx
 import pytest
 
+from aidial_sdk import DIALApp
 from aidial_sdk.chat_completion import ChatCompletion
+from tests.utils.leaving_client import serve_to_a_leaving_client
 
 
 class WaitingApp(ChatCompletion):
@@ -88,3 +90,40 @@ async def run_disconnect_test(
 
     with contextlib.suppress(httpx.ReadError):
         await task
+
+
+class EndlessApp(ChatCompletion):
+    def __init__(self) -> None:
+        self.finished = False
+
+    async def chat_completion(self, request, response) -> None:
+        try:
+            with response.create_single_choice() as choice:
+                while True:
+                    choice.append_content("x")
+                    await asyncio.sleep(0)
+        finally:
+            self.finished = True
+
+
+@pytest.mark.parametrize(
+    "heartbeat_interval", [None, 60], ids=["no-heartbeat", "heartbeat"]
+)
+@pytest.mark.parametrize("chunks", [0, 1], ids=["before-start", "mid-stream"])
+async def test_impl_stops_when_the_client_leaves(
+    heartbeat_interval: float | None, chunks: int
+) -> None:
+    impl = EndlessApp()
+    app = DIALApp().add_chat_completion(
+        "app", impl, heartbeat_interval=heartbeat_interval
+    )
+
+    await serve_to_a_leaving_client(
+        app,
+        "/openai/deployments/app/chat/completions",
+        {"messages": [{"role": "user", "content": "hello"}], "stream": True},
+        {"api-key": "dummy-key"},
+        chunks=chunks,
+    )
+
+    assert impl.finished

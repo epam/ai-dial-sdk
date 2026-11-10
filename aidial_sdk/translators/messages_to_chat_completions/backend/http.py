@@ -122,7 +122,7 @@ def _core_errors() -> Iterator[None]:
         raise _from_core_error(e) from e
 
 
-async def _chunks(
+async def core_chunks(
     stream: AsyncStream[ChatCompletionChunk],
 ) -> AsyncGenerator[ChatCompletionChunk, None]:
     with _core_errors():
@@ -138,9 +138,9 @@ class ChatClientHttp:
 
     async def create_stream(
         self, body: dict
-    ) -> AsyncGenerator[ChatCompletionChunk, None]:
+    ) -> AsyncStream[ChatCompletionChunk]:
         with _core_errors():
-            stream = await self.client.post(
+            return await self.client.post(
                 "/chat/completions",
                 cast_to=ChatCompletion,
                 body=body,
@@ -148,7 +148,6 @@ class ChatClientHttp:
                 stream=True,
                 stream_cls=AsyncStream[ChatCompletionChunk],
             )
-        return _chunks(stream)
 
     async def create_block(self, body: dict) -> ChatCompletion:
         with _core_errors():
