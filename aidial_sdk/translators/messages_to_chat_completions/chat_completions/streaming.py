@@ -16,9 +16,10 @@ from openai.types.chat import ChatCompletionChunk
 from openai.types.chat.chat_completion_chunk import Choice, ChoiceDeltaToolCall
 from openai.types.completion_usage import CompletionUsage
 
+from aidial_sdk.translators.messages_to_chat_completions.chat_completions._reasoning_content import (
+    ReasoningContentProvider,
+)
 from aidial_sdk.translators.messages_to_chat_completions.chat_completions.dial_extensions import (
-    CustomContent,
-    is_reasoning_stage,
     parse_extras,
 )
 from aidial_sdk.translators.messages_to_chat_completions.chat_completions.from_chat_completions import (
@@ -55,9 +56,8 @@ class ChatCompletionsToAnthropicStream(AnthropicStreamState):
         self.is_refusal = False
         self.has_tool_call = False
         self._translation_state = translation_state
-        self._reasoning_stages: set[int | None] = set()
+        self._reasoning = ReasoningContentProvider()
         self._seen_citations: set[str] = set()
-        self._signed = False
         self._tools: dict[int, int] = {}
 
     def handle(self, chunk: ChatCompletionChunk) -> Iterator[bytes]:
@@ -84,7 +84,12 @@ class ChatCompletionsToAnthropicStream(AnthropicStreamState):
 
         if choice.finish_reason:
             self.finish_reason = choice.finish_reason
-        yield from self._on_custom_content(extras.custom_content)
+
+        reasoning = self._reasoning.get_reasoning_content(delta)
+        if reasoning.content:
+            yield from self._thinking_delta(reasoning.content)
+        if reasoning.signature:
+            yield from self._signature_delta(reasoning.signature)
 
         if text := delta.content:
             yield from self._emit_text(text)
@@ -105,26 +110,6 @@ class ChatCompletionsToAnthropicStream(AnthropicStreamState):
                 yield from self.close_block()
         for call in delta.tool_calls or []:
             yield from self._on_tool_call_delta(call)
-
-    def _on_custom_content(
-        self, custom_content: CustomContent | None
-    ) -> Iterator[bytes]:
-        if custom_content is None:
-            return
-
-        for stage in custom_content.stages or []:
-            if is_reasoning_stage(stage.name):
-                self._reasoning_stages.add(stage.index)
-            if stage.index in self._reasoning_stages and stage.content:
-                yield from self._thinking_delta(stage.content)
-
-        if self._signed or custom_content.state is None:
-            return
-        for block in custom_content.state.claude_message_content or []:
-            if block.type == "thinking" and block.signature:
-                self._signed = True
-                yield from self._signature_delta(block.signature)
-                break
 
     def _thinking_delta(self, text: str) -> Iterator[bytes]:
         yield from self._close_tools()

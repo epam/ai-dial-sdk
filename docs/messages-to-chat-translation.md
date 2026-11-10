@@ -198,8 +198,7 @@ Only `choices[0]` is translated; other choices are dropped with a warning. Conte
 | --- | --- | --- |
 | `id` | `id` | A stream that ends before its first chunk gets a generated UUID |
 | — | `model` | Always the requested deployment: the upstream's `model` is not exposed |
-| `message.custom_content.state.claude_message_content[]` thinking | `{"type": "thinking", "thinking": "...", "signature": "..."}` | DIAL's native Claude reasoning, with its signature |
-| otherwise `message.custom_content.stages[]` named like `think`/`thought`/`reason` | `{"type": "thinking", "thinking": "...", "signature": ""}` | |
+| `message.reasoning_content`, `message.custom_content.stages[]` named like `think`/`thought`/`reason`, `message.custom_content.state.claude_message_content[]` thinking | `{"type": "thinking", "thinking": "...", "signature": "..."}` | The sources carry the same text, so it is taken once, from the longest. Only `claude_message_content` carries a signature; otherwise it is `""` |
 | `message.annotations[].url_citation` | `server_tool_use` + `web_search_tool_result` | One pair with every cited URL; `query` is `""` |
 | `message.content` | `{"type": "text", "text": "..."}` | |
 | `message.refusal` | `{"type": "text", "text": "..."}` | |
@@ -242,7 +241,7 @@ The client gets `message_start → (content_block_start → delta* → content_b
 | Chat Completions chunk | Anthropic events |
 | --- | --- |
 | First chunk | `message_start` (zero usage) |
-| `delta.custom_content.stages[]` thinking text | `thinking` block, `thinking_delta` |
+| `delta.reasoning_content`, `delta.custom_content.stages[]` thinking text, `delta.custom_content.state.claude_message_content[].thinking` | `thinking` block, `thinking_delta` with the text none of them has sent before |
 | `delta.custom_content.state.claude_message_content[].signature` | `signature_delta`, then the thinking block closes. A signature after the block closed is dropped with a warning |
 | `delta.content`, `delta.refusal` | `text` block, `text_delta` |
 | `delta.annotations` with new URLs | `server_tool_use` + `web_search_tool_result` blocks; each URL is sent once per stream |

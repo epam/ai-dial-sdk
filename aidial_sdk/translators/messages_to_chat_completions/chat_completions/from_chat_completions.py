@@ -25,11 +25,8 @@ from openai.types.chat.chat_completion_message_tool_call import (
 )
 from openai.types.completion_usage import CompletionUsage, PromptTokensDetails
 
-from aidial_sdk.translators.messages_to_chat_completions.chat_completions.dial_extensions import (
-    CustomContent,
-    get_claude_thinking_block,
-    get_dial_reasoning_content,
-    parse_extras,
+from aidial_sdk.translators.messages_to_chat_completions.chat_completions._reasoning_content import (
+    ReasoningContentProvider,
 )
 from aidial_sdk.translators.messages_to_chat_completions.translation_state import (
     TranslationState,
@@ -76,8 +73,7 @@ def _to_anthropic_content_blocks(
 
     content: list[AnthropicContentBlock] = []
 
-    extras = parse_extras(message.model_extra)
-    if thinking := to_anthropic_thinking_block(extras.custom_content):
+    if thinking := to_anthropic_thinking_block(message):
         content.append(thinking)
 
     content.extend(
@@ -100,17 +96,16 @@ def _text_block(text: str) -> TextBlock:
 
 
 def to_anthropic_thinking_block(
-    custom_content: CustomContent | None,
+    message: ChatCompletionMessage,
 ) -> ThinkingBlock | None:
-    if block := get_claude_thinking_block(custom_content):
-        return ThinkingBlock(
-            type="thinking",
-            thinking=block.thinking or "",
-            signature=block.signature or "",
-        )
-    if text := get_dial_reasoning_content(custom_content):
-        return ThinkingBlock(type="thinking", thinking=text, signature="")
-    return None
+    reasoning = ReasoningContentProvider().get_reasoning_content(message)
+    if reasoning.content is None:
+        return None
+    return ThinkingBlock(
+        type="thinking",
+        thinking=reasoning.content,
+        signature=reasoning.signature or "",
+    )
 
 
 def _citations(annotations: list[Annotation] | None) -> list[tuple[str, str]]:
