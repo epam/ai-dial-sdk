@@ -189,19 +189,31 @@ def test_thinking_from_reasoning_stages_has_an_empty_signature() -> None:
     )
 
 
-def test_state_thinking_is_preferred_over_stages() -> None:
+def test_reasoning_content_becomes_a_thinking_block() -> None:
+    msg = translate(
+        response(message(content="answer", reasoning_content="let me think"))
+    )
+
+    assert msg.content == [
+        ThinkingBlock(type="thinking", thinking="let me think", signature=""),
+        TextBlock(type="text", text="answer"),
+    ]
+
+
+def test_reasoning_shared_by_several_sources_is_not_repeated() -> None:
     msg = translate(
         response(
             message(
+                reasoning_content="let me",
                 custom_content={
                     "stages": [
-                        {"index": 0, "name": "Thinking", "content": "stage"}
+                        {"index": 0, "name": "Thinking", "content": "let me th"}
                     ],
                     "state": {
                         "claude_message_content": [
                             {
                                 "type": "thinking",
-                                "thinking": "signed",
+                                "thinking": "let me think",
                                 "signature": "s",
                             }
                         ]
@@ -211,7 +223,7 @@ def test_state_thinking_is_preferred_over_stages() -> None:
         )
     )
     assert msg.content[0] == ThinkingBlock(
-        type="thinking", thinking="signed", signature="s"
+        type="thinking", thinking="let me think", signature="s"
     )
 
 
