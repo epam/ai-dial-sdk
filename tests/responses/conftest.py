@@ -30,7 +30,7 @@ from aidial_sdk.responses._context import _ResponseContext
 from aidial_sdk.responses.base import ResponsesApplication
 from aidial_sdk.responses.events import Event, _dump, to_sse_response
 from aidial_sdk.responses.models import ResponseObject
-from aidial_sdk.responses.request import DeploymentContext, Request
+from aidial_sdk.responses.request import Request, RequestContext
 from aidial_sdk.responses.response import Response, _Producer
 from aidial_sdk.utils.errors import RUNTIME_ERROR_MESSAGE
 
@@ -278,7 +278,7 @@ async def run_builders(build: Callable[[_ResponseContext], Any]) -> str:
 def make_request(**body: Any) -> Request:
     return Request(
         **{"input": "Hi", **body},
-        deployment=DeploymentContext(
+        context=RequestContext(
             api_key_secret=SecretStr("key"),
             deployment_id="deployment",
             headers={},
@@ -364,16 +364,16 @@ async def run_response(producer: _Producer, **body: Any) -> Run:
     )
 
 
-_GOLDEN_DIR = Path(__file__).parent / "golden"
+_REFERENCE_DIR = Path(__file__).parent / "reference"
 
 
-def assert_golden(name: str, transcript: str) -> None:
+def assert_reference(name: str, transcript: str) -> None:
     """
-    Compares with `golden/<name>.sse` byte for byte.
-    `UPDATE_GOLDEN=1` rewrites the file instead: read it before committing.
+    Compares with `reference/<name>.sse` byte for byte.
+    `UPDATE_REFERENCE=1` rewrites the file instead: read it before committing.
     """
-    path = _GOLDEN_DIR / f"{name}.sse"
-    if os.environ.get("UPDATE_GOLDEN") == "1":
+    path = _REFERENCE_DIR / f"{name}.sse"
+    if os.environ.get("UPDATE_REFERENCE") == "1":
         path.write_text(transcript)
     assert path.read_text() == transcript
 

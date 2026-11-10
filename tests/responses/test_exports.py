@@ -38,7 +38,7 @@ _EXPORTS = {
     "ReasoningInputItem",
     "ItemReference",
     "RawItem",
-    "DeploymentContext",
+    "RequestContext",
     "Tool",
     "FunctionTool",
     "CustomTool",

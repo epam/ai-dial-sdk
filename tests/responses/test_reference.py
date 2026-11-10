@@ -1,11 +1,11 @@
 """
 One fixed call sequence per case, its SSE transcript compared byte for
-byte with `golden/<case>.sse`.
+byte with `reference/<case>.sse`.
 
 A builder case runs its builders against a bare context (`run_builders`),
 a response case runs as the handler of a whole response (`run_response`).
 Both check every event against openai and the stream against the block
-response. `UPDATE_GOLDEN=1` rewrites the files: read every one before
+response. `UPDATE_REFERENCE=1` rewrites the files: read every one before
 committing it, and treat a diff as a finding, not something to regenerate
 away.
 """
@@ -28,7 +28,11 @@ from aidial_sdk.responses.request import Request
 from aidial_sdk.responses.response import Response, _Producer
 from aidial_sdk.responses.server_tool import ImageGeneration, WebSearch
 from aidial_sdk.responses.tool_call import CustomToolCall, FunctionCall
-from tests.responses.conftest import assert_golden, run_builders, run_response
+from tests.responses.conftest import (
+    assert_reference,
+    run_builders,
+    run_response,
+)
 
 
 class _Boom(Exception):
@@ -271,19 +275,19 @@ RESPONSE_CASES: dict[str, _Producer] = {
 
 
 @pytest.mark.parametrize("name", BUILDER_CASES)
-async def test_builder_golden(name: str):
-    assert_golden(name, await run_builders(BUILDER_CASES[name]))
+async def test_builder_reference(name: str):
+    assert_reference(name, await run_builders(BUILDER_CASES[name]))
 
 
 @pytest.mark.parametrize("name", RESPONSE_CASES)
-async def test_response_golden(name: str):
+async def test_response_reference(name: str):
     run = await run_response(RESPONSE_CASES[name])
-    assert_golden(name, run.transcript)
+    assert_reference(name, run.transcript)
 
 
-def test_every_golden_file_has_a_case():
+def test_every_reference_file_has_a_case():
     # A file no case writes is a stale transcript nobody checks
     on_disk = {
-        path.stem for path in (Path(__file__).parent / "golden").glob("*")
+        path.stem for path in (Path(__file__).parent / "reference").glob("*")
     }
     assert on_disk == BUILDER_CASES.keys() | RESPONSE_CASES.keys()

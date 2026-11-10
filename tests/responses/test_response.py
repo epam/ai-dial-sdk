@@ -15,7 +15,7 @@ from tests.responses.conftest import (
     make_response,
     run_response,
 )
-from tests.responses.test_golden import (
+from tests.responses.test_reference import (
     open_items_at_return,
     shortcuts,
     two_function_calls,

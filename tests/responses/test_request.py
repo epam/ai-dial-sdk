@@ -16,7 +16,6 @@ from aidial_sdk.responses.enums import MessagePhase
 from aidial_sdk.responses.request import (
     CustomToolCallItem,
     CustomToolCallOutputItem,
-    DeploymentContext,
     FunctionCallItem,
     FunctionCallOutputItem,
     InputAudioPart,
@@ -32,6 +31,7 @@ from aidial_sdk.responses.request import (
     ReasoningInputItem,
     RefusalContentPart,
     Request,
+    RequestContext,
     ResponsesRequest,
 )
 from aidial_sdk.responses.response import Response
@@ -584,9 +584,9 @@ async def test_deployment_fields_are_kept_apart_from_the_body():
 
     request = await _from_request(body)
 
-    assert isinstance(request.deployment, DeploymentContext)
-    assert request.deployment.api_key == "key"
-    assert request.deployment.deployment_id == "deployment"
+    assert isinstance(request.context, RequestContext)
+    assert request.context.api_key == "key"
+    assert request.context.deployment_id == "deployment"
     assert not hasattr(request, "api_key")
     assert request.model_dump() == ResponsesRequest(**body).model_dump()
 
@@ -607,16 +607,16 @@ async def test_body_field_named_like_a_deployment_field_is_an_extra(
     request = await _from_request({"input": "hi", field: value})
 
     assert request.model_dump()[field] == value
-    assert request.deployment.deployment_id == "deployment"
-    assert request.deployment.api_key == "key"
-    assert request.deployment.base_url is None
-    assert request.deployment.conversation_id is None
-    assert "k" not in request.deployment.headers
+    assert request.context.deployment_id == "deployment"
+    assert request.context.api_key == "key"
+    assert request.context.base_url is None
+    assert request.context.conversation_id is None
+    assert "k" not in request.context.headers
 
 
 async def test_body_field_deployment_is_rejected():
-    with pytest.raises(InvalidRequestError, match="'deployment'") as exc_info:
-        await _from_request({"input": "hi", "deployment": {}})
+    with pytest.raises(InvalidRequestError, match="'context'") as exc_info:
+        await _from_request({"input": "hi", "context": {}})
 
     assert exc_info.value.status_code == 400
 

@@ -16,7 +16,7 @@ from tests.responses.conftest import (
     raises_runtime_error,
     run_response,
 )
-from tests.responses.test_golden import (
+from tests.responses.test_reference import (
     raises_in_message,
     raises_with_open_items,
 )

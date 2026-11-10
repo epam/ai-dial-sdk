@@ -408,7 +408,7 @@ class ResponsesRequest(ExtraAllowModel):
         ]
 
 
-class DeploymentContext(FromRequestDeploymentMixin):
+class RequestContext(FromRequestDeploymentMixin):
     """
     The DIAL side of a request: the api key, the deployment id, the headers
     and the rest of `FromRequestDeploymentMixin`. It's parsed from the request
@@ -423,10 +423,10 @@ class DeploymentContext(FromRequestDeploymentMixin):
 class Request(ResponsesRequest, FromRequestMixin):
     """
     The request body, parsed as is, with the DIAL side of the request
-    kept apart in `deployment`, so that no body field can collide with it.
+    kept apart in `context`, so that no body field can collide with it.
     """
 
-    deployment: DeploymentContext = Field(..., exclude=True)
+    context: RequestContext = Field(..., exclude=True)
 
     @classmethod
     async def from_request(
@@ -435,17 +435,15 @@ class Request(ResponsesRequest, FromRequestMixin):
         deployment_id: str | None,
         base_url: str | None,
     ) -> Self:
-        deployment = await DeploymentContext.from_request(
+        context = await RequestContext.from_request(
             request, deployment_id, base_url
         )
 
         body = await cls.get_request_body(request)
-        if "deployment" in body:
-            raise InvalidRequestError(
-                "The request field 'deployment' is reserved"
-            )
+        if "context" in body:
+            raise InvalidRequestError("The request field 'context' is reserved")
 
-        return cls(**body, deployment=deployment)
+        return cls(**body, context=context)
 
     @staticmethod
     async def get_request_body(request: fastapi.Request) -> dict:

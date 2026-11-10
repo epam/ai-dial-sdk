@@ -218,7 +218,7 @@ The JSON response is a `response` object whose `output` holds the echoed message
 
 With `"stream": true` the same response arrives as Server-Sent Events, from `response.created` to `response.completed`. See [examples/echo_responses](examples/echo_responses) for the full body and an `openai` client call, and [examples/travel_responses](examples/travel_responses) for an agent-like application: reasoning, parallel tool calls, web search with citations and image generation.
 
-`request` holds the request body as sent. The DIAL side of the request is kept apart in `request.deployment`: `request.deployment.api_key`, `.headers`, `.deployment_id`, and so on. A chat completion `Request` exposes these at the top level.
+`request` holds the request body as sent. The DIAL side of the request is kept apart in `request.context`: `request.context.api_key`, `.headers`, `.deployment_id`, and so on. A chat completion `Request` exposes these at the top level.
 
 #### Builders
 

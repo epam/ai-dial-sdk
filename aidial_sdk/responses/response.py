@@ -99,8 +99,8 @@ class Response:
                 id=new_id(RESPONSE_PREFIX),
                 created_at=int(time()),
                 model=get_client_deployment_id(
-                    request.deployment.headers,
-                    request.deployment.deployment_id,
+                    request.context.headers,
+                    request.context.deployment_id,
                 ),
                 # An absent parameter takes the default of the response object
                 **request.model_dump(

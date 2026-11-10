@@ -11,7 +11,7 @@ from tests.responses.conftest import (
     drain,
     raises_runtime_error,
 )
-from tests.responses.test_golden import (
+from tests.responses.test_reference import (
     image_generation_failed,
     web_search_failed,
 )
