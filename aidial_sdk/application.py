@@ -38,7 +38,7 @@ from aidial_sdk.exceptions import DeploymentNotFoundError
 from aidial_sdk.exceptions import HTTPException as DIALException
 from aidial_sdk.header_propagator import HeaderPropagator
 from aidial_sdk.response_headers import NonForwardableHeadersMiddleware
-from aidial_sdk.responses.base import ResponsesApplication
+from aidial_sdk.responses.base import Responses
 from aidial_sdk.responses.events import (
     hold_back_preamble,
     to_sse_response,
@@ -241,7 +241,7 @@ class DIALApp(FastAPI):
     def add_responses(
         self,
         deployment_name: str,
-        impl: ResponsesApplication,
+        impl: Responses,
         *,
         heartbeat_interval: float | None = None,
     ) -> "DIALApp":
@@ -470,7 +470,7 @@ class DIALApp(FastAPI):
     def _responses(
         self,
         deployment_id: str | None,
-        impl: ResponsesApplication,
+        impl: Responses,
         *,
         heartbeat_interval: float | None,
     ):

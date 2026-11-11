@@ -27,7 +27,7 @@ from aidial_sdk.deployment._headers import DIAL_DEPLOYMENT_ID
 from aidial_sdk.exceptions import HTTPException as DIALException
 from aidial_sdk.exceptions import RuntimeServerError
 from aidial_sdk.responses._context import _ResponseContext
-from aidial_sdk.responses.base import ResponsesApplication
+from aidial_sdk.responses.base import Responses
 from aidial_sdk.responses.events import Event, _dump, to_sse_response
 from aidial_sdk.responses.models import ResponseObject
 from aidial_sdk.responses.request import Request, RequestContext
@@ -440,7 +440,7 @@ DEPLOYMENT = "test-deployment"
 Handler = Callable[[Request, Response], Awaitable[None]]
 
 
-class HandlerApp(ResponsesApplication):
+class HandlerApp(Responses):
     def __init__(self, handler: Handler):
         self._handler = handler
 

@@ -1,13 +1,13 @@
 import pytest
 
-from aidial_sdk.responses.base import ResponsesApplication
+from aidial_sdk.responses.base import Responses
 from aidial_sdk.responses.request import Request
 from aidial_sdk.responses.response import Response
 from tests.responses.conftest import run_response
 
 
 def test_create_response_is_abstract():
-    class Incomplete(ResponsesApplication):
+    class Incomplete(Responses):
         pass
 
     with pytest.raises(TypeError):
@@ -15,7 +15,7 @@ def test_create_response_is_abstract():
 
 
 async def test_subclass_runs_as_the_handler():
-    class Echo(ResponsesApplication):
+    class Echo(Responses):
         async def create_response(
             self, request: Request, response: Response
         ) -> None:

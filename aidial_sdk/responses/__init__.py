@@ -1,4 +1,4 @@
-from aidial_sdk.responses.base import ResponsesApplication
+from aidial_sdk.responses.base import Responses
 from aidial_sdk.responses.enums import (
     ErrorCode,
     IncompleteReason,
@@ -100,7 +100,7 @@ __all__ = [
     "RequestContext",
     "Response",
     "ResponseStatus",
-    "ResponsesApplication",
+    "Responses",
     "StreamOptions",
     "SummaryPart",
     "TextConfig",

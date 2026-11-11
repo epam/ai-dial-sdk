@@ -15,7 +15,7 @@ from aidial_sdk.responses import (
     IncompleteReason,
     Request,
     Response,
-    ResponsesApplication,
+    Responses,
 )
 
 from . import model, tools
@@ -42,8 +42,8 @@ async def reason(request: Request, response: Response, thought: Thought) -> int:
     return tokens
 
 
-# ResponsesApplication is an abstract class for Responses API applications
-class TravelApplication(ResponsesApplication):
+# Responses is an abstract class for applications and model adapters
+class TravelApplication(Responses):
     async def create_response(
         self, request: Request, response: Response
     ) -> None:

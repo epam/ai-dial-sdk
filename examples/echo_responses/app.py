@@ -6,11 +6,11 @@ over the OpenAI Responses API.
 import uvicorn
 
 from aidial_sdk import DIALApp
-from aidial_sdk.responses import Request, Response, ResponsesApplication
+from aidial_sdk.responses import Request, Response, Responses
 
 
-# ResponsesApplication is an abstract class for Responses API applications
-class EchoApplication(ResponsesApplication):
+# Responses is an abstract class for applications and model adapters
+class EchoApplication(Responses):
     async def create_response(
         self, request: Request, response: Response
     ) -> None:

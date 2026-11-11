@@ -10,7 +10,7 @@ from aidial_sdk.chat_completion import Request as ChatCompletionRequest
 from aidial_sdk.chat_completion import Response as ChatCompletionResponse
 from aidial_sdk.deployment._headers import DIAL_DEPLOYMENT_ID
 from aidial_sdk.exceptions import RequestValidationError
-from aidial_sdk.responses.base import ResponsesApplication
+from aidial_sdk.responses.base import Responses
 from aidial_sdk.responses.request import Request
 from aidial_sdk.responses.response import Response
 from tests.responses.conftest import ROUTES, Route, check_http, run_handler
@@ -20,7 +20,7 @@ _HEADERS = {"api-key": "TEST_API_KEY"}
 _BODY = {"input": "Hi"}
 
 
-class _Echo(ResponsesApplication):
+class _Echo(Responses):
     async def create_response(
         self, request: Request, response: Response
     ) -> None:
@@ -62,7 +62,7 @@ def test_routes_answer(path: str, headers: dict[str, str]):
     assert message["content"] == block.body["output"][0]["content"]
 
 
-class _ModelSetter(ResponsesApplication):
+class _ModelSetter(Responses):
     def __init__(self, model: str | None):
         self._model = model
 
@@ -140,7 +140,7 @@ def test_no_other_endpoint():
         assert response.status_code in (404, 405), endpoint
 
 
-class _Slow(ResponsesApplication):
+class _Slow(Responses):
     async def create_response(
         self, request: Request, response: Response
     ) -> None:
@@ -170,7 +170,7 @@ def test_heartbeat(heartbeat_interval: float | None):
     assert run.types[-1] == "response.completed"
 
 
-class _BothProtocols(ChatCompletion, ResponsesApplication):
+class _BothProtocols(ChatCompletion, Responses):
     async def chat_completion(
         self, request: ChatCompletionRequest, response: ChatCompletionResponse
     ) -> None:
@@ -205,7 +205,7 @@ def test_one_deployment_serves_both_protocols():
         assert run.body["output"][0]["content"][0]["text"] == "responses"
 
 
-class _WithHeaders(ResponsesApplication):
+class _WithHeaders(Responses):
     async def create_response(
         self, request: Request, response: Response
     ) -> None:

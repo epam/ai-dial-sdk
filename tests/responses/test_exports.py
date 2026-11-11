@@ -2,7 +2,7 @@ import aidial_sdk.responses
 
 _EXPORTS = {
     # entry points
-    "ResponsesApplication",
+    "Responses",
     "Request",
     "Response",
     # item / part builders
