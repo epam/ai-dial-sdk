@@ -1,0 +1,42 @@
+event: response.output_item.added
+data: {"type":"response.output_item.added","sequence_number":0,"output_index":0,"item":{"type":"message","id":"msg_1","role":"assistant","status":"in_progress","content":[],"phase":null}}
+
+event: response.content_part.added
+data: {"type":"response.content_part.added","sequence_number":1,"item_id":"msg_1","output_index":0,"content_index":0,"part":{"type":"output_text","text":"","annotations":[],"logprobs":[]}}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","sequence_number":2,"item_id":"msg_1","output_index":0,"content_index":0,"delta":"Let me check.","logprobs":[]}
+
+event: response.output_text.done
+data: {"type":"response.output_text.done","sequence_number":3,"item_id":"msg_1","output_index":0,"content_index":0,"text":"Let me check.","logprobs":[]}
+
+event: response.content_part.done
+data: {"type":"response.content_part.done","sequence_number":4,"item_id":"msg_1","output_index":0,"content_index":0,"part":{"type":"output_text","text":"Let me check.","annotations":[],"logprobs":[]}}
+
+event: response.content_part.added
+data: {"type":"response.content_part.added","sequence_number":5,"item_id":"msg_1","output_index":0,"content_index":1,"part":{"type":"refusal","refusal":""}}
+
+event: response.refusal.delta
+data: {"type":"response.refusal.delta","sequence_number":6,"item_id":"msg_1","output_index":0,"content_index":1,"delta":"No."}
+
+event: response.refusal.done
+data: {"type":"response.refusal.done","sequence_number":7,"item_id":"msg_1","output_index":0,"content_index":1,"refusal":"No."}
+
+event: response.content_part.done
+data: {"type":"response.content_part.done","sequence_number":8,"item_id":"msg_1","output_index":0,"content_index":1,"part":{"type":"refusal","refusal":"No."}}
+
+event: response.content_part.added
+data: {"type":"response.content_part.added","sequence_number":9,"item_id":"msg_1","output_index":0,"content_index":2,"part":{"type":"output_text","text":"","annotations":[],"logprobs":[]}}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","sequence_number":10,"item_id":"msg_1","output_index":0,"content_index":2,"delta":"Sorry.","logprobs":[]}
+
+event: response.output_text.done
+data: {"type":"response.output_text.done","sequence_number":11,"item_id":"msg_1","output_index":0,"content_index":2,"text":"Sorry.","logprobs":[]}
+
+event: response.content_part.done
+data: {"type":"response.content_part.done","sequence_number":12,"item_id":"msg_1","output_index":0,"content_index":2,"part":{"type":"output_text","text":"Sorry.","annotations":[],"logprobs":[]}}
+
+event: response.output_item.done
+data: {"type":"response.output_item.done","sequence_number":13,"output_index":0,"item":{"type":"message","id":"msg_1","role":"assistant","status":"completed","content":[{"type":"output_text","text":"Let me check.","annotations":[],"logprobs":[]},{"type":"refusal","refusal":"No."},{"type":"output_text","text":"Sorry.","annotations":[],"logprobs":[]}],"phase":null}}
+

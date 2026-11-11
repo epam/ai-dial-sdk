@@ -1,0 +1,21 @@
+event: response.output_item.added
+data: {"type":"response.output_item.added","sequence_number":0,"output_index":0,"item":{"type":"message","id":"msg_1","role":"assistant","status":"in_progress","content":[],"phase":null}}
+
+event: response.content_part.added
+data: {"type":"response.content_part.added","sequence_number":1,"item_id":"msg_1","output_index":0,"content_index":0,"part":{"type":"refusal","refusal":""}}
+
+event: response.refusal.delta
+data: {"type":"response.refusal.delta","sequence_number":2,"item_id":"msg_1","output_index":0,"content_index":0,"delta":"I can't"}
+
+event: response.refusal.delta
+data: {"type":"response.refusal.delta","sequence_number":3,"item_id":"msg_1","output_index":0,"content_index":0,"delta":" help with that."}
+
+event: response.refusal.done
+data: {"type":"response.refusal.done","sequence_number":4,"item_id":"msg_1","output_index":0,"content_index":0,"refusal":"I can't help with that."}
+
+event: response.content_part.done
+data: {"type":"response.content_part.done","sequence_number":5,"item_id":"msg_1","output_index":0,"content_index":0,"part":{"type":"refusal","refusal":"I can't help with that."}}
+
+event: response.output_item.done
+data: {"type":"response.output_item.done","sequence_number":6,"output_index":0,"item":{"type":"message","id":"msg_1","role":"assistant","status":"completed","content":[{"type":"refusal","refusal":"I can't help with that."}],"phase":null}}
+
