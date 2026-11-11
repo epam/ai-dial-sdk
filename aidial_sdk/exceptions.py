@@ -13,13 +13,16 @@ ExceptionType = Literal["openai", "anthropic"]
 
 
 class _AnthropicErrorType(Enum):
-    INVALID_REQUEST = "invalid_request_error", 400, 422
+    INVALID_REQUEST = "invalid_request_error", 400
     AUTHENTICATION = "authentication_error", 401
+    BILLING = "billing_error", 402
     PERMISSION = "permission_error", 403
     NOT_FOUND = "not_found_error", 404
+    CONFLICT = "conflict_error", 409
     REQUEST_TOO_LARGE = "request_too_large", 413
     RATE_LIMIT = "rate_limit_error", 429
     API = "api_error", 500, 502
+    TIMEOUT = "timeout_error", 504
     OVERLOADED = "overloaded_error", 529, 503
 
     def __init__(self, code: str, *status_codes: int) -> None:
@@ -31,7 +34,8 @@ class _AnthropicErrorType(Enum):
         for error_type in cls:
             if status_code in error_type.status_codes:
                 return error_type
-        return cls.API
+        # Anthropic answers the other 4xx statuses with invalid_request_error
+        return cls.INVALID_REQUEST if 400 <= status_code < 500 else cls.API
 
 
 class HTTPException(Exception):
