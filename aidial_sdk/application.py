@@ -1,3 +1,4 @@
+import json
 import logging
 import re
 import warnings
@@ -7,7 +8,7 @@ from typing import Any, Literal, TypeVar
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
-from starlette.types import Receive, Scope, Send
+from starlette.types import Message, Receive, Scope, Send
 
 from aidial_sdk._constants import DIAL_SDK_SSE_HEARTBEAT_INTERVAL
 from aidial_sdk._errors import (
@@ -62,6 +63,15 @@ from aidial_sdk.utils.streaming import (
 configure_sdk_logger()
 
 RequestType = TypeVar("RequestType", bound=FromRequestMixin)
+
+
+def _with_json_body(request: Request, body: dict) -> Request:
+    data = json.dumps(body).encode()
+
+    async def receive() -> Message:
+        return {"type": "http.request", "body": data, "more_body": False}
+
+    return Request(request.scope, receive)
 
 
 class PathFilter(logging.Filter):
@@ -203,6 +213,7 @@ class DIALApp(FastAPI):
         impl: ChatCompletion,
         *,
         heartbeat_interval: float | None = None,
+        expose_as_anthropic_messages: bool = False,
     ) -> "DIALApp":
         heartbeat_interval = (
             heartbeat_interval or DIAL_SDK_SSE_HEARTBEAT_INTERVAL
@@ -228,7 +239,42 @@ class DIALApp(FastAPI):
                 handler_decorator=error_handler("openai"),
             )
 
+        if expose_as_anthropic_messages:
+            self._add_generic_route(
+                deployment_name,
+                "/anthropic/v1/messages",
+                self._anthropic_messages_handler(impl, heartbeat_interval),
+                methods=["POST"],
+                handler_decorator=error_handler("anthropic"),
+            )
+
         return self
+
+    def _anthropic_messages_handler(
+        self, impl: ChatCompletion, heartbeat_interval: float | None
+    ) -> Handler:
+        # The translator requires Pydantic v2 and the translators extra
+        from aidial_sdk.translators.messages_to_chat_completions.backend.sdk import (
+            ChatClientSdk,
+        )
+        from aidial_sdk.translators.messages_to_chat_completions.chat_completions.app import (
+            handle_anthropic_messages,
+        )
+
+        async def _handler(original_request: Request) -> Response:
+            async def _parse_request(body: dict) -> ChatCompletionRequest:
+                return await self._parse_request(
+                    ChatCompletionRequest,
+                    _with_json_body(original_request, body),
+                    None,
+                )
+
+            return await handle_anthropic_messages(
+                original_request,
+                ChatClientSdk(_parse_request, impl, heartbeat_interval),
+            )
+
+        return _handler
 
     def _chat_completion_handlers(
         self,
