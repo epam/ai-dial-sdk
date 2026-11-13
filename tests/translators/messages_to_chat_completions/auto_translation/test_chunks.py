@@ -211,16 +211,12 @@ async def test_thinking_from_state(stream: bool):
     async with _anthropic_client(_chat) as client:
         message = await client.final_message(stream=stream)
 
-    if stream:
-        # FIXME: streaming drops the thinking from claude_message_content (issue #487)
-        assert message.content == [TextBlock(type="text", text="Hello")]
-    else:
-        assert message.content == [
-            ThinkingBlock(
-                type="thinking", thinking="Let me think", signature="sig"
-            ),
-            TextBlock(type="text", text="Hello"),
-        ]
+    assert message.content == [
+        ThinkingBlock(
+            type="thinking", thinking="Let me think", signature="sig"
+        ),
+        TextBlock(type="text", text="Hello"),
+    ]
 
 
 async def test_thinking_from_reasoning_content(stream: bool):
@@ -232,16 +228,10 @@ async def test_thinking_from_reasoning_content(stream: bool):
     async with _anthropic_client(_chat) as client:
         message = await client.final_message(stream=stream)
 
-    if stream:
-        # FIXME: streaming drops the thinking from reasoning_content (issue #487)
-        assert message.content == [TextBlock(type="text", text="Hello")]
-    else:
-        assert message.content == [
-            ThinkingBlock(
-                type="thinking", thinking="Let me think", signature=""
-            ),
-            TextBlock(type="text", text="Hello"),
-        ]
+    assert message.content == [
+        ThinkingBlock(type="thinking", thinking="Let me think", signature=""),
+        TextBlock(type="text", text="Hello"),
+    ]
 
 
 async def test_dial_only_chunks_are_dropped(stream: bool):

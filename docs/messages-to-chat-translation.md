@@ -59,7 +59,7 @@ See the [mounting and DIAL Core configuration example](../README.md#anthropic-me
 | `DIAL_API_VERSION` | `2025-01-01-preview` | `api-version` sent to Core by the legacy endpoint only |
 | `DIAL_SDK_LOG` | `WARNING` | Level of the `aidial_sdk` logger the translator logs to (see [logging](logging.md)). `DEBUG` logs inbound request bodies and outgoing responses or SSE chunks |
 
-The deployment is taken from the `x-dial-deployment-id` header that DIAL Core sets, falling back to the body's `model`.
+The deployment is taken from the `x-dial-deployment-id` header that DIAL Core sets, falling back to the `x-dial-override-name` header.
 
 Only these inbound headers are forwarded to Core, the rest are not:
 
@@ -198,8 +198,7 @@ Only `choices[0]` is translated; other choices are dropped with a warning. Conte
 | --- | --- | --- |
 | `id` | `id` | A stream that ends before its first chunk gets a generated UUID |
 | — | `model` | Always the requested deployment: the upstream's `model` is not exposed |
-| `message.custom_content.state.claude_message_content[]` thinking | `{"type": "thinking", "thinking": "...", "signature": "..."}` | DIAL's native Claude reasoning, with its signature |
-| otherwise `message.custom_content.stages[]` named like `think`/`thought`/`reason` | `{"type": "thinking", "thinking": "...", "signature": ""}` | |
+| `message.reasoning_content`, `message.custom_content.stages[]` named like `think`/`thought`/`reason`, `message.custom_content.state.claude_message_content[]` thinking | `{"type": "thinking", "thinking": "...", "signature": "..."}` | The sources carry the same text, so it is taken once, from the longest. Only `claude_message_content` carries a signature; otherwise it is `""` |
 | `message.annotations[].url_citation` | `server_tool_use` + `web_search_tool_result` | One pair with every cited URL; `query` is `""` |
 | `message.content` | `{"type": "text", "text": "..."}` | |
 | `message.refusal` | `{"type": "text", "text": "..."}` | |
@@ -242,7 +241,7 @@ The client gets `message_start → (content_block_start → delta* → content_b
 | Chat Completions chunk | Anthropic events |
 | --- | --- |
 | First chunk | `message_start` (zero usage) |
-| `delta.custom_content.stages[]` thinking text | `thinking` block, `thinking_delta` |
+| `delta.reasoning_content`, `delta.custom_content.stages[]` thinking text, `delta.custom_content.state.claude_message_content[].thinking` | `thinking` block, `thinking_delta` with the text none of them has sent before |
 | `delta.custom_content.state.claude_message_content[].signature` | `signature_delta`, then the thinking block closes. A signature after the block closed is dropped with a warning |
 | `delta.content`, `delta.refusal` | `text` block, `text_delta` |
 | `delta.annotations` with new URLs | `server_tool_use` + `web_search_tool_result` blocks; each URL is sent once per stream |
@@ -262,7 +261,9 @@ Every error is Anthropic-shaped: `{"type": "error", "error": {"type": "...", "me
 | Failure | HTTP status | `error.type` |
 | --- | --- | --- |
 | Invalid JSON, unknown role, bad effort, `image` with a `file` source, `document` with a `url` or `file` source | 400 | `invalid_request_error` |
-| Upstream 400/422, 401, 403, 404, 413, 429 | Same | `invalid_request_error`, `authentication_error`, `permission_error`, `not_found_error`, `request_too_large`, `rate_limit_error` |
+| Upstream 401, 402, 403, 404, 409, 413, 429 | Same | `authentication_error`, `billing_error`, `permission_error`, `not_found_error`, `conflict_error`, `request_too_large`, `rate_limit_error` |
+| Other upstream 4xx | Same | `invalid_request_error` |
+| Upstream 504 | Same | `timeout_error` |
 | Upstream 503 or 529 | Same | `overloaded_error` |
 | Other upstream errors | Same | `api_error` |
 | Core unreachable | 502 | `api_error` |
