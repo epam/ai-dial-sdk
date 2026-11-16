@@ -10,12 +10,12 @@ from fastapi import Request
 from httpx import ASGITransport
 
 from aidial_sdk import DIALApp
+from aidial_sdk.translators._messages.sse_stream import (
+    HEARTBEAT,
+)
 from aidial_sdk.translators.messages_to_chat_completions import (
     ClientFactory,
     mount_translator,
-)
-from aidial_sdk.translators.messages_to_chat_completions.backend.client import (
-    HEARTBEAT,
 )
 from aidial_sdk.translators.messages_to_chat_completions.backend.http import (
     ChatClientHttp,

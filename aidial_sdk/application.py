@@ -1,4 +1,3 @@
-import json
 import logging
 import re
 import warnings
@@ -8,7 +7,7 @@ from typing import Any, Literal, TypeVar
 
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
-from starlette.types import Message, Receive, Scope, Send
+from starlette.types import Receive, Scope, Send
 
 from aidial_sdk._constants import DIAL_SDK_SSE_HEARTBEAT_INTERVAL
 from aidial_sdk._errors import (
@@ -47,6 +46,7 @@ from aidial_sdk.utils._interpolation import (
 )
 from aidial_sdk.utils._logging_middleware import LoggingMiddleware
 from aidial_sdk.utils._reflection import get_method_implementation
+from aidial_sdk.utils._request import with_json_body
 from aidial_sdk.utils.env import env_var_list
 from aidial_sdk.utils.log_config import configure_sdk_logger
 from aidial_sdk.utils.logging import (
@@ -63,15 +63,6 @@ from aidial_sdk.utils.streaming import (
 configure_sdk_logger()
 
 RequestType = TypeVar("RequestType", bound=FromRequestMixin)
-
-
-def _with_json_body(request: Request, body: dict) -> Request:
-    data = json.dumps(body).encode()
-
-    async def receive() -> Message:
-        return {"type": "http.request", "body": data, "more_body": False}
-
-    return Request(request.scope, receive)
 
 
 class PathFilter(logging.Filter):
@@ -265,7 +256,7 @@ class DIALApp(FastAPI):
             async def _parse_request(body: dict) -> ChatCompletionRequest:
                 return await self._parse_request(
                     ChatCompletionRequest,
-                    _with_json_body(original_request, body),
+                    with_json_body(original_request, body),
                     None,
                 )
 

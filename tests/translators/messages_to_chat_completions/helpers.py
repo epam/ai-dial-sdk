@@ -7,12 +7,12 @@ from openai.types.chat import ChatCompletionChunk
 from openai.types.chat.chat_completion_chunk import Choice, ChoiceDelta
 from openai.types.completion_usage import CompletionUsage
 
+from aidial_sdk.translators._messages.translation_state import (
+    TranslationState,
+)
 from aidial_sdk.translators.messages_to_chat_completions.chat_completions.to_chat_completions import (
     DialChatCompletionsRequest,
     to_chat_completions_request,
-)
-from aidial_sdk.translators.messages_to_chat_completions.translation_state import (
-    TranslationState,
 )
 
 
