@@ -1,0 +1,57 @@
+event: response.created
+data: {"type":"response.created","sequence_number":0,"response":{"id":"resp_1","object":"response","created_at":1700000000,"model":"m","status":"in_progress","output":[],"error":null,"incomplete_details":null,"usage":null,"tools":[],"tool_choice":"auto","parallel_tool_calls":true,"instructions":null,"max_output_tokens":null,"max_tool_calls":null,"metadata":null,"prompt_cache_key":null,"reasoning":null,"safety_identifier":null,"temperature":null,"text":null,"top_logprobs":null,"top_p":null,"truncation":null,"user":null}}
+
+event: response.in_progress
+data: {"type":"response.in_progress","sequence_number":1,"response":{"id":"resp_1","object":"response","created_at":1700000000,"model":"m","status":"in_progress","output":[],"error":null,"incomplete_details":null,"usage":null,"tools":[],"tool_choice":"auto","parallel_tool_calls":true,"instructions":null,"max_output_tokens":null,"max_tool_calls":null,"metadata":null,"prompt_cache_key":null,"reasoning":null,"safety_identifier":null,"temperature":null,"text":null,"top_logprobs":null,"top_p":null,"truncation":null,"user":null}}
+
+event: response.output_item.added
+data: {"type":"response.output_item.added","sequence_number":2,"output_index":0,"item":{"type":"message","id":"msg_1","role":"assistant","status":"in_progress","content":[],"phase":null}}
+
+event: response.content_part.added
+data: {"type":"response.content_part.added","sequence_number":3,"item_id":"msg_1","output_index":0,"content_index":0,"part":{"type":"output_text","text":"","annotations":[],"logprobs":[]}}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","sequence_number":4,"item_id":"msg_1","output_index":0,"content_index":0,"delta":"Hi","logprobs":[]}
+
+event: response.output_item.added
+data: {"type":"response.output_item.added","sequence_number":5,"output_index":1,"item":{"type":"function_call","id":"fc_1","status":"in_progress","call_id":"call_1","name":"f","arguments":""}}
+
+event: response.function_call_arguments.delta
+data: {"type":"response.function_call_arguments.delta","sequence_number":6,"item_id":"fc_1","output_index":1,"delta":"{}"}
+
+event: response.function_call_arguments.done
+data: {"type":"response.function_call_arguments.done","sequence_number":7,"item_id":"fc_1","output_index":1,"name":"f","arguments":"{}"}
+
+event: response.output_item.done
+data: {"type":"response.output_item.done","sequence_number":8,"output_index":1,"item":{"type":"function_call","id":"fc_1","status":"completed","call_id":"call_1","name":"f","arguments":"{}"}}
+
+event: response.output_item.added
+data: {"type":"response.output_item.added","sequence_number":9,"output_index":2,"item":{"type":"reasoning","id":"rs_1","status":"in_progress","summary":[],"content":null,"encrypted_content":null}}
+
+event: response.reasoning_summary_part.added
+data: {"type":"response.reasoning_summary_part.added","sequence_number":10,"item_id":"rs_1","output_index":2,"summary_index":0,"part":{"type":"summary_text","text":""}}
+
+event: response.reasoning_summary_text.delta
+data: {"type":"response.reasoning_summary_text.delta","sequence_number":11,"item_id":"rs_1","output_index":2,"summary_index":0,"delta":"Thinking"}
+
+event: response.output_text.done
+data: {"type":"response.output_text.done","sequence_number":12,"item_id":"msg_1","output_index":0,"content_index":0,"text":"Hi","logprobs":[]}
+
+event: response.content_part.done
+data: {"type":"response.content_part.done","sequence_number":13,"item_id":"msg_1","output_index":0,"content_index":0,"part":{"type":"output_text","text":"Hi","annotations":[],"logprobs":[]}}
+
+event: response.output_item.done
+data: {"type":"response.output_item.done","sequence_number":14,"output_index":0,"item":{"type":"message","id":"msg_1","role":"assistant","status":"completed","content":[{"type":"output_text","text":"Hi","annotations":[],"logprobs":[]}],"phase":null}}
+
+event: response.reasoning_summary_text.done
+data: {"type":"response.reasoning_summary_text.done","sequence_number":15,"item_id":"rs_1","output_index":2,"summary_index":0,"text":"Thinking"}
+
+event: response.reasoning_summary_part.done
+data: {"type":"response.reasoning_summary_part.done","sequence_number":16,"item_id":"rs_1","output_index":2,"summary_index":0,"part":{"type":"summary_text","text":"Thinking"}}
+
+event: response.output_item.done
+data: {"type":"response.output_item.done","sequence_number":17,"output_index":2,"item":{"type":"reasoning","id":"rs_1","status":"completed","summary":[{"type":"summary_text","text":"Thinking"}],"content":null,"encrypted_content":null}}
+
+event: response.completed
+data: {"type":"response.completed","sequence_number":18,"response":{"id":"resp_1","object":"response","created_at":1700000000,"model":"m","status":"completed","output":[{"type":"message","id":"msg_1","role":"assistant","status":"completed","content":[{"type":"output_text","text":"Hi","annotations":[],"logprobs":[]}],"phase":null},{"type":"function_call","id":"fc_1","status":"completed","call_id":"call_1","name":"f","arguments":"{}"},{"type":"reasoning","id":"rs_1","status":"completed","summary":[{"type":"summary_text","text":"Thinking"}],"content":null,"encrypted_content":null}],"error":null,"incomplete_details":null,"usage":null,"tools":[],"tool_choice":"auto","parallel_tool_calls":true,"instructions":null,"max_output_tokens":null,"max_tool_calls":null,"metadata":null,"prompt_cache_key":null,"reasoning":null,"safety_identifier":null,"temperature":null,"text":null,"top_logprobs":null,"top_p":null,"truncation":null,"user":null}}
+

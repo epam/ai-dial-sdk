@@ -1,0 +1,42 @@
+event: response.output_item.added
+data: {"type":"response.output_item.added","sequence_number":0,"output_index":0,"item":{"type":"reasoning","id":"rs_1","status":"in_progress","summary":[],"content":null,"encrypted_content":null}}
+
+event: response.reasoning_summary_part.added
+data: {"type":"response.reasoning_summary_part.added","sequence_number":1,"item_id":"rs_1","output_index":0,"summary_index":0,"part":{"type":"summary_text","text":""}}
+
+event: response.reasoning_summary_text.delta
+data: {"type":"response.reasoning_summary_text.delta","sequence_number":2,"item_id":"rs_1","output_index":0,"summary_index":0,"delta":"Summary."}
+
+event: response.reasoning_summary_text.done
+data: {"type":"response.reasoning_summary_text.done","sequence_number":3,"item_id":"rs_1","output_index":0,"summary_index":0,"text":"Summary."}
+
+event: response.reasoning_summary_part.done
+data: {"type":"response.reasoning_summary_part.done","sequence_number":4,"item_id":"rs_1","output_index":0,"summary_index":0,"part":{"type":"summary_text","text":"Summary."}}
+
+event: response.content_part.added
+data: {"type":"response.content_part.added","sequence_number":5,"item_id":"rs_1","output_index":0,"content_index":0,"part":{"type":"reasoning_text","text":""}}
+
+event: response.reasoning_text.delta
+data: {"type":"response.reasoning_text.delta","sequence_number":6,"item_id":"rs_1","output_index":0,"content_index":0,"delta":"Raw thoughts."}
+
+event: response.reasoning_text.done
+data: {"type":"response.reasoning_text.done","sequence_number":7,"item_id":"rs_1","output_index":0,"content_index":0,"text":"Raw thoughts."}
+
+event: response.content_part.done
+data: {"type":"response.content_part.done","sequence_number":8,"item_id":"rs_1","output_index":0,"content_index":0,"part":{"type":"reasoning_text","text":"Raw thoughts."}}
+
+event: response.reasoning_summary_part.added
+data: {"type":"response.reasoning_summary_part.added","sequence_number":9,"item_id":"rs_1","output_index":0,"summary_index":1,"part":{"type":"summary_text","text":""}}
+
+event: response.reasoning_summary_text.delta
+data: {"type":"response.reasoning_summary_text.delta","sequence_number":10,"item_id":"rs_1","output_index":0,"summary_index":1,"delta":"More summary."}
+
+event: response.reasoning_summary_text.done
+data: {"type":"response.reasoning_summary_text.done","sequence_number":11,"item_id":"rs_1","output_index":0,"summary_index":1,"text":"More summary."}
+
+event: response.reasoning_summary_part.done
+data: {"type":"response.reasoning_summary_part.done","sequence_number":12,"item_id":"rs_1","output_index":0,"summary_index":1,"part":{"type":"summary_text","text":"More summary."}}
+
+event: response.output_item.done
+data: {"type":"response.output_item.done","sequence_number":13,"output_index":0,"item":{"type":"reasoning","id":"rs_1","status":"completed","summary":[{"type":"summary_text","text":"Summary."},{"type":"summary_text","text":"More summary."}],"content":[{"type":"reasoning_text","text":"Raw thoughts."}],"encrypted_content":"gAAAAB"}}
+

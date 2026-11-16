@@ -1,0 +1,39 @@
+event: response.created
+data: {"type":"response.created","sequence_number":0,"response":{"id":"resp_1","object":"response","created_at":1700000000,"model":"m","status":"in_progress","output":[],"error":null,"incomplete_details":null,"usage":null,"tools":[],"tool_choice":"auto","parallel_tool_calls":true,"instructions":null,"max_output_tokens":null,"max_tool_calls":null,"metadata":null,"prompt_cache_key":null,"reasoning":null,"safety_identifier":null,"temperature":null,"text":null,"top_logprobs":null,"top_p":null,"truncation":null,"user":null}}
+
+event: response.in_progress
+data: {"type":"response.in_progress","sequence_number":1,"response":{"id":"resp_1","object":"response","created_at":1700000000,"model":"m","status":"in_progress","output":[],"error":null,"incomplete_details":null,"usage":null,"tools":[],"tool_choice":"auto","parallel_tool_calls":true,"instructions":null,"max_output_tokens":null,"max_tool_calls":null,"metadata":null,"prompt_cache_key":null,"reasoning":null,"safety_identifier":null,"temperature":null,"text":null,"top_logprobs":null,"top_p":null,"truncation":null,"user":null}}
+
+event: response.output_item.added
+data: {"type":"response.output_item.added","sequence_number":2,"output_index":0,"item":{"type":"message","id":"msg_1","role":"assistant","status":"in_progress","content":[],"phase":null}}
+
+event: response.content_part.added
+data: {"type":"response.content_part.added","sequence_number":3,"item_id":"msg_1","output_index":0,"content_index":0,"part":{"type":"output_text","text":"","annotations":[],"logprobs":[]}}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","sequence_number":4,"item_id":"msg_1","output_index":0,"content_index":0,"delta":"Partial","logprobs":[]}
+
+event: response.output_item.added
+data: {"type":"response.output_item.added","sequence_number":5,"output_index":1,"item":{"type":"web_search_call","id":"ws_1","status":"in_progress","action":{"type":"search","query":null,"queries":null,"sources":null}}}
+
+event: response.web_search_call.in_progress
+data: {"type":"response.web_search_call.in_progress","sequence_number":6,"item_id":"ws_1","output_index":1}
+
+event: response.web_search_call.searching
+data: {"type":"response.web_search_call.searching","sequence_number":7,"item_id":"ws_1","output_index":1}
+
+event: response.output_item.added
+data: {"type":"response.output_item.added","sequence_number":8,"output_index":2,"item":{"type":"function_call","id":"fc_1","status":"in_progress","call_id":"call_1","name":"f","arguments":""}}
+
+event: response.function_call_arguments.delta
+data: {"type":"response.function_call_arguments.delta","sequence_number":9,"item_id":"fc_1","output_index":2,"delta":"{\"a\":"}
+
+event: response.output_item.done
+data: {"type":"response.output_item.done","sequence_number":10,"output_index":1,"item":{"type":"web_search_call","id":"ws_1","status":"failed","action":{"type":"search","query":"q","queries":null,"sources":null}}}
+
+event: error
+data: {"type":"error","sequence_number":11,"code":"server_error","message":"Internal server error","param":null}
+
+event: response.failed
+data: {"type":"response.failed","sequence_number":12,"response":{"id":"resp_1","object":"response","created_at":1700000000,"model":"m","status":"failed","output":[{"type":"message","id":"msg_1","role":"assistant","status":"in_progress","content":[{"type":"output_text","text":"Partial","annotations":[],"logprobs":[]}],"phase":null},{"type":"web_search_call","id":"ws_1","status":"failed","action":{"type":"search","query":"q","queries":null,"sources":null}},{"type":"function_call","id":"fc_1","status":"in_progress","call_id":"call_1","name":"f","arguments":"{\"a\":"}],"error":{"code":"server_error","message":"Internal server error"},"incomplete_details":null,"usage":null,"tools":[],"tool_choice":"auto","parallel_tool_calls":true,"instructions":null,"max_output_tokens":null,"max_tool_calls":null,"metadata":null,"prompt_cache_key":null,"reasoning":null,"safety_identifier":null,"temperature":null,"text":null,"top_logprobs":null,"top_p":null,"truncation":null,"user":null}}
+

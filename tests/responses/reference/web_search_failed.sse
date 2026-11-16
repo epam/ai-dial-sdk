@@ -1,0 +1,12 @@
+event: response.output_item.added
+data: {"type":"response.output_item.added","sequence_number":0,"output_index":0,"item":{"type":"web_search_call","id":"ws_1","status":"in_progress","action":{"type":"search","query":null,"queries":null,"sources":null}}}
+
+event: response.web_search_call.in_progress
+data: {"type":"response.web_search_call.in_progress","sequence_number":1,"item_id":"ws_1","output_index":0}
+
+event: response.web_search_call.searching
+data: {"type":"response.web_search_call.searching","sequence_number":2,"item_id":"ws_1","output_index":0}
+
+event: response.output_item.done
+data: {"type":"response.output_item.done","sequence_number":3,"output_index":0,"item":{"type":"web_search_call","id":"ws_1","status":"failed","action":{"type":"search","query":null,"queries":["a","b"],"sources":null}}}
+
