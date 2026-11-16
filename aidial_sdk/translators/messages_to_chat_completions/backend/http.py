@@ -12,6 +12,7 @@ from openai.types.chat import ChatCompletion, ChatCompletionChunk
 from aidial_sdk.exceptions import HTTPException as DIALException
 from aidial_sdk.translators.messages_to_chat_completions.backend.client import (
     HEARTBEAT,
+    Headers,
     Heartbeat,
 )
 from aidial_sdk.translators.messages_to_chat_completions.settings import (
@@ -148,7 +149,7 @@ class ChatClientHttp:
 
     async def create_stream(
         self, body: dict
-    ) -> AsyncGenerator[ChatCompletionChunk | Heartbeat, None]:
+    ) -> tuple[AsyncGenerator[ChatCompletionChunk | Heartbeat, None], Headers]:
         with _core_errors():
             stream = await self.client.post(
                 "/chat/completions",
@@ -158,9 +159,9 @@ class ChatClientHttp:
                 stream=True,
                 stream_cls=AsyncStream[ChatCompletionChunk],
             )
-        return _with_heartbeat(stream, self.heartbeat_interval)
+        return _with_heartbeat(stream, self.heartbeat_interval), []
 
-    async def create_block(self, body: dict) -> ChatCompletion:
+    async def create_block(self, body: dict) -> tuple[ChatCompletion, Headers]:
         with _core_errors():
             response = await self.client.post(
                 "/chat/completions",
@@ -168,4 +169,4 @@ class ChatClientHttp:
                 body=body,
                 options={"headers": self.core_headers},
             )
-        return response
+        return response, []
