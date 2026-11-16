@@ -1,5 +1,5 @@
 from collections.abc import AsyncGenerator, AsyncIterator, Hashable, Iterator
-from typing import Any
+from typing import Any, cast
 
 from anthropic.types import TextBlock, ThinkingBlock, ToolUseBlock
 from anthropic.types.input_json_delta import InputJSONDelta
@@ -9,6 +9,7 @@ from anthropic.types.raw_content_block_start_event import (
 from anthropic.types.signature_delta import SignatureDelta
 from anthropic.types.text_delta import TextDelta
 from anthropic.types.thinking_delta import ThinkingDelta
+from openai._models import construct_type_unchecked
 from openai.types.responses import (
     ResponseCompletedEvent,
     ResponseCreatedEvent,
@@ -24,6 +25,7 @@ from openai.types.responses import (
     ResponseReasoningSummaryTextDeltaEvent,
     ResponseReasoningTextDeltaEvent,
     ResponseRefusalDeltaEvent,
+    ResponseStreamEvent,
     ResponseTextDeltaEvent,
 )
 
@@ -51,7 +53,17 @@ from aidial_sdk.translators.messages_to_responses.reasoning import (
 )
 from aidial_sdk.utils.logging import logger as log
 
-ResponsesEvent = dict[str, Any]
+ResponsesEvent = ResponseStreamEvent
+
+
+def parse_event(data: object) -> ResponsesEvent:
+    """The event of the class of its `type`. An event of an unknown type gets
+    the class of the first type, which `_ResponsesToAnthropicStream.handle`
+    ignores."""
+    return construct_type_unchecked(
+        value=data, type_=cast(Any, ResponseStreamEvent)
+    )
+
 
 # The keys of the open block: a text is a content part of an output item,
 # a tool call and a reasoning are output items
@@ -78,74 +90,42 @@ class _ResponsesToAnthropicStream(AnthropicStreamState):
             yield format_sse({"type": "ping"})
             return
 
-        # The events are dispatched on `type` before they are constructed:
-        # the openai SDK constructs an event of a type it doesn't know as the
-        # first class of the union
-        match event.get("type"):
-            case "response.created":
-                created = ResponseCreatedEvent.model_construct(**event)
-                self.message_id = created.response.id
+        match event:
+            case ResponseCreatedEvent():
+                self.message_id = event.response.id
                 yield from self._start()
-            case "response.output_item.added":
-                yield from self._on_item_added(
-                    ResponseOutputItemAddedEvent.model_construct(**event)
-                )
-            case "response.output_text.delta":
-                text = ResponseTextDeltaEvent.model_construct(**event)
+            case ResponseOutputItemAddedEvent():
+                yield from self._on_item_added(event)
+            case ResponseTextDeltaEvent() | ResponseRefusalDeltaEvent():
                 yield from self._text_delta(
-                    ("text", text.output_index, text.content_index), text.delta
+                    ("text", event.output_index, event.content_index),
+                    event.delta,
                 )
-            case "response.refusal.delta":
-                refusal = ResponseRefusalDeltaEvent.model_construct(**event)
-                yield from self._text_delta(
-                    ("text", refusal.output_index, refusal.content_index),
-                    refusal.delta,
-                )
-            case "response.function_call_arguments.delta":
-                yield from self._on_arguments_delta(
-                    ResponseFunctionCallArgumentsDeltaEvent.model_construct(
-                        **event
-                    )
-                )
-            case "response.reasoning_summary_text.delta":
-                summary = (
-                    ResponseReasoningSummaryTextDeltaEvent.model_construct(
-                        **event
-                    )
-                )
+            case ResponseFunctionCallArgumentsDeltaEvent():
+                yield from self._on_arguments_delta(event)
+            case ResponseReasoningSummaryTextDeltaEvent():
                 yield from self._thinking_delta(
-                    summary.output_index,
-                    ("summary", summary.summary_index),
-                    summary.delta,
+                    event.output_index,
+                    ("summary", event.summary_index),
+                    event.delta,
                 )
-            case "response.reasoning_text.delta":
-                reasoning = ResponseReasoningTextDeltaEvent.model_construct(
-                    **event
-                )
+            case ResponseReasoningTextDeltaEvent():
                 yield from self._thinking_delta(
-                    reasoning.output_index,
-                    ("content", reasoning.content_index),
-                    reasoning.delta,
+                    event.output_index,
+                    ("content", event.content_index),
+                    event.delta,
                 )
-            case "response.output_item.done":
-                yield from self._on_item_done(
-                    ResponseOutputItemDoneEvent.model_construct(**event)
-                )
-            case "response.completed":
-                completed = ResponseCompletedEvent.model_construct(**event)
-                yield from self._finish(completed)
-            case "response.incomplete":
-                incomplete = ResponseIncompleteEvent.model_construct(**event)
-                yield from self._finish(incomplete)
-            case "response.failed":
-                failed = ResponseFailedEvent.model_construct(**event)
+            case ResponseOutputItemDoneEvent():
+                yield from self._on_item_done(event)
+            case ResponseCompletedEvent() | ResponseIncompleteEvent():
+                yield from self._finish(event)
+            case ResponseFailedEvent():
                 yield from self.emit_error(
-                    from_response_error(failed.response.error)
+                    from_response_error(event.response.error)
                 )
-            case "error":
-                error = ResponseErrorEvent.model_construct(**event)
+            case ResponseErrorEvent():
                 yield from self.emit_error(
-                    from_error_code(error.code, error.message)
+                    from_error_code(event.code, event.message)
                 )
             case _:
                 pass

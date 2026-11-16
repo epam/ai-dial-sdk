@@ -7,6 +7,7 @@ from contextlib import aclosing
 from anthropic.types.beta.message_create_params import MessageCreateParams
 from fastapi import Request
 from fastapi.responses import JSONResponse, Response, StreamingResponse
+from openai._streaming import ServerSentEvent, SSEDecoder
 from openai.types.responses import Response as ResponsesResponse
 from pydantic import BaseModel, ValidationError
 from starlette.datastructures import MutableHeaders
@@ -27,6 +28,7 @@ from aidial_sdk.translators.messages_to_responses.from_responses import (
 )
 from aidial_sdk.translators.messages_to_responses.streaming import (
     ResponsesEvent,
+    parse_event,
     translate_stream,
 )
 from aidial_sdk.translators.messages_to_responses.to_responses import (
@@ -165,30 +167,24 @@ async def _body_chunks(response: Response) -> AsyncGenerator[bytes, None]:
             await iterator.aclose()
 
 
+# The SSE decoder of the openai SDK drops a comment, which is how a server
+# sends a heartbeat, so it's surfaced as an event
+_HEARTBEAT_EVENT = ServerSentEvent(event="heartbeat")
+
+
+class _SSEDecoder(SSEDecoder):
+    def decode(self, line: str) -> ServerSentEvent | None:
+        if line.startswith(":"):
+            return _HEARTBEAT_EVENT
+        return super().decode(line)
+
+
 async def _read_events(
     response: Response,
 ) -> AsyncGenerator[ResponsesEvent | Heartbeat, None]:
-    """Parses the server-sent events of the body:
-    https://html.spec.whatwg.org/multipage/server-sent-events.html"""
-
-    data: list[str] = []
-    async with aclosing(_read_lines(response)) as lines:
-        async for line in lines:
-            if line.startswith(":"):
-                # A comment, which is how a server sends a heartbeat
-                yield HEARTBEAT
-            elif line.startswith("data:"):
-                data.append(line.removeprefix("data:").removeprefix(" "))
-            elif not line and data:
-                if (event := "\n".join(data)) != "[DONE]":
-                    yield json.loads(event)
-                data = []
-
-
-async def _read_lines(response: Response) -> AsyncGenerator[str, None]:
-    buffer = b""
     async with aclosing(_body_chunks(response)) as chunks:
-        async for chunk in chunks:
-            *lines, buffer = (buffer + chunk).split(b"\n")
-            for line in lines:
-                yield line.removesuffix(b"\r").decode()
+        async for sse in _SSEDecoder().aiter_bytes(chunks):
+            if sse is _HEARTBEAT_EVENT:
+                yield HEARTBEAT
+            elif not sse.data.startswith("[DONE]"):
+                yield parse_event(sse.json())

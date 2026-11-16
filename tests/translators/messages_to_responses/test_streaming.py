@@ -11,6 +11,7 @@ from aidial_sdk.translators._messages.translation_state import (
     TranslationState,
 )
 from aidial_sdk.translators.messages_to_responses.streaming import (
+    parse_event,
     translate_stream,
 )
 from tests.translators.messages_to_chat_completions.helpers import (
@@ -32,7 +33,10 @@ Event = dict[str, Any]
 async def translate(
     events: list[Event | Heartbeat], raise_after: Exception | None = None
 ) -> list[tuple[str, Any]]:
-    stream = FakeStream(events, raise_after)
+    stream = FakeStream(
+        [e if isinstance(e, Heartbeat) else parse_event(e) for e in events],
+        raise_after,
+    )
     collected = b""
     async for chunk in translate_stream(
         stream.generator, "gpt-5.5", TranslationState()
