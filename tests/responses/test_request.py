@@ -3,6 +3,7 @@ from typing import Any
 
 import fastapi
 import httpx
+import httpx2
 import openai
 import pytest
 from starlette.testclient import TestClient
@@ -35,7 +36,12 @@ from aidial_sdk.responses.request import (
     ResponsesRequest,
 )
 from aidial_sdk.responses.response import Response
-from tests.responses.conftest import run_handler
+from tests.responses.conftest import (
+    DEPLOYMENT,
+    Handler,
+    HandlerApp,
+    run_handler,
+)
 from tests.utils.pydantic import model_parse
 
 
@@ -807,3 +813,90 @@ def test_own_output_sent_back_as_input_is_accepted():
         input=[{"role": "user", "content": "Hi"}, *output],
     )
     assert second.http.status_code == 200, second.http.text
+
+
+# The extras of the models that pass a configuration through by design
+_NESTED_EXTRAS: list[tuple[str, dict[str, Any]]] = [
+    (
+        "web_search",
+        {"tools": [{"type": "web_search", "search_context_size": "low"}]},
+    ),
+    (
+        "mcp",
+        {
+            "tools": [
+                {
+                    "type": "mcp",
+                    "server_label": "deepwiki",
+                    "server_url": "https://mcp.deepwiki.com/mcp",
+                }
+            ]
+        },
+    ),
+    (
+        "allowed_tools",
+        {"tool_choice": {"type": "allowed_tools", "mode": "auto", "tools": []}},
+    ),
+    ("text", {"text": {"verbosity": "low", "unmodelled": 1}}),
+    ("stream_options", {"stream_options": {"unmodelled": True}}),
+    (
+        "input_image",
+        {
+            "input": [
+                {
+                    "type": "message",
+                    "role": "user",
+                    "content": [
+                        {
+                            "type": "input_image",
+                            "image_url": "https://example.com/a.png",
+                            "unmodelled": "kept",
+                        }
+                    ],
+                }
+            ]
+        },
+    ),
+]
+
+
+def _post_to_app(handler: Handler, body: dict[str, Any]) -> httpx2.Response:
+    # Through `DIALApp`, which rejects extra request fields by default:
+    # building the request directly never reaches that check.
+    # Not `run_handler`: an extra unknown to openai is echoed in `text`
+    app = DIALApp().add_responses(DEPLOYMENT, HandlerApp(handler))
+    client = TestClient(app=app, headers={"api-key": "key"})
+    return client.post(
+        f"/openai/deployments/{DEPLOYMENT}/responses",
+        json={"input": "Hi", **body},
+    )
+
+
+@pytest.mark.parametrize(
+    "body",
+    [body for _, body in _NESTED_EXTRAS],
+    ids=[name for name, _ in _NESTED_EXTRAS],
+)
+def test_nested_extras_survive_parsing_by_the_app(body: dict[str, Any]):
+    dumped: list[dict[str, Any]] = []
+
+    async def record(request: Request, response: Response) -> None:
+        dumped.append(request.model_dump(mode="json", exclude_none=True))
+        response.append_text("ok")
+
+    http = _post_to_app(record, body)
+
+    assert http.status_code == 200, http.text
+    [request] = dumped
+    for field, value in body.items():
+        assert request[field] == value
+
+
+def test_unknown_top_level_field_is_still_rejected_by_the_app():
+    async def unreachable(request: Request, response: Response) -> None:
+        raise AssertionError("the request is expected to be rejected")
+
+    http = _post_to_app(unreachable, {"unmodelled": 1})
+
+    assert http.status_code == 400
+    assert "unmodelled" in http.json()["error"]["message"]

@@ -4,7 +4,7 @@ from typing import Literal, Self
 from aidial_sdk.responses import events
 from aidial_sdk.responses._context import _ResponseContext
 from aidial_sdk.responses._ids import MESSAGE_PREFIX
-from aidial_sdk.responses._item_base import _ItemBuilder, _PartBuilder
+from aidial_sdk.responses._item_base import _Chunks, _ItemBuilder, _PartBuilder
 from aidial_sdk.responses.enums import ItemStatus, MessagePhase
 from aidial_sdk.responses.models import (
     Annotation,
@@ -31,12 +31,14 @@ class TextPart(_PartBuilder):
     _kind = "text part"
 
     _part: ResponseOutputText
+    _text: _Chunks
     _pending_logprobs: list[Logprob]
 
     def __init__(self, message: "Message"):
         content = message._item.content
         super().__init__(message, index=len(content))
         self._part = ResponseOutputText(logprobs=[])
+        self._text = _Chunks()
         self._pending_logprobs = []
         content.append(self._part)
         self._on_open()
@@ -44,7 +46,7 @@ class TextPart(_PartBuilder):
     def append(self, text: str) -> Self:
         self._check_writable("append text to")
 
-        self._part.text += text
+        self._text.append(text)
         self._emit_delta(text)
         return self
 
@@ -78,6 +80,8 @@ class TextPart(_PartBuilder):
         omitted ones are filled in: `title` with `""`, and the indices with
         the range of the text appended so far, `(0, len(text))`.
         """
+        if end_index is None:
+            self._sync()
         return self.add_annotation(
             UrlCitation(
                 url=url,
@@ -129,7 +133,11 @@ class TextPart(_PartBuilder):
             )
         )
 
+    def _sync(self) -> None:
+        self._part.text = self._text.join()
+
     def _on_close(self) -> None:
+        self._sync()
         if self._pending_logprobs:
             self._emit_delta("")
         self._ctx.emit(
@@ -155,18 +163,20 @@ class RefusalPart(_PartBuilder):
     _kind = "refusal part"
 
     _part: ResponseOutputRefusal
+    _refusal: _Chunks
 
     def __init__(self, message: "Message"):
         content = message._item.content
         super().__init__(message, index=len(content))
         self._part = ResponseOutputRefusal()
+        self._refusal = _Chunks()
         content.append(self._part)
         self._on_open()
 
     def append(self, refusal: str) -> Self:
         self._check_writable("append refusal to")
 
-        self._part.refusal += refusal
+        self._refusal.append(refusal)
         self._ctx.emit(
             events.refusal_delta(
                 item_id=self._item_id,
@@ -187,7 +197,11 @@ class RefusalPart(_PartBuilder):
             )
         )
 
+    def _sync(self) -> None:
+        self._part.refusal = self._refusal.join()
+
     def _on_close(self) -> None:
+        self._sync()
         self._ctx.emit(
             events.refusal_done(
                 item_id=self._item_id,
@@ -276,6 +290,14 @@ class Message(_ItemBuilder[ResponseOutputMessage]):
         self._close_open_part()
         part = self._open_part = RefusalPart(self)
         return part
+
+    def _set_incomplete(self) -> None:
+        self._incomplete = True
+
+    def _sync(self) -> None:
+        # The parts closed before are synced already
+        if self._open_part is not None:
+            self._open_part._sync()
 
     def _close_open_part(self) -> None:
         # Opening a content part closes the one still open

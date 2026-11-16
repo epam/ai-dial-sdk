@@ -43,7 +43,7 @@ def test_nothing_appended(builder, field: str):
 def test_set_arguments_takes_a_string_as_is():
     call = FunctionCall(_FixedIdContext(stream=True), "f")
 
-    call.set_arguments('{"a":1}')
+    call.set_arguments('{"a":1}').close()
 
     assert call._item.arguments == '{"a":1}'
 

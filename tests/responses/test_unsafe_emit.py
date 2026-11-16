@@ -1,15 +1,22 @@
 import logging
+from typing import Any
 
+import pytest
 from openai.types.responses import (
     ResponseErrorEvent,
     ResponseMcpCallInProgressEvent,
 )
 
+from aidial_sdk.exceptions import RuntimeServerError
 from aidial_sdk.responses.events import _dump
+from aidial_sdk.responses.request import Request
+from aidial_sdk.responses.response import Response
 from tests.responses.conftest import (
     _parse,
     drain,
     make_response,
+    raises_runtime_error,
+    run_handler,
     validate_event,
 )
 
@@ -122,3 +129,38 @@ def test_sequence_numbers_stay_gapless_around_raw_events():
 
     stream = drain(response._ctx)
     assert [e["sequence_number"] for e in stream] == list(range(len(stream)))
+
+
+@pytest.mark.parametrize(
+    "event", [{"foo": 1}, {"type": None}, {"type": 1}], ids=repr
+)
+@pytest.mark.parametrize("stream", [True, False])
+def test_event_without_a_string_type_is_refused(
+    caplog, event: dict[str, Any], stream: bool
+):
+    response = make_response(stream=stream)
+
+    with raises_runtime_error(
+        caplog, 'Trying to emit an event without a string "type"'
+    ):
+        response.unsafe_emit(event)
+
+    # Refused before anything was emitted
+    assert not response._ctx.generation_started
+
+
+def test_refused_event_does_not_cut_the_connection():
+    refused: list[RuntimeServerError] = []
+
+    async def handler(request: Request, response: Response) -> None:
+        try:
+            response.unsafe_emit({"foo": 1})
+        except RuntimeServerError as e:
+            refused.append(e)
+        response.append_text("Hi")
+
+    run = run_handler(handler, stream=True)
+
+    assert len(refused) == 1
+    assert run.http.status_code == 200
+    assert run.types[-1] == "response.completed"

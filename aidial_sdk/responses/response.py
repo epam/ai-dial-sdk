@@ -87,6 +87,7 @@ class Response:
     _usage: Usage | None
     _incomplete_reason: IncompleteReason | None
     _headers: list[tuple[str, str]]
+    _headers_sent: bool
     _body: dict[str, Any] | None
     _exception: DIALException | None
     _raised_early: bool
@@ -114,6 +115,7 @@ class Response:
         self._usage = None
         self._incomplete_reason = None
         self._headers = []
+        self._headers_sent = False
         self._body = None
         self._exception = None
         self._raised_early = False
@@ -224,19 +226,16 @@ class Response:
         a sequence the builders can't express, e.g. an upstream Responses
         stream proxied verbatim.
 
+        The event must carry a string `type`, which names the SSE event
+        and which every consumer of the stream keys off: an event without
+        one is refused in both modes.
+
         In block mode it's a no-op that logs a warning: there is no stream
         to write to, and the response object can't absorb the event.
         Generation starts all the same, so that the setters' guard rails
         behave alike in both modes.
         """
         self._check_not_finished("emit an event")
-        self._ctx.start_generation()
-        if not self.stream:
-            log_warning(
-                "The event passed to unsafe_emit is dropped: "
-                "the response isn't streamed"
-            )
-            return
 
         if isinstance(event, Mapping):
             raw = copy.deepcopy(dict(event))
@@ -244,6 +243,18 @@ class Response:
             raw = event.model_dump(
                 mode="json", by_alias=True, exclude_unset=True
             )
+        if not isinstance(raw.get("type"), str):
+            raise runtime_error(
+                'Trying to emit an event without a string "type"'
+            )
+
+        self._ctx.start_generation()
+        if not self.stream:
+            log_warning(
+                "The event passed to unsafe_emit is dropped: "
+                "the response isn't streamed"
+            )
+            return
 
         self._ctx.emit(raw)
 
@@ -279,9 +290,23 @@ class Response:
             raise runtime_error(
                 "Trying to set a header after start of generation"
             )
+        # The stream is open before generation starts if a heartbeat
+        # opened it, and the headers went out with it
+        if self._headers_sent:
+            raise runtime_error(
+                "Trying to set a header after the headers were sent"
+            )
 
         self._headers.append((key, value))
         return self
+
+    def _send_headers(self) -> list[tuple[str, str]]:
+        """
+        Called by the transport when it sends the headers:
+        any header set later is refused rather than dropped.
+        """
+        self._headers_sent = True
+        return self._headers
 
     async def aflush(self) -> None:
         """Waits until every event emitted so far is written."""
@@ -393,13 +418,11 @@ class Response:
 
         # In creation order, so that the transcript is deterministic.
         # On an incomplete response an item still open was cut off too,
-        # which only these types can state
+        # which each item type states as its schema allows
         for item in self._items:
             if not item.closed:
-                if self._incomplete_reason is not None and isinstance(
-                    item, Message | Reasoning | FunctionCall
-                ):
-                    item.set_incomplete()
+                if self._incomplete_reason is not None:
+                    item._set_incomplete()
                 item._close_self()
 
         response_object = self._ctx.response_object

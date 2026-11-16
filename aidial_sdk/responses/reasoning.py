@@ -3,7 +3,7 @@ from typing import Self
 from aidial_sdk.responses import events
 from aidial_sdk.responses._context import _ResponseContext
 from aidial_sdk.responses._ids import REASONING_PREFIX
-from aidial_sdk.responses._item_base import _ItemBuilder, _PartBuilder
+from aidial_sdk.responses._item_base import _Chunks, _ItemBuilder, _PartBuilder
 from aidial_sdk.responses.enums import ItemStatus
 from aidial_sdk.responses.models import (
     ReasoningContent,
@@ -18,12 +18,14 @@ class SummaryPart(_PartBuilder):
     _kind = "summary part"
 
     _part: ReasoningSummary
+    _text: _Chunks
     _incomplete: bool
 
     def __init__(self, reasoning: "Reasoning"):
         summary = reasoning._item.summary
         super().__init__(reasoning, index=len(summary))
         self._part = ReasoningSummary()
+        self._text = _Chunks()
         self._incomplete = False
         summary.append(self._part)
         self._on_open()
@@ -31,7 +33,7 @@ class SummaryPart(_PartBuilder):
     def append(self, text: str) -> Self:
         self._check_writable("append text to")
 
-        self._part.text += text
+        self._text.append(text)
         self._ctx.emit(
             events.reasoning_summary_text_delta(
                 item_id=self._item_id,
@@ -58,7 +60,11 @@ class SummaryPart(_PartBuilder):
             )
         )
 
+    def _sync(self) -> None:
+        self._part.text = self._text.join()
+
     def _on_close(self) -> None:
+        self._sync()
         self._ctx.emit(
             events.reasoning_summary_text_done(
                 item_id=self._item_id,
@@ -84,6 +90,7 @@ class ReasoningTextPart(_PartBuilder):
     _kind = "reasoning text part"
 
     _part: ReasoningContent
+    _text: _Chunks
 
     def __init__(self, reasoning: "Reasoning"):
         if reasoning._item.content is None:
@@ -91,13 +98,14 @@ class ReasoningTextPart(_PartBuilder):
         content = reasoning._item.content
         super().__init__(reasoning, index=len(content))
         self._part = ReasoningContent()
+        self._text = _Chunks()
         content.append(self._part)
         self._on_open()
 
     def append(self, text: str) -> Self:
         self._check_writable("append text to")
 
-        self._part.text += text
+        self._text.append(text)
         self._ctx.emit(
             events.reasoning_text_delta(
                 item_id=self._item_id,
@@ -118,7 +126,11 @@ class ReasoningTextPart(_PartBuilder):
             )
         )
 
+    def _sync(self) -> None:
+        self._part.text = self._text.join()
+
     def _on_close(self) -> None:
+        self._sync()
         self._ctx.emit(
             events.reasoning_text_done(
                 item_id=self._item_id,
@@ -195,6 +207,17 @@ class Reasoning(_ItemBuilder[ResponseReasoningItem]):
         self._close_open_part()
         part = self._open_part = ReasoningTextPart(self)
         return part
+
+    def _set_incomplete(self) -> None:
+        self._incomplete = True
+        # The only part with a status of its own
+        if isinstance(self._open_part, SummaryPart):
+            self._open_part._incomplete = True
+
+    def _sync(self) -> None:
+        # The parts closed before are synced already
+        if self._open_part is not None:
+            self._open_part._sync()
 
     def _close_open_part(self) -> None:
         # Opening a part closes the one still open, in either array

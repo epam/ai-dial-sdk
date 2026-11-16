@@ -273,14 +273,48 @@ async def test_set_incomplete_closes_the_open_items_as_incomplete():
 
     statuses = [item.get("status") for item in run.body["output"]]
     # Closed by the handler, then the three types that admit `incomplete`;
-    # a custom tool call has no status, a web search no `incomplete`
+    # a custom tool call has no status, a web search no `incomplete`,
+    # so it fails rather than claim it completed
     assert statuses == [
         "completed",
         "incomplete",
         "incomplete",
         None,
-        "completed",
+        "failed",
     ]
+
+
+async def _cut_off_with_every_status_open(
+    request: Request, response: Response
+) -> None:
+    response.create_web_search().searching(query="q")
+    response.create_image_generation().generating()
+    response.create_message().append_text("Partial")
+    response.create_reasoning().append_summary("Cut sh")
+    response.set_incomplete(IncompleteReason.MAX_OUTPUT_TOKENS)
+
+
+async def test_set_incomplete_completes_none_of_the_open_items():
+    run = await run_response(_cut_off_with_every_status_open)
+
+    assert not [t for t in run.types if t.endswith(".completed")]
+    assert '"completed"' not in run.transcript
+    # Each with the status its schema has for being cut off: the server
+    # tools have no `incomplete`, so `failed`, without `.completed`
+    assert [item["status"] for item in run.body["output"]] == [
+        "failed",
+        "failed",
+        "incomplete",
+        "incomplete",
+    ]
+    [summary_part_done] = [
+        e
+        for e in run.stream
+        if e["type"] == "response.reasoning_summary_part.done"
+    ]
+    assert summary_part_done["status"] == "incomplete"
+    # And the items are closed all the same
+    assert run.types.count("response.output_item.done") == 4
 
 
 async def test_set_usage():

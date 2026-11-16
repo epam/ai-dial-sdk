@@ -1,2 +1,2 @@
-aidial-sdk>=0.46
+aidial-sdk>=0.48
 uvicorn==0.30.1

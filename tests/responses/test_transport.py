@@ -205,6 +205,28 @@ def test_heartbeat_opens_the_stream():
     assert run.types == [*_PREAMBLE, *_FAILURE]
 
 
+def test_header_after_a_heartbeat_is_refused(caplog):
+    # A heartbeat opened the stream, so the headers are sent:
+    # a header set later can't reach the client and must not be dropped
+    refused: list[RuntimeServerError] = []
+
+    async def handler(request: Request, response: Response) -> None:
+        await asyncio.sleep(0.3)
+        try:
+            response.append_header("X-Late", "1")
+        except RuntimeServerError as e:
+            refused.append(e)
+        response.append_text("Hi")
+
+    run = run_handler(handler, stream=True, heartbeat_interval=0.05)
+
+    assert run.http.text.startswith(": heartbeat\n\n")
+    assert "X-Late" not in run.http.headers
+    assert len(refused) == 1
+    assert "Trying to set a header after the headers were sent" in caplog.text
+    assert run.types[-1] == "response.completed"
+
+
 def _preamble() -> list[Event]:
     response_object = ResponseObject(id="resp_1", created_at=0, model="m")
     return [

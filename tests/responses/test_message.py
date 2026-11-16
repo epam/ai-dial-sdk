@@ -36,6 +36,7 @@ def test_append_reuses_the_open_part_of_the_same_kind():
     text = message.create_text()
 
     message.append_text("a").append_text("b")
+    message.close()
 
     assert message._item.content == [text._part]
     assert text._part.text == "ab"
@@ -84,6 +85,7 @@ def test_content_stream():
 
     print("Hello", file=message.content_stream)
     print("world", end="", file=message.create_text().content_stream)
+    message.close()
 
     assert [part.text for part in message._item.content] == [  # type: ignore
         "Hello\n",

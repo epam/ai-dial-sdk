@@ -15,6 +15,14 @@ class ExtraAllowModel(BaseModel):
             extra = "allow"
 
 
+class ExtraKeepModel(ExtraAllowModel):
+    """
+    A model whose extras are part of its contract, e.g. the configuration
+    of a tool the SDK doesn't model, so `model_validate_extra_fields`
+    doesn't report them.
+    """
+
+
 class IgnoreIndex(BaseModel):
     @model_validator(mode="before")
     @classmethod
@@ -87,6 +95,8 @@ if PYDANTIC_V2:
         )
 
         for model, loc in _model_iterate_fields(root_model, False, ()):
+            if isinstance(model, ExtraKeepModel):
+                continue
             for key, value in (model.model_extra or {}).items():
                 errors.append(
                     {
@@ -109,6 +119,8 @@ else:
         errors: list[ErrorWrapper] = []
 
         for model, loc in _model_iterate_fields(root_model, False, ()):
+            if isinstance(model, ExtraKeepModel):
+                continue
             declared = set(_get_model_fields(model).keys())
             for key in model.__dict__:
                 if key not in declared:

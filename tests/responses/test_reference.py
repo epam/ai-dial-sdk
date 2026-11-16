@@ -16,6 +16,7 @@ from pathlib import Path
 import pytest
 
 from aidial_sdk.responses._context import _ResponseContext
+from aidial_sdk.responses.enums import IncompleteReason
 from aidial_sdk.responses.message import Message
 from aidial_sdk.responses.models import (
     FileCitation,
@@ -265,12 +266,24 @@ async def raises_with_open_items(request: Request, response: Response) -> None:
     raise _Boom()
 
 
+async def incomplete_with_open_items(
+    request: Request, response: Response
+) -> None:
+    # Cut off with every item open, the summary part included
+    response.create_web_search().searching(query="q")
+    response.create_image_generation().generating()
+    response.create_message().append_text("Partial")
+    response.create_reasoning().append_summary("Cut sh")
+    response.set_incomplete(IncompleteReason.MAX_OUTPUT_TOKENS)
+
+
 RESPONSE_CASES: dict[str, _Producer] = {
     "response_two_function_calls": two_function_calls,
     "response_open_items_at_return": open_items_at_return,
     "response_shortcuts": shortcuts,
     "response_raises_in_message": raises_in_message,
     "response_raises_with_open_items": raises_with_open_items,
+    "response_incomplete_with_open_items": incomplete_with_open_items,
 }
 
 

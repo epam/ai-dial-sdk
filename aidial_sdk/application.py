@@ -498,7 +498,7 @@ class DIALApp(FastAPI):
                 )
                 resp = JSONResponse(content=response_json)
 
-            for key, value in response._headers:
+            for key, value in response._send_headers():
                 resp.headers.append(key, value)
 
             return resp

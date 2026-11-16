@@ -22,7 +22,22 @@ class _ServerTool(_ItemBuilder[_ToolT]):
     On an exception it is closed with `status: "failed"` and without its
     terminal status event, since the protocol has no failure event for it.
     The exception is not swallowed.
+
+    Its status has no `incomplete` either (in openai<3.9 for a web
+    search, in any version for an image generation): cut off by
+    an incomplete response, it's closed with `status: "failed"`, the only
+    terminal status other than `completed`, again without its terminal
+    status event.
     """
+
+    _cut_off: bool
+
+    def __init__(self, ctx: _ResponseContext, item: _ToolT):
+        super().__init__(ctx, item)
+        self._cut_off = False
+
+    def _set_incomplete(self) -> None:
+        self._cut_off = True
 
     def _fail_self(self) -> None:
         self._closed = True
@@ -92,12 +107,15 @@ class WebSearch(_ServerTool[ResponseFunctionWebSearch]):
         )
 
     def _on_close(self) -> None:
-        self._item.status = "completed"
-        self._ctx.emit(
-            events.web_search_call_completed(
-                item_id=self.id, output_index=self._output_index
+        if self._cut_off:
+            self._item.status = "failed"
+        else:
+            self._item.status = "completed"
+            self._ctx.emit(
+                events.web_search_call_completed(
+                    item_id=self.id, output_index=self._output_index
+                )
             )
-        )
         self._emit_done()
 
 
@@ -154,10 +172,13 @@ class ImageGeneration(_ServerTool[ImageGenerationCall]):
         )
 
     def _on_close(self) -> None:
-        self._item.status = "completed"
-        self._ctx.emit(
-            events.image_generation_call_completed(
-                item_id=self.id, output_index=self._output_index
+        if self._cut_off:
+            self._item.status = "failed"
+        else:
+            self._item.status = "completed"
+            self._ctx.emit(
+                events.image_generation_call_completed(
+                    item_id=self.id, output_index=self._output_index
+                )
             )
-        )
         self._emit_done()

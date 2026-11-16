@@ -19,7 +19,7 @@ from aidial_sdk.deployment.from_request_mixin import (
 )
 from aidial_sdk.exceptions import InvalidRequestError, RequestValidationError
 from aidial_sdk.responses.enums import ItemStatus, MessagePhase
-from aidial_sdk.utils.pydantic import ExtraAllowModel
+from aidial_sdk.utils.pydantic import ExtraAllowModel, ExtraKeepModel
 
 
 class InputRole(str, Enum):
@@ -91,7 +91,7 @@ class InputTextPart(ExtraAllowModel):
     text: StrictStr
 
 
-class InputImagePart(ExtraAllowModel):
+class InputImagePart(ExtraKeepModel):
     type: Literal["input_image"]
     image_url: StrictStr | None = None
     file_id: StrictStr | None = None
@@ -271,7 +271,7 @@ class CustomTool(ExtraAllowModel):
     format: dict[str, Any] | None = None
 
 
-class Tool(ExtraAllowModel):
+class Tool(ExtraKeepModel):
     """
     A tool of a type the SDK doesn't model (`web_search`, `mcp`, ...),
     all of its fields are kept as extras.
@@ -292,7 +292,7 @@ class Tool(ExtraAllowModel):
         return data
 
 
-class ToolChoice(ExtraAllowModel):
+class ToolChoice(ExtraKeepModel):
     """
     `{"type": "function", "name": ...}`, `{"type": "allowed_tools", ...}`,
     `{"type": "web_search_preview"}` and the like.
@@ -302,7 +302,7 @@ class ToolChoice(ExtraAllowModel):
     name: StrictStr | None = None
 
 
-class TextConfig(ExtraAllowModel):
+class TextConfig(ExtraKeepModel):
     format: dict[str, Any] | None = None
     verbosity: StrictStr | None = None
 
@@ -312,7 +312,7 @@ class ReasoningConfig(ExtraAllowModel):
     summary: StrictStr | None = None
 
 
-class StreamOptions(ExtraAllowModel):
+class StreamOptions(ExtraKeepModel):
     include_obfuscation: StrictBool | None = None
 
 

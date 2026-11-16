@@ -10,6 +10,30 @@ from aidial_sdk.utils.errors import runtime_error
 _ItemT = TypeVar("_ItemT", bound=ResponseOutputItem)
 
 
+class _Chunks:
+    """
+    The deltas of a string field of the snapshot, joined when the field
+    is written: `+=` on the field would copy the whole string on every
+    delta, quadratic in its length.
+    """
+
+    _chunks: list[str]
+
+    def __init__(self) -> None:
+        self._chunks = []
+
+    def __bool__(self) -> bool:
+        return any(self._chunks)
+
+    def append(self, chunk: str) -> None:
+        self._chunks.append(chunk)
+
+    def join(self) -> str:
+        text = "".join(self._chunks)
+        self._chunks = [text]
+        return text
+
+
 class _Builder(ABC):
     """
     The open/close mechanics shared by every builder.
@@ -71,11 +95,19 @@ class _Builder(ABC):
         self._closed = True
         self._on_close()
 
-    def _fail_self(self) -> None:  # noqa: B027 -- empty on purpose
+    def _fail_self(self) -> None:
         """
         Records a failure: on an exception, and on the response failing.
         By default the builder is left open, since its exit events would
-        claim the content finished normally.
+        claim the content finished normally, but what was written reaches
+        the snapshot `response.failed` carries.
+        """
+        self._sync()
+
+    def _sync(self) -> None:  # noqa: B027 -- empty on purpose
+        """
+        Writes the accumulated deltas into the snapshot: on close, and on
+        a failure, before the snapshot is serialised.
         """
 
     def _check_writable(self, action: str) -> None:
@@ -134,6 +166,14 @@ class _ItemBuilder(_Builder, Generic[_ItemT]):
                 output_index=self._output_index, item=self._item
             )
         )
+
+    def _set_incomplete(self) -> None:  # noqa: B027 -- a no-op by default
+        """
+        Records that an incomplete response cut the item off: called on
+        each item still open when it ends, right before it's closed.
+        Each item type states it as its schema allows; by default nothing
+        is recorded, which is right only for an item with no `status`.
+        """
 
     def _emit_done(self) -> None:
         self._ctx.emit(

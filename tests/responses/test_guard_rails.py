@@ -279,6 +279,18 @@ def _started(stream: bool = True) -> Response:
     return response
 
 
+@pytest.mark.parametrize("stream", [True, False])
+def test_append_header_after_the_headers_were_sent(caplog, stream: bool):
+    # Before generation starts, e.g. when a heartbeat opened the stream
+    response = make_response(stream=stream)
+    response._send_headers()
+
+    with raises_runtime_error(
+        caplog, "Trying to set a header after the headers were sent"
+    ):
+        response.append_header("a", "1")
+
+
 @pytest.mark.parametrize(
     "call, reason",
     [

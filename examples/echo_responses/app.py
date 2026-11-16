@@ -14,12 +14,14 @@ class EchoApplication(Responses):
     async def create_response(
         self, request: Request, response: Response
     ) -> None:
-        # Get last message (the newest) from the history and it's text
-        last_message = request.messages[-1].text()
+        # Get the text of the last message (the newest), if there is one:
+        # the input may hold no messages, e.g. only tool results
+        messages = request.messages
+        text = messages[-1].text() if messages else ""
 
         # Generate a single output message
         with response.create_message() as message:
-            message.append_text(last_message)
+            message.append_text(text)
 
 
 # DIALApp extends FastAPI to provide a user-friendly interface for routing requests to your applications
