@@ -1,5 +1,5 @@
-from collections.abc import AsyncGenerator, AsyncIterator, Hashable, Iterator
-from typing import Any, cast
+from collections.abc import AsyncGenerator, AsyncIterator, Iterator
+from typing import Any, Literal, TypedDict, cast
 
 from anthropic.types import TextBlock, ThinkingBlock, ToolUseBlock
 from anthropic.types.input_json_delta import InputJSONDelta
@@ -67,8 +67,14 @@ def parse_event(data: object) -> ResponsesEvent:
 
 # The keys of the open block: a text is a content part of an output item,
 # a tool call and a reasoning are output items
-_TextKey = tuple[str, int, int]
-_ItemKey = tuple[str, int]
+class _TextKey(TypedDict):
+    output_index: int
+    content_index: int
+
+
+class _ItemKey(TypedDict):
+    kind: Literal["function", "reasoning"]
+    output_index: int
 
 
 class _ResponsesToAnthropicStream(AnthropicStreamState):
@@ -98,7 +104,10 @@ class _ResponsesToAnthropicStream(AnthropicStreamState):
                 yield from self._on_item_added(event)
             case ResponseTextDeltaEvent() | ResponseRefusalDeltaEvent():
                 yield from self._text_delta(
-                    ("text", event.output_index, event.content_index),
+                    _TextKey(
+                        output_index=event.output_index,
+                        content_index=event.content_index,
+                    ),
                     event.delta,
                 )
             case ResponseFunctionCallArgumentsDeltaEvent():
@@ -128,7 +137,7 @@ class _ResponsesToAnthropicStream(AnthropicStreamState):
                     from_error_code(event.code, event.message)
                 )
             case _:
-                pass
+                log.debug(f"Dropping Responses API event: {event.type}")
 
     def _start(self) -> Iterator[bytes]:
         if not self.started:
@@ -136,7 +145,7 @@ class _ResponsesToAnthropicStream(AnthropicStreamState):
             yield from self.message_start_events()
 
     def open_block(
-        self, key: Hashable, content_block: AnthropicContentBlock
+        self, key: object, content_block: AnthropicContentBlock
     ) -> Iterator[bytes]:
         yield from self._start()
         yield from super().open_block(key, content_block)
@@ -151,7 +160,7 @@ class _ResponsesToAnthropicStream(AnthropicStreamState):
     ) -> Iterator[bytes]:
         if not text:
             return
-        key: _ItemKey = ("reasoning", output_index)
+        key = _ItemKey(kind="reasoning", output_index=output_index)
         if not self.is_open(key):
             yield from self.open_block(
                 key, ThinkingBlock(type="thinking", thinking="", signature="")
@@ -171,7 +180,7 @@ class _ResponsesToAnthropicStream(AnthropicStreamState):
             case ResponseFunctionToolCall(type="function_call"):
                 self._has_tool_call = True
                 yield from self.open_block(
-                    ("function", event.output_index),
+                    _ItemKey(kind="function", output_index=event.output_index),
                     ToolUseBlock(
                         type="tool_use",
                         id=event.item.call_id,
@@ -185,10 +194,8 @@ class _ResponsesToAnthropicStream(AnthropicStreamState):
     def _on_arguments_delta(
         self, event: ResponseFunctionCallArgumentsDeltaEvent
     ) -> Iterator[bytes]:
-        if (
-            not self.is_open(("function", event.output_index))
-            or not event.delta
-        ):
+        key = _ItemKey(kind="function", output_index=event.output_index)
+        if not self.is_open(key) or not event.delta:
             return
         self._streamed_arguments.add(event.output_index)
         yield from self.delta(
@@ -200,7 +207,8 @@ class _ResponsesToAnthropicStream(AnthropicStreamState):
     ) -> Iterator[bytes]:
         match event.item:
             case ResponseFunctionToolCall(type="function_call"):
-                if not self.is_open(("function", event.output_index)):
+                key = _ItemKey(kind="function", output_index=event.output_index)
+                if not self.is_open(key):
                     return
                 if (
                     event.output_index not in self._streamed_arguments
@@ -216,7 +224,8 @@ class _ResponsesToAnthropicStream(AnthropicStreamState):
                 yield from self.close_block()
             case ResponseReasoningItem(type="reasoning"):
                 yield from self._on_reasoning_done(
-                    ("reasoning", event.output_index), event.item
+                    _ItemKey(kind="reasoning", output_index=event.output_index),
+                    event.item,
                 )
             case ResponseOutputMessage(type="message"):
                 for block in to_anthropic_citation_blocks(
@@ -226,7 +235,9 @@ class _ResponsesToAnthropicStream(AnthropicStreamState):
                     yield from self.close_block()
                 self._is_refusal = self._is_refusal or has_refusal(event.item)
             case _:
-                pass
+                log.debug(
+                    f"Dropping Responses API output item: {event.item.type}"
+                )
 
     def _on_reasoning_done(
         self, key: _ItemKey, item: ResponseReasoningItem

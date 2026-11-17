@@ -40,6 +40,7 @@ from aidial_sdk.translators._messages.web_search import (
 from aidial_sdk.translators.messages_to_responses.reasoning import (
     to_anthropic_thinking_block,
 )
+from aidial_sdk.utils._logging import log_unexpected, log_unsupported
 from aidial_sdk.utils.logging import logger as log
 
 # The Responses API error codes, and the error types DIAL writes into a
@@ -97,7 +98,7 @@ def to_anthropic_message(
                     _to_anthropic_tool_use_block(item, translation_state)
                 )
             case _:
-                log.debug(f"Dropping Responses API output item: {item.type}")
+                log_unsupported(f"Responses API output item: {item.type}")
 
     return Message(
         id=response.id,
@@ -142,6 +143,8 @@ def _to_anthropic_message_blocks(
                 )
             case ResponseOutputRefusal(type="refusal"):
                 yield TextBlock(type="text", text=part.refusal)
+            case _:
+                log_unexpected(f"Responses API content part: {part.type}")
 
 
 def to_anthropic_citation_blocks(
@@ -152,6 +155,10 @@ def to_anthropic_citation_blocks(
         match part:
             case ResponseOutputText(type="output_text"):
                 citations.extend(_new_citations(part, seen_urls))
+            case ResponseOutputRefusal(type="refusal"):
+                pass
+            case _:
+                log_unexpected(f"Responses API content part: {part.type}")
     return to_anthropic_web_search_blocks(citations)
 
 

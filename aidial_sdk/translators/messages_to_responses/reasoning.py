@@ -1,4 +1,4 @@
-from typing import Literal
+from typing import Literal, assert_never
 
 from anthropic.types import RedactedThinkingBlock, ThinkingBlock
 from anthropic.types.beta import (
@@ -9,24 +9,21 @@ from openai.types.responses import (
     ResponseReasoningItem,
     ResponseReasoningItemParam,
 )
-from pydantic import BaseModel, ConfigDict, ValidationError
+from pydantic import ValidationError
 
 from aidial_sdk.utils.logging import logger as log
+from aidial_sdk.utils.pydantic import ExtraAllowModel
 
 
-class _EncryptedReasoning(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-
+class _EncryptedReasoning(ExtraAllowModel):
     version: Literal[2]
     id: str
     encrypted_content: str
 
 
-class _Signature(BaseModel):
+class _Signature(ExtraAllowModel):
     """The encrypted reasoning item carried by an Anthropic thinking block
     to be replayed in the next turn."""
-
-    model_config = ConfigDict(extra="forbid")
 
     dial_translator_reasoning_wrapper: _EncryptedReasoning
 
@@ -68,6 +65,8 @@ def to_reasoning_item(
             signature, text = block["signature"], block["thinking"]
         case "redacted_thinking":
             signature, text = block["data"], ""
+        case unsupported:
+            assert_never(unsupported)
 
     try:
         reasoning = _Signature.model_validate_json(

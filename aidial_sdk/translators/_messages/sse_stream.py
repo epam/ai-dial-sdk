@@ -4,7 +4,6 @@ from collections.abc import (
     AsyncGenerator,
     AsyncIterator,
     Callable,
-    Hashable,
     Iterable,
     Iterator,
 )
@@ -67,13 +66,13 @@ class AnthropicStreamState:
         self.next_index = 0
         self.terminated = False
 
-        self._open: tuple[Hashable, int] | None = None
+        self._open: tuple[object, int] | None = None
 
-    def is_open(self, key: Hashable) -> bool:
+    def is_open(self, key: object) -> bool:
         return self._open is not None and self._open[0] == key
 
     def open_block(
-        self, key: Hashable, content_block: AnthropicContentBlock
+        self, key: object, content_block: AnthropicContentBlock
     ) -> Iterator[bytes]:
         yield from self.close_block()
         index = self.next_index

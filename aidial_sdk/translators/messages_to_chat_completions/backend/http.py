@@ -1,4 +1,4 @@
-from collections.abc import AsyncGenerator, Iterator
+from collections.abc import AsyncGenerator, Generator
 from contextlib import contextmanager
 from dataclasses import dataclass
 from urllib.parse import quote
@@ -102,7 +102,7 @@ def _from_core_error(e: openai.APIError) -> DIALException:
 
 
 @contextmanager
-def _core_errors() -> Iterator[None]:
+def _core_errors() -> Generator[None]:
     try:
         yield
     except openai.APIError as e:

@@ -351,6 +351,30 @@ async def test_unknown_event_is_ignored() -> None:
     ]
 
 
+async def test_unknown_output_item_is_ignored() -> None:
+    item: dict[str, object] = {"type": "teleport_call", "id": "tp_1"}
+    events = await translate(
+        [created(), item_added(0, item), item_done(0, item), completed([])]
+    )
+    assert [name for name, _ in events] == [
+        "message_start",
+        "content_block_start",
+        "content_block_stop",
+        "message_delta",
+        "message_stop",
+    ]
+
+
+async def test_unknown_content_part_is_ignored() -> None:
+    item = text_item("Hi")
+    item["content"].append({"type": "teleport_part", "text": "?"})
+    events = await translate([created(), item_done(0, item), completed([item])])
+    assert [name for name, _ in events][-2:] == [
+        "message_delta",
+        "message_stop",
+    ]
+
+
 async def test_incomplete_response_stops_on_max_tokens() -> None:
     events = await translate(
         [

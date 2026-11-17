@@ -71,6 +71,12 @@ def test_unknown_output_item_is_dropped() -> None:
     assert message["content"] == [{"type": "text", "text": ""}]
 
 
+def test_unknown_content_part_is_dropped() -> None:
+    item = text_item("Hello")
+    item["content"].append({"type": "teleport_part", "text": "?"})
+    assert translate([item])["content"] == [{"type": "text", "text": "Hello"}]
+
+
 class TestReasoning:
     def test_encrypted_reasoning_with_text_is_signed_thinking(self) -> None:
         message = translate([reasoning_item(["One", "Two"])])
