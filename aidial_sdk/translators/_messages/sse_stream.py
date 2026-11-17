@@ -4,7 +4,6 @@ from collections.abc import (
     AsyncGenerator,
     AsyncIterator,
     Callable,
-    Hashable,
     Iterable,
     Iterator,
 )
@@ -35,6 +34,13 @@ from aidial_sdk.utils.logging import logger as log
 _T = TypeVar("_T")
 
 
+class Heartbeat:
+    """Yielded by a stream for each heartbeat interval it was idle."""
+
+
+HEARTBEAT = Heartbeat()
+
+
 AnthropicSSEEvent = (
     RawMessageStartEvent
     | RawContentBlockStartEvent
@@ -60,13 +66,13 @@ class AnthropicStreamState:
         self.next_index = 0
         self.terminated = False
 
-        self._open: tuple[Hashable, int] | None = None
+        self._open: tuple[object, int] | None = None
 
-    def is_open(self, key: Hashable) -> bool:
+    def is_open(self, key: object) -> bool:
         return self._open is not None and self._open[0] == key
 
     def open_block(
-        self, key: Hashable, content_block: AnthropicContentBlock
+        self, key: object, content_block: AnthropicContentBlock
     ) -> Iterator[bytes]:
         yield from self.close_block()
         index = self.next_index
@@ -133,19 +139,22 @@ class AnthropicStreamState:
             return
         self.terminated = True
         yield from self.close_block()
+        delta_usage = MessageDeltaUsage(
+            input_tokens=usage.input_tokens,
+            output_tokens=usage.output_tokens,
+            cache_creation_input_tokens=usage.cache_creation_input_tokens,
+            cache_read_input_tokens=usage.cache_read_input_tokens,
+            output_tokens_details=usage.output_tokens_details,
+        )
+        if usage.server_tool_use is not None:
+            delta_usage.server_tool_use = usage.server_tool_use
         yield format_sse(
             RawMessageDeltaEvent(
                 type="message_delta",
                 delta=Delta(
                     stop_reason=stop_reason, stop_sequence=stop_sequence
                 ),
-                usage=MessageDeltaUsage(
-                    input_tokens=usage.input_tokens,
-                    output_tokens=usage.output_tokens,
-                    cache_creation_input_tokens=usage.cache_creation_input_tokens,
-                    cache_read_input_tokens=usage.cache_read_input_tokens,
-                    output_tokens_details=usage.output_tokens_details,
-                ),
+                usage=delta_usage,
             )
         )
         yield format_sse(RawMessageStopEvent(type="message_stop"))

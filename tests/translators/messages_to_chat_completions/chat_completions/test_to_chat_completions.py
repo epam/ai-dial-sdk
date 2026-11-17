@@ -20,11 +20,11 @@ from aidial_sdk.chat_completion.request import (
     Tool as SdkTool,
 )
 from aidial_sdk.exceptions import InvalidRequestError
+from aidial_sdk.translators._messages.translation_state import (
+    TranslationState,
+)
 from aidial_sdk.translators.messages_to_chat_completions.chat_completions.to_chat_completions import (
     to_chat_completions_request,
-)
-from aidial_sdk.translators.messages_to_chat_completions.translation_state import (
-    TranslationState,
 )
 from tests.translators.messages_to_chat_completions.helpers import (
     DEPLOYMENT,

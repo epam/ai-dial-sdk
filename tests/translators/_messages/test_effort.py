@@ -4,7 +4,7 @@ import pytest
 from anthropic.types.beta.message_create_params import MessageCreateParams
 
 from aidial_sdk.exceptions import InvalidRequestError
-from aidial_sdk.translators.messages_to_chat_completions.chat_completions.reasoning import (
+from aidial_sdk.translators._messages.effort import (
     resolve_effort,
 )
 
@@ -141,7 +141,12 @@ def test_disabled_thinking_overrides_a_system_turn_effort() -> None:
         {"output_config": {"effort": "extreme"}},
         {"messages": [system_turn("extreme")]},
     ],
+    ids=["request", "system-turn"],
 )
 def test_an_unknown_effort_is_rejected(body: dict[str, object]) -> None:
-    with pytest.raises(InvalidRequestError):
+    with pytest.raises(InvalidRequestError) as e:
         intent(body)
+    assert e.value.message == (
+        "Cannot convert Anthropic Messages API reasoning effort extreme "
+        "to an OpenAI reasoning effort"
+    )

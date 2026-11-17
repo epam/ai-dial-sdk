@@ -13,15 +13,15 @@ from openai.types.completion_usage import (
     PromptTokensDetails,
 )
 
-from aidial_sdk.translators.messages_to_chat_completions.backend.client import (
+from aidial_sdk.translators._messages.sse_stream import (
     HEARTBEAT,
     Heartbeat,
 )
+from aidial_sdk.translators._messages.translation_state import (
+    TranslationState,
+)
 from aidial_sdk.translators.messages_to_chat_completions.chat_completions.streaming import (
     translate_stream,
-)
-from aidial_sdk.translators.messages_to_chat_completions.translation_state import (
-    TranslationState,
 )
 from tests.translators.messages_to_chat_completions.helpers import (
     FakeStream,

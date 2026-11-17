@@ -1,7 +1,5 @@
 import json
 import logging
-from collections.abc import Awaitable, Callable
-from typing import TypeVar
 
 import httpx
 from anthropic.types.beta.message_create_params import MessageCreateParams
@@ -12,6 +10,13 @@ from aidial_sdk._constants import DIAL_SDK_SSE_HEARTBEAT_INTERVAL
 from aidial_sdk._errors import error_handler
 from aidial_sdk.deployment.from_request_mixin import get_client_deployment_id
 from aidial_sdk.exceptions import InvalidRequestError, ResourceNotFoundError
+from aidial_sdk.translators._messages.dial_core import (
+    ClientFactory,
+    get_dial_url,
+)
+from aidial_sdk.translators._messages.translation_state import (
+    TranslationState,
+)
 from aidial_sdk.translators.messages_to_chat_completions.backend.client import (
     ChatClient,
 )
@@ -30,17 +35,8 @@ from aidial_sdk.translators.messages_to_chat_completions.chat_completions.stream
 from aidial_sdk.translators.messages_to_chat_completions.chat_completions.to_chat_completions import (
     to_chat_completions_request,
 )
-from aidial_sdk.translators.messages_to_chat_completions.settings import (
-    get_dial_url,
-)
-from aidial_sdk.translators.messages_to_chat_completions.translation_state import (
-    TranslationState,
-)
 from aidial_sdk.utils._logging_middleware import LoggingMiddleware
 from aidial_sdk.utils.logging import logger as log
-
-ClientT = TypeVar("ClientT")
-ClientFactory = Callable[[Request], Awaitable[ClientT]] | ClientT
 
 
 async def _not_found(request: Request) -> Response:
