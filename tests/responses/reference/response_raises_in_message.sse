@@ -1,0 +1,21 @@
+event: response.created
+data: {"type":"response.created","sequence_number":0,"response":{"id":"resp_1","object":"response","created_at":1700000000,"model":"m","status":"in_progress","output":[],"error":null,"incomplete_details":null,"usage":null,"tools":[],"tool_choice":"auto","parallel_tool_calls":true,"instructions":null,"max_output_tokens":null,"max_tool_calls":null,"metadata":null,"prompt_cache_key":null,"reasoning":null,"safety_identifier":null,"temperature":null,"text":null,"top_logprobs":null,"top_p":null,"truncation":null,"user":null}}
+
+event: response.in_progress
+data: {"type":"response.in_progress","sequence_number":1,"response":{"id":"resp_1","object":"response","created_at":1700000000,"model":"m","status":"in_progress","output":[],"error":null,"incomplete_details":null,"usage":null,"tools":[],"tool_choice":"auto","parallel_tool_calls":true,"instructions":null,"max_output_tokens":null,"max_tool_calls":null,"metadata":null,"prompt_cache_key":null,"reasoning":null,"safety_identifier":null,"temperature":null,"text":null,"top_logprobs":null,"top_p":null,"truncation":null,"user":null}}
+
+event: response.output_item.added
+data: {"type":"response.output_item.added","sequence_number":2,"output_index":0,"item":{"type":"message","id":"msg_1","role":"assistant","status":"in_progress","content":[],"phase":null}}
+
+event: response.content_part.added
+data: {"type":"response.content_part.added","sequence_number":3,"item_id":"msg_1","output_index":0,"content_index":0,"part":{"type":"output_text","text":"","annotations":[],"logprobs":[]}}
+
+event: response.output_text.delta
+data: {"type":"response.output_text.delta","sequence_number":4,"item_id":"msg_1","output_index":0,"content_index":0,"delta":"Partial","logprobs":[]}
+
+event: error
+data: {"type":"error","sequence_number":5,"code":"server_error","message":"Internal server error","param":null}
+
+event: response.failed
+data: {"type":"response.failed","sequence_number":6,"response":{"id":"resp_1","object":"response","created_at":1700000000,"model":"m","status":"failed","output":[{"type":"message","id":"msg_1","role":"assistant","status":"in_progress","content":[{"type":"output_text","text":"Partial","annotations":[],"logprobs":[]}],"phase":null}],"error":{"code":"server_error","message":"Internal server error"},"incomplete_details":null,"usage":null,"tools":[],"tool_choice":"auto","parallel_tool_calls":true,"instructions":null,"max_output_tokens":null,"max_tool_calls":null,"metadata":null,"prompt_cache_key":null,"reasoning":null,"safety_identifier":null,"temperature":null,"text":null,"top_logprobs":null,"top_p":null,"truncation":null,"user":null}}
+

@@ -1,0 +1,15 @@
+event: response.output_item.added
+data: {"type":"response.output_item.added","sequence_number":0,"output_index":0,"item":{"type":"image_generation_call","id":"ig_1","status":"in_progress","result":null}}
+
+event: response.image_generation_call.in_progress
+data: {"type":"response.image_generation_call.in_progress","sequence_number":1,"item_id":"ig_1","output_index":0}
+
+event: response.image_generation_call.generating
+data: {"type":"response.image_generation_call.generating","sequence_number":2,"item_id":"ig_1","output_index":0}
+
+event: response.image_generation_call.partial_image
+data: {"type":"response.image_generation_call.partial_image","sequence_number":3,"item_id":"ig_1","output_index":0,"partial_image_index":0,"partial_image_b64":"cGFydGlhbDE="}
+
+event: response.output_item.done
+data: {"type":"response.output_item.done","sequence_number":4,"output_index":0,"item":{"type":"image_generation_call","id":"ig_1","status":"failed","result":null}}
+
