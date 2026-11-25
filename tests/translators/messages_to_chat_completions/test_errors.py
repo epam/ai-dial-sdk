@@ -62,6 +62,7 @@ async def _core_error(status: int, body: dict | str) -> DIALException:
         (418, "invalid_request_error"),
         (501, "api_error"),
     ],
+    ids=lambda value: str(value),
 )
 async def test_upstream_error_preserves_status_and_maps_type(
     status: int, expected: str

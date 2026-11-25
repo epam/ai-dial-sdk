@@ -27,12 +27,12 @@ from openai.types.completion_usage import (
     PromptTokensDetails,
 )
 
+from aidial_sdk.translators._messages.translation_state import (
+    TranslationState,
+)
 from aidial_sdk.translators.messages_to_chat_completions.chat_completions.from_chat_completions import (
     to_anthropic_response,
     to_anthropic_stop_reason,
-)
-from aidial_sdk.translators.messages_to_chat_completions.translation_state import (
-    TranslationState,
 )
 
 FinishReason = Literal[
